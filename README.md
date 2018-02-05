@@ -13,7 +13,7 @@ VbPeg is self-hosted, meaning it can produce it's own parser in src\cParser.cls 
 
  - Generate a private VB6 class from PEG grammar in VbPeg.peg
 ```
-    c:> VbPeg.exe VbPeg.peg -o src\cParser -private
+    c:> VbPeg.exe VbPeg.peg -o src\cParser -private -userdata:cTree
 ```
 ### Command-line
 ```
