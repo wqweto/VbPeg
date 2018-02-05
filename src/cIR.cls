@@ -371,7 +371,7 @@ Private Function pvCodeGenNode( _
             AddChild m_uIr.IrActionsSelect, _
                 AddChild(AddNode(ucsIrtStmtCase, sText), _
                     AddNode(ucsIrtStmtEmit, .NodeText(lNode)))
-        Case ucsNdtStar
+        Case ucsNdtStar, ucsNdtPlus
             lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, AddNode(ucsIrtStmtDoExit))
             If lIrNode = 0 Then
                 GoTo QH
@@ -383,8 +383,17 @@ Private Function pvCodeGenNode( _
                     AddChild(AddNode(ucsIrtStmtDoLoop), lIrNode)), _
                     lSuccess)
             End If
+            If .NodeType(lNode) = ucsNdtPlus Then
+                lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, lFailure)
+                If lIrNode = 0 Then
+                    GoTo QH
+                End If
+                pvCodeGenNode = AddChild(AddChild(AddNode(ucsIrtBlock), lIrNode), pvCodeGenNode)
+            End If
         Case ucsNdtQuery
-            pvCodeGenNode = pvCodeGenNode(.NodeChild(lNode, 0), lSuccess, lSuccess)
+            pvCodeGenNode = AddNode(ucsIrtBlock)
+            AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, IR_CONTINUE)
+            AddChild pvCodeGenNode, lSuccess
         Case ucsNdtPeekFor
             If Not .NodeFlag(lNode, ucsNdfIsNot) Then
                 If .NodeFlag(lNode, ucsNdfRestorePos) Then
