@@ -123,6 +123,10 @@ Property Get NodeText(ByVal lNode As Long) As String
     NodeText = m_uTree.Nodes(lNode).Text
 End Property
 
+Property Let NodeText(ByVal lNode As Long, sValue As String)
+    m_uTree.Nodes(lNode).Text = sValue
+End Property
+
 Property Get NodeChild(ByVal lNode As Long, ByVal lIdx As Long) As Long
     NodeChild = m_uTree.Nodes(lNode).Children(lIdx)
 End Property
