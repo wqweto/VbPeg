@@ -67,7 +67,7 @@ Private Sub Main()
             "  -public         emit public VB6 class module" & vbCrLf & _
             "  -private        emit private VB6 class module" & vbCrLf & _
             "  -module NAME    VB6 class/module name [default: OUTFILE]" & vbCrLf & _
-            "  -userdata NAME  parser context UserData member data-type [default: Variant]" & vbCrLf & _
+            "  -userdata TYPE  parser context's UserData member data-type [default: Variant]" & vbCrLf & _
             "  -q              in quiet operation outputs only errors" & vbCrLf & vbCrLf & _
             "If no -tree/-ir is used emits VB6 code. If no -o is used writes result to console. If no -public/-private is used emits standard .bas module." & vbCrLf
         Exit Sub
