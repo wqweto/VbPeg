@@ -335,9 +335,8 @@ End Function
 
 Public Function MakePlus(ByVal lNode As Long) As Long
     With m_uTree
-        MakePlus = pvNewNode(ucsNdtSequence, NumChildren:=2)
+        MakePlus = pvNewNode(ucsNdtPlus, NumChildren:=1)
         .Nodes(MakePlus).Children(0) = lNode
-        .Nodes(MakePlus).Children(1) = MakeStar(lNode)
     End With
 End Function
 
@@ -435,7 +434,7 @@ Public Function OptimizeTree() As Boolean
     
     Do While pvOptimizePass1(NODE_ROOT)
     Loop
-    Do While pvOptimizePass2(NODE_ROOT)
+    Do While pvOptimizePass2(NODE_ROOT, False)
     Loop
     '--- for all rules re-adjust Used flag
     With m_uTree.Nodes(NODE_ROOT)
@@ -527,17 +526,20 @@ End Function
 '--- in Alternate nodes merges sequential Class nodes
 '--- transforms PeekNot -> Not PeekFor nodes
 '--- transforms single char Class -> single char String
-Private Function pvOptimizePass2(ByVal lNode As Long) As Boolean
+Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Boolean) As Boolean
     Dim vElem           As Variant
     Dim lCount          As Long
     Dim lFlags          As Long
     Dim sText           As String
+    Dim bChildSavePos   As Boolean
     
     With m_uTree.Nodes(lNode)
+        bChildSavePos = bParentSavePos Or (.Flags And ucsNdfSavePos) <> 0
         For Each vElem In .Children
-            If pvOptimizePass2(vElem) Then
+            If pvOptimizePass2(vElem, bChildSavePos) Then
                 pvOptimizePass2 = True
             End If
+            bChildSavePos = False
         Next
         Select Case .NodeType
         Case ucsNdtSequence, ucsNdtRule
@@ -569,7 +571,11 @@ Private Function pvOptimizePass2(ByVal lNode As Long) As Boolean
                         End If
                     End Select
                     If lCount > 0 Then
-                        lFlags = lFlags Or ucsNdfMultiStep Or ucsNdfSavePos
+                        If bParentSavePos Then
+                            lFlags = lFlags And Not ucsNdfMultiStep And Not ucsNdfSavePos
+                        Else
+                            lFlags = lFlags Or ucsNdfMultiStep Or ucsNdfSavePos
+                        End If
                         With m_uTree.Nodes(vElem)
                             If (.Flags And ucsNdfRestorePos) = 0 Then
                                 .Flags = .Flags Or ucsNdfRestorePos
@@ -598,10 +604,14 @@ Private Function pvOptimizePass2(ByVal lNode As Long) As Boolean
                 End If
             End If
         Case ucsNdtAlternate
-            If (.Flags And ucsNdfSavePos) = 0 Then
+            If (.Flags And ucsNdfSavePos) = IIf(bParentSavePos, ucsNdfSavePos, 0) Then
                 For Each vElem In .Children
                     If (m_uTree.Nodes(vElem).Flags And ucsNdfSavePos) <> 0 Then
-                        .Flags = .Flags Or ucsNdfSavePos
+                        If bParentSavePos Then
+                            .Flags = .Flags And Not ucsNdfSavePos
+                        Else
+                            .Flags = .Flags Or ucsNdfSavePos
+                        End If
                         With m_uTree.Nodes(vElem)
                             .Flags = .Flags And Not ucsNdfSavePos
                         End With
