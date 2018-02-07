@@ -33,7 +33,6 @@ Private Const IR_CONTINUE           As Long = 0
 Private Const IR_DECL               As Long = 1
 Private Const IR_ROOT               As Long = 2
 Private Const LNG_COMMENT_COLUMN    As Long = 51
-Private Const LNG_MAXINT            As Long = 2 ^ 31 - 1
 Private Const STR_FUNC_PREFIX       As String = "Parse"
 Private Const STR_BUFPOS_PREFIX     As String = "p"
 Private Const STR_THUNKPOS_PREFIX   As String = "q"
@@ -751,6 +750,8 @@ Public Function EmitCode( _
 "' Constants and member variables" & vbCrLf & _
 "'=========================================================================" & vbCrLf
         pvOutput _
+"Private Const LNG_MAXINT            As Long = 2 ^ 31 - 1" & vbCrLf
+        pvOutput _
 "'= generated enum ========================================================" & vbCrLf
         With .Nodes(IR_DECL)
             For lIdx = 0 To .Count - 1
@@ -1032,7 +1033,7 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
         Case ucsIrtStmtGoTo
             pvOutput "GoTo " & .Text
         Case ucsIrtStmtForLoop
-            pvOutput "For " & .Text & " = 0 To " & LNG_MAXINT
+            pvOutput "For " & .Text & " = 0 To LNG_MAXINT"
             GoSub EmitChildren
             pvOutput "Next"
         Case ucsIrtStmtForExit
