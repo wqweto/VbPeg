@@ -46,12 +46,11 @@ Private Const STR_VERSION           As String = "0.2"
 '=========================================================================
 
 Private Sub Main()
-    Dim oOpt           As Variant
+    Dim oOpt            As Object
     Dim oTree           As cTree
     Dim oParser         As cParser
     Dim oIR             As cIR
     Dim nFile           As Integer
-    Dim cOutput         As Collection
     Dim sOutput         As String
     
     On Error GoTo EH
@@ -103,15 +102,15 @@ Private Sub Main()
             If LenB(oOpt.Item("-module")) = 0 Then
                 oOpt.Item("-module") = GetFilePart(oOpt.Item("-o"))
             End If
-            If Not oIR.EmitCode(cOutput, _
+            If Not oIR.EmitCode( _
                     oOpt.Item("-public") Or oOpt.Item("-private"), _
                     oOpt.Item("-public"), _
                     CStr(oOpt.Item("-module")), _
-                    CStr(oOpt.Item("-userdata"))) Then
+                    CStr(oOpt.Item("-userdata")), _
+                    sOutput) Then
                 ConsoleError "Failed emit: %1" & vbCrLf, oIR.LastError
                 Exit Sub
             End If
-            sOutput = ConcatCollection(cOutput, vbCrLf)
         End If
     End If
     '--- write output
@@ -130,7 +129,7 @@ Private Sub Main()
         Put nFile, , sOutput
         Close nFile
         If Not oOpt.Item("-q") Then
-            ConsoleError "File " & oOpt.Item("-o") & " successfully emitted" & vbCrLf
+            ConsoleError "File " & oOpt.Item("-o") & " emitted successfully" & vbCrLf
         End If
     Else
         ConsolePrint sOutput

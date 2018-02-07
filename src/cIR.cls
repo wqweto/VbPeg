@@ -710,11 +710,11 @@ Private Sub pvOutputIrNode(ByVal lNode As Long)
 End Sub
 
 Public Function EmitCode( _
-            cOutput As Collection, _
             ByVal bClass As String, _
             ByVal bPublic As Boolean, _
             sModuleName As String, _
-            sUserData As String) As Boolean
+            sUserData As String, _
+            sOutput As String) As Boolean
     Dim lIdx            As Long
     
     If LenB(sModuleName) = 0 Then
@@ -904,7 +904,7 @@ Public Function EmitCode( _
                 pvOutput vbNullString
             Next
         End With
-        Set cOutput = .OutBuilder
+        sOutput = ConcatCollection(.OutBuilder, vbCrLf)
         '--- success
         EmitCode = True
     End With
