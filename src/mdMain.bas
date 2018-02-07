@@ -13,8 +13,12 @@ DefObj A-Z
 ' API
 '=========================================================================
 
-Private Const STD_OUTPUT_HANDLE         As Long = -11&
-Private Const STD_ERROR_HANDLE          As Long = -12&
+Private Const STD_OUTPUT_HANDLE             As Long = -11&
+Private Const STD_ERROR_HANDLE              As Long = -12&
+'--- for CreateFile
+Private Const GENERIC_WRITE                 As Long = &H40000000
+Private Const OPEN_EXISTING                 As Long = 3
+Private Const FILE_SHARE_READ               As Long = &H1
 
 Private Declare Function GetStdHandle Lib "kernel32" (ByVal nStdHandle As Long) As Long
 Private Declare Function WriteFile Lib "kernel32" (ByVal hFile As Long, lpBuffer As Any, ByVal nNumberOfBytesToWrite As Long, lpNumberOfBytesWritten As Long, lpOverlapped As Any) As Long
@@ -26,6 +30,10 @@ Private Declare Function ApiSysAllocString Lib "oleaut32" Alias "SysAllocString"
 Private Declare Function GetFileAttributes Lib "kernel32" Alias "GetFileAttributesA" (ByVal lpFileName As String) As Long
 Private Declare Function IsTextUnicode Lib "advapi32" (lpBuffer As Any, ByVal cb As Long, lpi As Long) As Long
 Public Declare Function EmptyLongArray Lib "oleaut32" Alias "SafeArrayCreateVector" (Optional ByVal vt As VbVarType = vbLong, Optional ByVal lLow As Long = 0, Optional ByVal lCount As Long = 0) As Long()
+Private Declare Function CreateFile Lib "kernel32" Alias "CreateFileA" (ByVal lpFileName As String, ByVal dwDesiredAccess As Long, ByVal dwShareMode As Long, ByVal lpSecurityAttributes As Long, ByVal dwCreationDisposition As Long, ByVal dwFlagsAndAttributes As Long, ByVal hTemplateFile As Long) As Long
+Private Declare Function SetFilePointer Lib "kernel32" (ByVal hFile As Long, ByVal lDistanceToMove As Long, ByVal lpDistanceToMoveHigh As Long, ByVal dwMoveMethod As Long) As Long
+Private Declare Function SetEndOfFile Lib "kernel32" (ByVal hFile As Long) As Long
+Private Declare Function CloseHandle Lib "kernel32" (ByVal hObject As Long) As Long
 
 '=========================================================================
 ' Constants and member variables
@@ -73,16 +81,8 @@ Private Sub Main()
         Exit Sub
     End If
     Set oTree = New cTree
-    If Not oParser.Init(ReadTextFile(oOpt.Item("arg1")), oTree) Then
-        ConsoleError "Failed init: %1" & vbCrLf, oParser.LastError
-        Exit Sub
-    End If
-    If Not oParser.ParseGrammar() Then
+    If oParser.Match(ReadTextFile(oOpt.Item("arg1")), UserData:=oTree) = 0 Then
         ConsoleError "Error parsing: %1" & vbCrLf, oParser.LastError
-        Exit Sub
-    End If
-    If Not oParser.Flush() Then
-        ConsoleError "Error in actions: %1" & vbCrLf, oParser.LastError
         Exit Sub
     End If
     If Not oTree.OptimizeTree() Then
@@ -124,6 +124,7 @@ Private Sub Main()
         If InStrRev(oOpt.Item("-o"), "\") >= InStrRev(oOpt.Item("-o"), ".") Then
             oOpt.Item("-o") = oOpt.Item("-o") & IIf(oOpt.Item("-public") Or oOpt.Item("-private"), ".cls", ".bas")
         End If
+        SetFileLen oOpt.Item("-o"), Len(sOutput)
         nFile = FreeFile
         Open oOpt.Item("-o") For Binary Access Write Shared As nFile
         Put nFile, , sOutput
@@ -295,7 +296,7 @@ Public Function ReadTextFile(sFile As String) As String
     If LenB(ReadTextFile) = 0 Then
         Set oStream = CreateObject("ADODB.Stream")
         With oStream
-            .OPEN
+            .Open
             If LenB(sCharset) <> 0 Then
                 .Charset = sCharset
             End If
@@ -354,5 +355,19 @@ Public Function GetFilePart(sFileName As String) As String
     GetFilePart = Mid$(sFileName, InStrRev(sFileName, "\") + 1)
     If InStrRev(GetFilePart, ".") > 0 Then
         GetFilePart = Left$(GetFilePart, InStrRev(GetFilePart, ".") - 1)
+    End If
+End Function
+
+Public Function SetFileLen(sFile As String, ByVal lSize As Long) As Boolean
+    Dim hFile       As Long
+    
+    hFile = CreateFile(sFile, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0)
+    If hFile <> 0 Then
+        If SetFilePointer(hFile, lSize, 0, 0) <> -1 Then
+            If SetEndOfFile(hFile) <> 0 Then
+                SetFileLen = True
+            End If
+        End If
+        Call CloseHandle(hFile)
     End If
 End Function
