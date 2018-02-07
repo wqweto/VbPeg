@@ -11,6 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
+
 '=========================================================================
 '
 ' VbPeg (c) 2018 by wqweto@gmail.com
@@ -88,6 +89,7 @@ Private Type UcsIrType
     Count               As Long
     CodeGenTree         As cTree
     CodeGenId           As Long
+    CodeGenStartFunc    As String
     IrActionsEnum       As Long
     IrActionsSelect     As Long
     OutModulePrefix     As String
@@ -243,6 +245,9 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                         AddChild lBody, AddChild(AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME), lIrNode)
                     Else
                         AddChild lBody, lIrNode
+                    End If
+                    If vElem = .StartRule Then
+                        m_uIr.CodeGenStartFunc = m_uIr.Nodes(lBody).Text
                     End If
                 End If
             Next
@@ -796,22 +801,33 @@ Public Function EmitCode( _
 "'=========================================================================" & vbCrLf & _
 "' Methods" & vbCrLf & _
 "'=========================================================================" & vbCrLf
+        If LenB(.CodeGenStartFunc) <> 0 Then
+            pvOutput _
+"Public Function " & .OutModulePrefix & "Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & ") As Long" & vbCrLf & _
+"    If " & .OutModulePrefix & "BeginMatch(sSubject, StartPos, UserData) Then" & vbCrLf & _
+"        If " & .CodeGenStartFunc & "() Then" & vbCrLf & _
+"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch()" & vbCrLf & _
+"        End If" & vbCrLf & _
+"    End If" & vbCrLf & _
+"End Function" & vbCrLf
+        End If
         pvOutput _
-"Public Function " & .OutModulePrefix & "BeginMatch(sContents As String, Optional UserData As " & sUserData & ") As Boolean" & vbCrLf & _
-"    Dim uEmpty          As UcsParserType" & vbCrLf & _
-"    " & vbCrLf & _
-"    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "BeginMatch(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & ") As Boolean" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
-"        If LenB(sContents) = 0 Then" & vbCrLf & _
-"            .LastError = ""Input has no contents""" & vbCrLf & _
+"        If LenB(sSubject) = 0 Then" & vbCrLf & _
+"            .LastError = ""Cannot match empty input""" & vbCrLf & _
 "            Exit Function" & vbCrLf & _
 "        End If" & vbCrLf & _
-"        .Contents = sContents" & vbCrLf & _
-"        ReDim .BufData(0 To Len(sContents) + 3) As Integer" & vbCrLf & _
-"        Call CopyMemory(.BufData(0), ByVal StrPtr(sContents), LenB(sContents))" & vbCrLf & _
-"        .BufSize = Len(sContents)" & vbCrLf & _
-"        .BufData(.BufSize) = -1" & vbCrLf & _
+"        .Contents = sSubject" & vbCrLf & _
+"        ReDim .BufData(0 To Len(sSubject) + 3) As Integer" & vbCrLf & _
+"        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))" & vbCrLf & _
+"        .BufPos = StartPos" & vbCrLf & _
+"        .BufSize = Len(sSubject)" & vbCrLf & _
+"        .BufData(.BufSize) = -1 '-- EOF anchor" & vbCrLf & _
 "        ReDim .ThunkData(0 To 4) As UcsParserThunkType" & vbCrLf & _
+"        .ThunkPos = 0" & vbCrLf & _
+"        .CaptureBegin = 0" & vbCrLf & _
+"        .CaptureEnd = 0" & vbCrLf & _
 "        If IsObject(UserData) Then" & vbCrLf & _
 "            Set .UserData = UserData" & vbCrLf & _
 "        Else" & vbCrLf & _
@@ -820,9 +836,19 @@ Public Function EmitCode( _
 "    End With" & vbCrLf & _
 "    " & .OutModulePrefix & "BeginMatch = True" & vbCrLf & _
 "End Function" & vbCrLf
-        pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch() As Boolean" & vbCrLf & _
+        If .IrActionsEnum = 0 Then
+            pvOutput _
+"Public Function " & .OutModulePrefix & "EndMatch() As Long" & vbCrLf & _
+"    Dim uEmpty          As UcsParserType" & vbCrLf & _
+"    " & vbCrLf & _
+"    " & .OutModulePrefix & "EndMatch = " & STR_CTX_VAR_NAME & ".BufPos" & vbCrLf & _
+"    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
+"End Function" & vbCrLf
+        Else
+            pvOutput _
+"Public Function " & .OutModulePrefix & "EndMatch() As Long" & vbCrLf & _
 "    Dim lIdx            As Long" & vbCrLf & _
+"    Dim uEmpty          As UcsParserType" & vbCrLf & _
 "    " & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        For lIdx = 0 To .ThunkPos - 1" & vbCrLf & _
@@ -830,16 +856,10 @@ Public Function EmitCode( _
 "                pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin" & vbCrLf & _
 "            End With" & vbCrLf & _
 "        Next" & vbCrLf & _
-"        .BufPos = 0" & vbCrLf & _
-"        ReDim .ThunkData(0 To 4) As UcsParserThunkType" & vbCrLf & _
-"        .ThunkPos = 0" & vbCrLf & _
-"        .CaptureBegin = 0" & vbCrLf & _
-"        .CaptureEnd = 0" & vbCrLf & _
-"        .LastError = vbNullString" & vbCrLf & _
+"        " & .OutModulePrefix & "EndMatch = .BufPos" & vbCrLf & _
 "    End With" & vbCrLf & _
-"    " & .OutModulePrefix & "EndMatch = True" & vbCrLf & _
+"    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
 "End Function" & vbCrLf
-        If .IrActionsEnum <> 0 Then
             pvOutput _
 "Private Sub pvPushAction(ByVal eAction As " & STR_ACTIONS_ENUM_NAME & ")" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _

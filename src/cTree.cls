@@ -155,6 +155,10 @@ Property Get NodeId(ByVal lNode As Long) As Long
     NodeId = m_uTree.Nodes(lNode).Id
 End Property
 
+Property Get StartRule() As Long
+    StartRule = m_uTree.StartRule
+End Property
+
 '=========================================================================
 ' Methods
 '=========================================================================
