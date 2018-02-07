@@ -521,17 +521,25 @@ EmitStmtIfOnIrNode:
         Case ucsNdtClass
             pvCodeGenNode = AddNode(ucsIrtStmtSelect, ".BufData(.BufPos)")
             lIrNode = AddNode(ucsIrtStmtCase, pvToVbCaseRange(pvFromPegString(.NodeText(lNode))), Comment:="[" & .NodeText(lNode) & "]")
+            AddChild pvCodeGenNode, lIrNode
             If Not .NodeFlag(lNode, ucsNdfIsNot) Then
                 AddChild lIrNode, AddNode(ucsIrtStmtEmit, ".BufPos = .BufPos + 1")
-            End If
-            AddChild lIrNode, lSuccess
-            AddChild pvCodeGenNode, lIrNode
-            If lFailure <> IR_CONTINUE Or .NodeFlag(lNode, ucsNdfIsNot) Then
-                lIrNode = AddNode(ucsIrtStmtCase, "Else")
-                If .NodeFlag(lNode, ucsNdfIsNot) Then
-                    AddChild lIrNode, AddNode(ucsIrtStmtEmit, ".BufPos = .BufPos + 1")
+                AddChild lIrNode, lSuccess
+                If lFailure <> IR_CONTINUE Then
+                    AddChild pvCodeGenNode, AddChild( _
+                        AddNode(ucsIrtStmtCase, "Else"), _
+                            lFailure)
                 End If
-                AddChild pvCodeGenNode, AddChild(lIrNode, lFailure)
+            Else
+                AddChild lIrNode, lFailure
+                AddChild pvCodeGenNode, AddChild( _
+                    AddNode(ucsIrtStmtCase, "Else"), AddChild(AddChild(AddChild( _
+                        AddNode(ucsIrtStmtIf), _
+                            AddNode(ucsIrtExprEmit, ".BufPos < .BufSize")), AddChild(AddChild( _
+                            AddNode(ucsIrtBlock), _
+                                AddNode(ucsIrtStmtEmit, ".BufPos = .BufPos + 1")), _
+                                lSuccess)), _
+                            lFailure))
             End If
         Case Else
             m_uIr.LastError = "Unsupported parse tree node type " & .NodeType(lNode)
