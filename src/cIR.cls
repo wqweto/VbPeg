@@ -468,6 +468,12 @@ Private Function pvCodeGenNode( _
                 Else
                     lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) <> " & Asc(sText) & " And .BufPos < .BufSize")
                 End If
+            ElseIf Len(sText) = 2 Then
+                If Not .NodeFlag(lNode, ucsNdfIsNot) Then
+                    lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) = " & Asc(sText) & " And .BufData(.BufPos + 1) = " & Asc(Mid$(sText, 2, 1)))
+                Else
+                    lIrNode = AddNode(ucsIrtExprEmit, "(.BufData(.BufPos) <> " & Asc(sText) & " Or .BufData(.BufPos + 1) <> " & Asc(Mid$(sText, 2, 1)) & ") And .BufPos + 1 < .BufSize")
+                End If
             ElseIf Not .NodeFlag(lNode, ucsNdfIsNot) Then
                 lIrNode = AddNode(ucsIrtExprEmit, "pvMatchString(" & pvToVbString(sText) & ")")
             Else
