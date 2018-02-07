@@ -27,15 +27,17 @@ DefObj A-Z
 ' Constants and member variables
 '=========================================================================
 
-Private Const STR_NODE_TYPES        As String = "|Block|DeclFunc|DeclEnum|DeclLabel|StmtCall|StmtRetVal|StmtExit|StmtDoLoop|StmtDoExit|StmtIf|StmtSelect|StmtCase|StmtSavePos|StmtRestorePos|StmtEmit|StmtWith|StmtCapture|StmtGoTo|ExprCall|ExprNot|ExprEmit"
+Private Const STR_NODE_TYPES        As String = "|Block|DeclFunc|DeclEnum|DeclLabel|StmtCall|StmtRetVal|StmtExit|StmtDoLoop|StmtDoExit|StmtIf|StmtSelect|StmtCase|StmtSavePos|StmtRestorePos|StmtEmit|StmtWith|StmtCapture|StmtGoTo|StmtForLoop|StmtForExit|ExprCall|ExprNot|ExprEmit"
 Private Const NODE_ROOT             As Long = 0
 Private Const IR_CONTINUE           As Long = 0
 Private Const IR_DECL               As Long = 1
 Private Const IR_ROOT               As Long = 2
 Private Const LNG_COMMENT_COLUMN    As Long = 51
+Private Const LNG_MAXINT            As Long = 2 ^ 31 - 1
 Private Const STR_FUNC_PREFIX       As String = "Parse"
 Private Const STR_BUFPOS_PREFIX     As String = "p"
 Private Const STR_THUNKPOS_PREFIX   As String = "q"
+Private Const STR_FOR_PREFIX        As String = "i"
 Private Const STR_CTX_VAR_NAME      As String = "ctx"
 Private Const STR_ACTIONS_ENUM_NAME As String = "UcsParserActionsEnum"
 Private Const STR_ACTIONS_ENUM_FMT  As String = "ucsAct_%1_%2"
@@ -59,6 +61,8 @@ Public Enum UcsIrNodeTypeEnum
     ucsIrtStmtWith
     ucsIrtStmtCapture
     ucsIrtStmtGoTo
+    ucsIrtStmtForLoop
+    ucsIrtStmtForExit
     ucsIrtExprCall
     ucsIrtExprNot
     ucsIrtExprEmit
@@ -85,7 +89,6 @@ Private Type UcsIrType
     CodeGenTree         As cTree
     CodeGenId           As Long
     IrActionsEnum       As Long
-    IrActionsImplFunc   As Long
     IrActionsSelect     As Long
     OutModulePrefix     As String
     OutBuilder          As Collection
@@ -205,51 +208,52 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
         .CodeGenId = 0
         Set .OutDictionary = CreateObject("Scripting.Dictionary")
         .OutDictionary.CompareMode = vbTextCompare
-        .IrActionsEnum = AddChild(AddNode(ucsIrtDeclEnum, STR_ACTIONS_ENUM_NAME), _
-            AddNode(ucsIrtStmtEmit, "[__ucsActNone]"))
-        .IrActionsImplFunc = AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME & ".UserData")
-        lIrNode = AddChild(AddNode(ucsIrtDeclFunc, "pvImplAction(eAction As " & STR_ACTIONS_ENUM_NAME & ", ByVal lOffset As Long, ByVal lSize As Long)"), _
-            .IrActionsImplFunc)
-        IrFlag(lIrNode, ucsIrfVoid) = True
-    End With
-    With m_uIr.CodeGenTree
-        For Each vElem In .NodeChildren(NODE_ROOT)
-            If .NodeFlag(vElem, ucsNdfUsed) Or bAllRules Then
-                pvCodeGenUniqueName vElem
-            End If
-        Next
-        For Each vElem In .NodeChildren(NODE_ROOT)
-            If .NodeFlag(vElem, ucsNdfUsed) Or bAllRules Then
-                lBody = AddNode(ucsIrtDeclFunc, STR_FUNC_PREFIX & .NodeText(vElem))
-                IrFlag(lBody, ucsIrfPublic) = True
-                If .NodeFlag(vElem, ucsNdfSavePos) Then
-                    AddChild lBody, AddNode(ucsIrtStmtSavePos, STR_BUFPOS_PREFIX & vElem)
-                    If .NodeFlag(vElem, ucsNdfHasActions) Then
-                        AddChild lBody, AddNode(ucsIrtStmtSavePos, STR_THUNKPOS_PREFIX & vElem)
+        With .CodeGenTree
+            For Each vElem In .NodeChildren(NODE_ROOT)
+                If .NodeFlag(vElem, ucsNdfUsed) Or bAllRules Then
+                    pvCodeGenUniqueName vElem
+                End If
+            Next
+            For Each vElem In .NodeChildren(NODE_ROOT)
+                If .NodeFlag(vElem, ucsNdfUsed) Or bAllRules Then
+                    lBody = AddNode(ucsIrtDeclFunc, STR_FUNC_PREFIX & .NodeText(vElem))
+                    IrFlag(lBody, ucsIrfPublic) = True
+                    If .NodeFlag(vElem, ucsNdfSavePos) Then
+                        AddChild lBody, AddNode(ucsIrtStmtSavePos, STR_BUFPOS_PREFIX & vElem)
+                        If .NodeFlag(vElem, ucsNdfHasActions) Then
+                            AddChild lBody, AddNode(ucsIrtStmtSavePos, STR_THUNKPOS_PREFIX & vElem)
+                        End If
+                    End If
+                    If .NodeFlag(vElem, ucsNdfAlwaysTrue) Then
+                        IrFlag(lBody, ucsIrfVoid) = True
+                        lSuccess = IR_CONTINUE
+                        lFailure = IR_CONTINUE
+                    Else
+                        lSuccess = AddChild(AddChild(AddNode(ucsIrtBlock), _
+                            AddNode(ucsIrtStmtRetVal, "True")), _
+                            AddNode(ucsIrtStmtExit))
+                        lFailure = IR_CONTINUE ' AddNode(ucsIrtStmtExit)
+                    End If
+                    lIrNode = pvCodeGenNode(.NodeChild(vElem, 0), lSuccess, lFailure)
+                    If lIrNode = 0 Then
+                        GoTo QH
+                    End If
+                    pvCodeGenTrimLastExit lIrNode
+                    If pvCodeGenFindCtxUse(lIrNode) Then
+                        AddChild lBody, AddChild(AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME), lIrNode)
+                    Else
+                        AddChild lBody, lIrNode
                     End If
                 End If
-                If .NodeFlag(vElem, ucsNdfAlwaysTrue) Then
-                    IrFlag(lBody, ucsIrfVoid) = True
-                    lSuccess = IR_CONTINUE
-                    lFailure = IR_CONTINUE
-                Else
-                    lSuccess = AddChild(AddChild(AddNode(ucsIrtBlock), _
-                        AddNode(ucsIrtStmtRetVal, "True")), _
-                        AddNode(ucsIrtStmtExit))
-                    lFailure = AddNode(ucsIrtStmtExit)
-                End If
-                lIrNode = pvCodeGenNode(.NodeChild(vElem, 0), lSuccess, lFailure)
-                If lIrNode = 0 Then
-                    GoTo QH
-                End If
-                pvCodeGenTrimLastExit lIrNode
-                If pvCodeGenFindCtxUse(lIrNode) Then
-                    AddChild lBody, AddChild(AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME), lIrNode)
-                Else
-                    AddChild lBody, lIrNode
-                End If
-            End If
-        Next
+            Next
+        End With
+        If .IrActionsSelect <> 0 Then
+            lIrNode = AddChild( _
+                AddNode(ucsIrtDeclFunc, "pvImplAction(ByVal eAction As " & STR_ACTIONS_ENUM_NAME & ", ByVal lOffset As Long, ByVal lSize As Long)"), AddChild( _
+                    AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME & ".UserData"), _
+                        .IrActionsSelect))
+            IrFlag(lIrNode, ucsIrfVoid) = True
+        End If
     End With
     '--- success
     CodeGen = True
@@ -277,12 +281,26 @@ Private Function pvCodeGenNode( _
             ByVal lSuccess As Long, _
             ByVal lFailure As Long) As Long
     Dim lIdx            As Long
-    Dim lChildNode      As Long
     Dim lIrNode         As Long
     Dim lIrFailure      As Long
     Dim sText           As String
     
+    If lNode = 74 Then
+        lNode = lNode
+    End If
     With m_uIr.CodeGenTree
+        If .NodeFlag(lNode, ucsNdfRestorePos) Then
+            If .NodeFlag(lNode, ucsNdfHasActions) Then
+                lIrNode = AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & .NodeRestoreFrom(lNode))
+            Else
+                lIrNode = IR_CONTINUE
+            End If
+            lFailure = AddChild(AddChild(AddChild( _
+                AddNode(ucsIrtBlock), _
+                    AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & .NodeRestoreFrom(lNode))), _
+                    lIrNode), _
+                    lFailure)
+        End If
         Select Case .NodeType(lNode)
         Case ucsNdtSequence
             pvCodeGenNode = AddNode(ucsIrtBlock)
@@ -294,18 +312,7 @@ Private Function pvCodeGenNode( _
             End If
             If lSuccess = IR_CONTINUE Then
                 For lIdx = 0 To .NodeNumChildren(lNode) - 1
-                    lChildNode = .NodeChild(lNode, lIdx)
-                    If .NodeFlag(lChildNode, ucsNdfRestorePos) Then
-                        lIrFailure = AddNode(ucsIrtBlock)
-                        AddChild lIrFailure, AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & .NodeRestoreFrom(lChildNode))
-                        If .NodeFlag(lChildNode, ucsNdfHasActions) Then
-                            AddChild lIrFailure, AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & .NodeRestoreFrom(lChildNode))
-                        End If
-                        AddChild lIrFailure, lFailure
-                    Else
-                        lIrFailure = lFailure
-                    End If
-                    lIrNode = pvCodeGenNode(lChildNode, IR_CONTINUE, lIrFailure)
+                    lIrNode = pvCodeGenNode(.NodeChild(lNode, lIdx), IR_CONTINUE, lFailure)
                     If lIrNode = 0 Then
                         GoTo QH
                     End If
@@ -314,18 +321,7 @@ Private Function pvCodeGenNode( _
             Else
                 lIrNode = lSuccess
                 For lIdx = .NodeNumChildren(lNode) - 1 To 0 Step -1
-                    lChildNode = .NodeChild(lNode, lIdx)
-                    If .NodeFlag(lChildNode, ucsNdfRestorePos) Then
-                        lIrFailure = AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & .NodeRestoreFrom(lChildNode))
-                        If .NodeFlag(lChildNode, ucsNdfHasActions) Then
-                            lIrFailure = AddChild(AddChild(AddNode(ucsIrtBlock), _
-                                lIrFailure), _
-                                AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & .NodeRestoreFrom(lChildNode)))
-                        End If
-                    Else
-                        lIrFailure = IR_CONTINUE
-                    End If
-                    lIrNode = pvCodeGenNode(lChildNode, lIrNode, lIrFailure)
+                    lIrNode = pvCodeGenNode(.NodeChild(lNode, lIdx), lIrNode, lFailure)
                     If lIrNode = 0 Then
                         GoTo QH
                     End If
@@ -344,18 +340,7 @@ Private Function pvCodeGenNode( _
             If lSuccess = IR_CONTINUE Then
                 lIrNode = lFailure
                 For lIdx = .NodeNumChildren(lNode) - 1 To 0 Step -1
-                    lChildNode = .NodeChild(lNode, lIdx)
-                    If .NodeFlag(lChildNode, ucsNdfRestorePos) Then
-                        lIrFailure = AddNode(ucsIrtBlock)
-                        AddChild lIrFailure, AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & .NodeRestoreFrom(lChildNode))
-                        If .NodeFlag(lChildNode, ucsNdfHasActions) Then
-                            AddChild lIrFailure, AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & .NodeRestoreFrom(lChildNode))
-                        End If
-                        AddChild lIrFailure, lIrNode
-                    Else
-                        lIrFailure = lIrNode
-                    End If
-                    lIrNode = pvCodeGenNode(lChildNode, IR_CONTINUE, lIrFailure)
+                    lIrNode = pvCodeGenNode(.NodeChild(lNode, lIdx), IR_CONTINUE, lIrNode)
                     If lIrNode = 0 Then
                         GoTo QH
                     End If
@@ -363,18 +348,7 @@ Private Function pvCodeGenNode( _
                 AddChild pvCodeGenNode, lIrNode
             Else
                 For lIdx = 0 To .NodeNumChildren(lNode) - 1
-                    lChildNode = .NodeChild(lNode, lIdx)
-                    If .NodeFlag(lChildNode, ucsNdfRestorePos) Then
-                        lIrFailure = AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & .NodeRestoreFrom(lChildNode))
-                        If .NodeFlag(lChildNode, ucsNdfHasActions) Then
-                            lIrFailure = AddChild(AddChild(AddNode(ucsIrtBlock), _
-                                lIrFailure), _
-                                AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & .NodeRestoreFrom(lChildNode)))
-                        End If
-                    Else
-                        lIrFailure = IR_CONTINUE
-                    End If
-                    lIrNode = pvCodeGenNode(lChildNode, lSuccess, lIrFailure)
+                    lIrNode = pvCodeGenNode(.NodeChild(lNode, lIdx), lSuccess, IR_CONTINUE)
                     If lIrNode = 0 Then
                         GoTo QH
                     End If
@@ -385,55 +359,74 @@ Private Function pvCodeGenNode( _
         Case ucsNdtReference
             If .NodeFlag(lNode, ucsNdfAlwaysTrue) Or _
                     lSuccess = IR_CONTINUE And lFailure = IR_CONTINUE Then
-                pvCodeGenNode = AddNode(ucsIrtBlock)
-                AddChild pvCodeGenNode, AddNode(ucsIrtStmtCall, STR_FUNC_PREFIX & .NodeText(.NodeRule(lNode)))
-                AddChild pvCodeGenNode, lSuccess
+                pvCodeGenNode = AddChild(AddChild( _
+                    AddNode(ucsIrtBlock), _
+                        AddNode(ucsIrtStmtCall, STR_FUNC_PREFIX & .NodeText(.NodeRule(lNode)))), _
+                        lSuccess)
             ElseIf lSuccess = IR_CONTINUE Then
-                pvCodeGenNode = AddNode(ucsIrtStmtIf)
-                AddChild pvCodeGenNode, AddChild(AddNode(ucsIrtExprNot), AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRule(lNode))))
-                AddChild pvCodeGenNode, lFailure
+                pvCodeGenNode = AddChild(AddChild( _
+                    AddNode(ucsIrtStmtIf), AddChild( _
+                        AddNode(ucsIrtExprNot), _
+                            AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRule(lNode))))), _
+                        lFailure)
             Else
-                pvCodeGenNode = AddNode(ucsIrtStmtIf)
-                AddChild pvCodeGenNode, AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRule(lNode)))
-                AddChild pvCodeGenNode, lSuccess
-                AddChild pvCodeGenNode, lFailure
+                pvCodeGenNode = AddChild(AddChild(AddChild( _
+                    AddNode(ucsIrtStmtIf), _
+                        AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRule(lNode)))), _
+                        lSuccess), _
+                        lFailure)
             End If
         Case ucsNdtAction
             sText = Replace(Replace(STR_ACTIONS_ENUM_FMT, "%1", .NodeId(lNode)), "%2", .NodeText(.NodeRule(lNode)))
-            pvCodeGenNode = AddChild(AddChild(AddNode(ucsIrtBlock), _
-                AddNode(ucsIrtStmtEmit, "pvPushAction " & sText)), _
-                lSuccess)
-            AddChild m_uIr.IrActionsEnum, AddNode(ucsIrtStmtEmit, sText)
+            pvCodeGenNode = AddChild(AddChild( _
+                AddNode(ucsIrtBlock), _
+                    AddNode(ucsIrtStmtEmit, "pvPushAction " & sText)), _
+                    lSuccess)
+            If m_uIr.IrActionsEnum = 0 Then
+                m_uIr.IrActionsEnum = AddNode(ucsIrtDeclEnum, STR_ACTIONS_ENUM_NAME)
+            End If
+            AddChild m_uIr.IrActionsEnum, _
+                AddNode(ucsIrtStmtEmit, sText)
             If m_uIr.IrActionsSelect = 0 Then
                 m_uIr.IrActionsSelect = AddNode(ucsIrtStmtSelect, "eAction")
-                AddChild m_uIr.IrActionsImplFunc, m_uIr.IrActionsSelect
             End If
-            AddChild m_uIr.IrActionsSelect, _
-                AddChild(AddNode(ucsIrtStmtCase, sText), _
+            AddChild m_uIr.IrActionsSelect, AddChild( _
+                AddNode(ucsIrtStmtCase, sText), _
                     AddNode(ucsIrtStmtEmit, .NodeText(lNode)))
-        Case ucsNdtStar, ucsNdtPlus
+        Case ucsNdtStar
             lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, AddNode(ucsIrtStmtDoExit))
             If lIrNode = 0 Then
                 GoTo QH
             End If
             If lSuccess = IR_CONTINUE Then
-                pvCodeGenNode = AddChild(AddNode(ucsIrtStmtDoLoop), lIrNode)
+                pvCodeGenNode = AddChild( _
+                    AddNode(ucsIrtStmtDoLoop), _
+                        lIrNode)
             Else
-                pvCodeGenNode = AddChild(AddChild(AddNode(ucsIrtBlock), _
-                    AddChild(AddNode(ucsIrtStmtDoLoop), lIrNode)), _
-                    lSuccess)
+                pvCodeGenNode = AddChild(AddChild( _
+                    AddNode(ucsIrtBlock), AddChild( _
+                        AddNode(ucsIrtStmtDoLoop), _
+                            lIrNode)), _
+                        lSuccess)
             End If
-            If .NodeType(lNode) = ucsNdtPlus Then
-                Select Case m_uIr.Nodes(pvCodeGenFindLastNode(lFailure)).NodeType
-                Case ucsIrtStmtDoExit, ucsIrtStmtExit
-                    lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, lFailure)
-                    If lIrNode = 0 Then
-                        GoTo QH
-                    End If
-                    pvCodeGenNode = AddChild(AddChild(AddNode(ucsIrtBlock), lIrNode), pvCodeGenNode)
-                Case Else
-                    pvCodeGenNode = pvCodeGenNode(.NodeChild(lNode, 0), pvCodeGenNode, lFailure)
-                End Select
+        Case ucsNdtPlus
+            lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, AddNode(ucsIrtStmtForExit))
+            If lIrNode = 0 Then
+                GoTo QH
+            End If
+            If lSuccess = IR_CONTINUE Then
+                pvCodeGenNode = AddChild( _
+                    AddNode(ucsIrtStmtForLoop, STR_FOR_PREFIX & lNode), _
+                        lIrNode)
+            Else
+                pvCodeGenNode = AddChild(AddChild( _
+                    AddNode(ucsIrtBlock), AddChild( _
+                        AddNode(ucsIrtStmtForLoop, STR_FOR_PREFIX & lNode), _
+                            lIrNode)), AddChild(AddChild(AddChild( _
+                        AddNode(ucsIrtStmtIf), _
+                            AddNode(ucsIrtExprEmit, STR_FOR_PREFIX & lNode & " <> 0")), _
+                            lSuccess), _
+                            lFailure))
             End If
         Case ucsNdtQuery
             sText = "L" & pvCodeGenId
@@ -444,8 +437,9 @@ Private Function pvCodeGenNode( _
         Case ucsNdtPeekFor
             If Not .NodeFlag(lNode, ucsNdfIsNot) Then
                 If .NodeFlag(lNode, ucsNdfRestorePos) Then
-                    lIrNode = AddNode(ucsIrtBlock)
-                    AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & .NodeRestoreFrom(lNode))
+                    lIrNode = AddChild( _
+                        AddNode(ucsIrtBlock), _
+                            AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & .NodeRestoreFrom(lNode)))
                     If .NodeFlag(lNode, ucsNdfHasActions) Then
                         AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & .NodeRestoreFrom(lNode))
                     End If
@@ -463,7 +457,7 @@ Private Function pvCodeGenNode( _
                 If Not .NodeFlag(lNode, ucsNdfIsNot) Then
                     lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) = " & Asc(sText))
                 Else
-                    lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) <> " & Asc(sText))
+                    lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) <> " & Asc(sText) & " And .BufPos < .BufSize")
                 End If
             ElseIf Not .NodeFlag(lNode, ucsNdfIsNot) Then
                 lIrNode = AddNode(ucsIrtExprEmit, "pvMatchString(" & pvToVbString(sText) & ")")
@@ -767,7 +761,7 @@ Public Function EmitCode( _
         End With
         pvOutput _
 "Private Type UcsParserThunkType" & vbCrLf & _
-"    Action              As " & STR_ACTIONS_ENUM_NAME & vbCrLf & _
+"    Action              As Long" & vbCrLf & _
 "    CaptureBegin        As Long" & vbCrLf & _
 "    CaptureEnd          As Long" & vbCrLf & _
 "End Type" & vbCrLf
@@ -791,19 +785,19 @@ Public Function EmitCode( _
 "' Properties" & vbCrLf & _
 "'=========================================================================" & vbCrLf
         pvOutput _
-"Property Get " & m_uIr.OutModulePrefix & "LastError() As String" & vbCrLf & _
-"    " & m_uIr.OutModulePrefix & "LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"Property Get " & .OutModulePrefix & "LastError() As String" & vbCrLf & _
+"    " & .OutModulePrefix & "LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
 "End Property" & vbCrLf
         pvOutput _
-"Property Get " & m_uIr.OutModulePrefix & "ParserVersion() As String" & vbCrLf & _
-"    " & m_uIr.OutModulePrefix & "ParserVersion = """ & Now & """" & vbCrLf & _
+"Property Get " & .OutModulePrefix & "ParserVersion() As String" & vbCrLf & _
+"    " & .OutModulePrefix & "ParserVersion = """ & Now & """" & vbCrLf & _
 "End Property" & vbCrLf
         pvOutput _
 "'=========================================================================" & vbCrLf & _
 "' Methods" & vbCrLf & _
 "'=========================================================================" & vbCrLf
         pvOutput _
-"Public Function " & .OutModulePrefix & "Init(sContents As String, UserData As " & sUserData & ") As Boolean" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "BeginMatch(sContents As String, Optional UserData As " & sUserData & ") As Boolean" & vbCrLf & _
 "    Dim uEmpty          As UcsParserType" & vbCrLf & _
 "    " & vbCrLf & _
 "    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
@@ -824,10 +818,10 @@ Public Function EmitCode( _
 "            .UserData = UserData" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End With" & vbCrLf & _
-"    " & m_uIr.OutModulePrefix & "Init = True" & vbCrLf & _
+"    " & .OutModulePrefix & "BeginMatch = True" & vbCrLf & _
 "End Function" & vbCrLf
         pvOutput _
-"Public Function " & .OutModulePrefix & "Flush() As Boolean" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "EndMatch() As Boolean" & vbCrLf & _
 "    Dim lIdx            As Long" & vbCrLf & _
 "    " & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
@@ -843,9 +837,10 @@ Public Function EmitCode( _
 "        .CaptureEnd = 0" & vbCrLf & _
 "        .LastError = vbNullString" & vbCrLf & _
 "    End With" & vbCrLf & _
-"    " & m_uIr.OutModulePrefix & "Flush = True" & vbCrLf & _
+"    " & .OutModulePrefix & "EndMatch = True" & vbCrLf & _
 "End Function" & vbCrLf
-        pvOutput _
+        If .IrActionsEnum <> 0 Then
+            pvOutput _
 "Private Sub pvPushAction(ByVal eAction As " & STR_ACTIONS_ENUM_NAME & ")" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        If UBound(.ThunkData) < .ThunkPos Then" & vbCrLf & _
@@ -859,6 +854,7 @@ Public Function EmitCode( _
 "        .ThunkPos = .ThunkPos + 1" & vbCrLf & _
 "    End With" & vbCrLf & _
 "End Sub" & vbCrLf
+        End If
         pvOutput _
 "Private Function pvMatchString(sText As String) As Boolean" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
@@ -1019,6 +1015,12 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
             pvOutput .Text & " = .BufPos"
         Case ucsIrtStmtGoTo
             pvOutput "GoTo " & .Text
+        Case ucsIrtStmtForLoop
+            pvOutput "For " & .Text & " = 0 To " & LNG_MAXINT
+            GoSub EmitChildren
+            pvOutput "Next"
+        Case ucsIrtStmtForExit
+            pvOutput "Exit For"
         Case Else
             m_uIr.LastError = "Unsupported IR node type " & .NodeType
             GoTo QH
@@ -1027,15 +1029,28 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
     '--- success
     pvEmitStmt = True
 QH:
+    Exit Function
+EmitChildren:
+    With m_uIr.Nodes(lNode)
+        m_uIr.OutIndent = m_uIr.OutIndent + 1
+        For lIdx = 0 To .Count - 1
+            If Not pvEmitStmt(.Children(lIdx)) Then
+                GoTo QH
+            End If
+        Next
+        m_uIr.OutIndent = m_uIr.OutIndent - 1
+    End With
+    Return
 End Function
 
 Private Sub pvEmitCollectDeclVar(ByVal lNode As Long)
     Dim lIdx            As Long
     
     With m_uIr.Nodes(lNode)
-        If .NodeType = ucsIrtStmtSavePos Then
+        Select Case .NodeType
+        Case ucsIrtStmtSavePos, ucsIrtStmtForLoop
             m_uIr.OutDictionary.Item(.Text) = "Long"
-        End If
+        End Select
         For lIdx = 0 To .Count - 1
             pvEmitCollectDeclVar .Children(lIdx)
         Next
