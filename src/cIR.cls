@@ -11,7 +11,6 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-
 '=========================================================================
 '
 ' VbPeg (c) 2018 by wqweto@gmail.com
@@ -287,7 +286,6 @@ Private Function pvCodeGenNode( _
             ByVal lFailure As Long) As Long
     Dim lIdx            As Long
     Dim lIrNode         As Long
-    Dim lIrFailure      As Long
     Dim sText           As String
     
     If lNode = 74 Then
@@ -382,6 +380,7 @@ Private Function pvCodeGenNode( _
                         lFailure)
             End If
         Case ucsNdtAction
+            '-- always true -> discard lFailure
             sText = Replace(Replace(STR_ACTIONS_ENUM_FMT, "%1", .NodeId(lNode)), "%2", .NodeText(.NodeRule(lNode)))
             pvCodeGenNode = AddChild(AddChild( _
                 AddNode(ucsIrtBlock), _
@@ -399,6 +398,7 @@ Private Function pvCodeGenNode( _
                 AddNode(ucsIrtStmtCase, sText), _
                     AddNode(ucsIrtStmtEmit, .NodeText(lNode)))
         Case ucsNdtStar
+            '-- always true -> discard lFailure
             lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, AddNode(ucsIrtStmtDoExit))
             If lIrNode = 0 Then
                 GoTo QH
@@ -420,9 +420,13 @@ Private Function pvCodeGenNode( _
                 GoTo QH
             End If
             If lSuccess = IR_CONTINUE Then
-                pvCodeGenNode = AddChild( _
-                    AddNode(ucsIrtStmtForLoop, STR_FOR_PREFIX & lNode), _
-                        lIrNode)
+                pvCodeGenNode = AddChild(AddChild( _
+                    AddNode(ucsIrtBlock), AddChild( _
+                        AddNode(ucsIrtStmtForLoop, STR_FOR_PREFIX & lNode), _
+                            lIrNode)), AddChild(AddChild( _
+                        AddNode(ucsIrtStmtIf), _
+                            AddNode(ucsIrtExprEmit, STR_FOR_PREFIX & lNode & " = 0")), _
+                            lFailure))
             Else
                 pvCodeGenNode = AddChild(AddChild( _
                     AddNode(ucsIrtBlock), AddChild( _
@@ -434,6 +438,7 @@ Private Function pvCodeGenNode( _
                             lFailure))
             End If
         Case ucsNdtQuery
+            '-- always true -> discard lFailure
             sText = "L" & pvCodeGenId
             pvCodeGenNode = AddNode(ucsIrtBlock)
             AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), AddNode(ucsIrtStmtGoTo, sText), IR_CONTINUE)
@@ -541,15 +546,6 @@ End Function
 Private Function pvCodeGenId() As Long
     m_uIr.CodeGenId = m_uIr.CodeGenId + 1
     pvCodeGenId = m_uIr.CodeGenId
-End Function
-
-Private Function pvCodeGenFindLastNode(ByVal lNode As Long) As Long
-    If lNode > IR_CONTINUE Then
-        Do While m_uIr.Nodes(lNode).Count > 0
-            lNode = m_uIr.Nodes(lNode).Children(m_uIr.Nodes(lNode).Count - 1)
-        Loop
-    End If
-    pvCodeGenFindLastNode = lNode
 End Function
 
 Private Function pvCodeGenFindCtxUse(ByVal lNode As Long) As Boolean
