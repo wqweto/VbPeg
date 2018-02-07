@@ -914,16 +914,13 @@ End Function
 Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
     Dim lIdx            As Long
     Dim vElem           As Variant
+    Dim bDontIndent     As Boolean
     
     With m_uIr.Nodes(lNode)
         Select Case .NodeType
         Case ucsIrtBlock
-            '--- don't indent
-            For lIdx = 0 To .Count - 1
-                If Not pvEmitStmt(.Children(lIdx)) Then
-                    GoTo QH
-                End If
-            Next
+            bDontIndent = True
+            GoSub EmitChildren
         Case ucsIrtDeclFunc
             m_uIr.OutFuncScope = IIf((.Flags And ucsIrfPublic) <> 0, "Public", "Private")
             m_uIr.OutFuncName = .Text
@@ -934,31 +931,21 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
                 m_uIr.OutFuncType = "Function"
                 pvOutput m_uIr.OutFuncScope & " Function " & .Text & "() As Boolean"
             End If
-            m_uIr.OutIndent = m_uIr.OutIndent + 1
             m_uIr.OutDictionary.RemoveAll
             pvEmitCollectDeclVar lNode
+            m_uIr.OutIndent = m_uIr.OutIndent + 1
             For Each vElem In m_uIr.OutDictionary.Keys
                 pvOutput "Dim " & vElem & " As " & m_uIr.OutDictionary.Item(vElem)
             Next
             If m_uIr.OutDictionary.Count > 0 Then
                 pvOutput vbNullString
             End If
-            For lIdx = 0 To .Count - 1
-                If Not pvEmitStmt(.Children(lIdx)) Then
-                    GoTo QH
-                End If
-            Next
             m_uIr.OutIndent = m_uIr.OutIndent - 1
+            GoSub EmitChildren
             pvOutput "End " & m_uIr.OutFuncType
         Case ucsIrtDeclEnum
             pvOutput "Private Enum " & .Text
-            m_uIr.OutIndent = m_uIr.OutIndent + 1
-            For lIdx = 0 To .Count - 1
-                If Not pvEmitStmt(.Children(lIdx)) Then
-                    GoTo QH
-                End If
-            Next
-            m_uIr.OutIndent = m_uIr.OutIndent - 1
+            GoSub EmitChildren
             pvOutput "End Enum"
         Case ucsIrtDeclLabel
             '--- note: no indent
@@ -971,27 +958,21 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
             pvOutput "Exit " & m_uIr.OutFuncType
         Case ucsIrtStmtDoLoop
             pvOutput "Do"
-            m_uIr.OutIndent = m_uIr.OutIndent + 1
-            For lIdx = 0 To .Count - 1
-                If Not pvEmitStmt(.Children(lIdx)) Then
-                    GoTo QH
-                End If
-            Next
-            m_uIr.OutIndent = m_uIr.OutIndent - 1
+            GoSub EmitChildren
             pvOutput "Loop"
         Case ucsIrtStmtDoExit
             pvOutput "Exit Do"
         Case ucsIrtStmtIf
             pvOutput "If " & pvEmitExpr(.Children(0)) & " Then", Comment:=.Comment
+            m_uIr.OutIndent = m_uIr.OutIndent + 1
             If .Count > 1 Then
-                m_uIr.OutIndent = m_uIr.OutIndent + 1
                 If Not pvEmitStmt(.Children(1)) Then
                     GoTo QH
                 End If
-                m_uIr.OutIndent = m_uIr.OutIndent - 1
             Else
                 pvOutput "'--- do nothing"
             End If
+            m_uIr.OutIndent = m_uIr.OutIndent - 1
             If .Count > 2 Then
                 pvOutput "Else"
                 m_uIr.OutIndent = m_uIr.OutIndent + 1
@@ -1003,21 +984,18 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
             pvOutput "End If"
         Case ucsIrtStmtSelect
             pvOutput "Select Case " & .Text
-            For lIdx = 0 To .Count - 1
-                If Not pvEmitStmt(.Children(lIdx)) Then
-                    GoTo QH
-                End If
-            Next
+            bDontIndent = True
+            GoSub EmitChildren
             pvOutput "End Select"
         Case ucsIrtStmtCase
             pvOutput "Case " & .Text, Comment:=.Comment
-            m_uIr.OutIndent = m_uIr.OutIndent + 1
-            For lIdx = 0 To .Count - 1
-                If Not pvEmitStmt(.Children(lIdx)) Then
-                    GoTo QH
-                End If
-            Next
-            m_uIr.OutIndent = m_uIr.OutIndent - 1
+            If .Count > 0 Then
+                GoSub EmitChildren
+            Else
+                m_uIr.OutIndent = m_uIr.OutIndent + 1
+                pvOutput "'--- do nothing"
+                m_uIr.OutIndent = m_uIr.OutIndent - 1
+            End If
         Case ucsIrtStmtSavePos
             If Left$(.Text, Len(STR_BUFPOS_PREFIX)) = STR_BUFPOS_PREFIX Then
                 pvOutput .Text & " = .BufPos"
@@ -1034,13 +1012,7 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
             pvOutput .Text
         Case ucsIrtStmtWith
             pvOutput "With " & .Text
-            m_uIr.OutIndent = m_uIr.OutIndent + 1
-            For lIdx = 0 To .Count - 1
-                If Not pvEmitStmt(.Children(lIdx)) Then
-                    GoTo QH
-                End If
-            Next
-            m_uIr.OutIndent = m_uIr.OutIndent - 1
+            GoSub EmitChildren
             pvOutput "End With"
         Case ucsIrtStmtCapture
             pvOutput .Text & " = .BufPos"
@@ -1063,13 +1035,17 @@ QH:
     Exit Function
 EmitChildren:
     With m_uIr.Nodes(lNode)
-        m_uIr.OutIndent = m_uIr.OutIndent + 1
+        If Not bDontIndent Then
+            m_uIr.OutIndent = m_uIr.OutIndent + 1
+        End If
         For lIdx = 0 To .Count - 1
             If Not pvEmitStmt(.Children(lIdx)) Then
                 GoTo QH
             End If
         Next
-        m_uIr.OutIndent = m_uIr.OutIndent - 1
+        If Not bDontIndent Then
+            m_uIr.OutIndent = m_uIr.OutIndent - 1
+        End If
     End With
     Return
 End Function
