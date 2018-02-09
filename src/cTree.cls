@@ -27,12 +27,12 @@ DefObj A-Z
 ' Constants and member variables
 '=========================================================================
 
-Private Const STR_TYPES             As String = "|Rule|Reference|Dot|String|Class|Action|Predicate|Alternate|Sequence|PeekFor|PeekNot|Query|Star|Plus"
+Private Const STR_TYPES             As String = "|Rule|Variable|Reference|Dot|String|Class|Action|Predicate|Alternate|Sequence|PeekFor|PeekNot|Query|Star|Plus"
 Private Const NODE_ROOT             As Long = 0
 
 Public Enum UcsTreeNodeTypeEnum
     ucsNdtRule = 1
-'    ucsNdtVariable
+    ucsNdtVariable
     ucsNdtReference
     ucsNdtDot
     ucsNdtString
@@ -65,8 +65,10 @@ Private Type UcsTreeNodeType
     NodeType            As UcsTreeNodeTypeEnum
     Text                As String
     Children()          As Long
+    Variables()         As Long
     Id                  As Long
-    Rule                As Long
+    RefRule             As Long
+    RefVar              As Long
     Flags               As UcsTreeNodeFlagsEnum
     RestoreFrom         As Long
 End Type
@@ -148,7 +150,7 @@ Property Get NodeRestoreFrom(ByVal lNode As Long) As Long
 End Property
 
 Property Get NodeRule(ByVal lNode As Long) As Long
-    NodeRule = m_uTree.Nodes(lNode).Rule
+    NodeRule = m_uTree.Nodes(lNode).RefRule
 End Property
 
 Property Get NodeId(ByVal lNode As Long) As Long
@@ -173,6 +175,7 @@ Private Function pvNewNode( _
             ReDim .Nodes(0 To 4) As UcsTreeNodeType
             '-- root node holds all the rules as children
             .Nodes(NODE_ROOT).Children = EmptyLongArray
+            .Nodes(NODE_ROOT).Variables = EmptyLongArray
             .Count = 1
         ElseIf .Count > UBound(.Nodes) Then
             ReDim Preserve .Nodes(0 To 2 * UBound(.Nodes)) As UcsTreeNodeType
@@ -185,6 +188,7 @@ Private Function pvNewNode( _
             Else
                 .Children = EmptyLongArray
             End If
+            .Variables = EmptyLongArray
         End With
         RetVal = .Count
         .Count = .Count + 1
@@ -224,20 +228,38 @@ Public Function BeginRule(ByVal lRule As Long) As Long
     End With
 End Function
 
-'Public Function MakeVariable(sName As String) As Long
-'    With m_uTree
-'        Debug.Assert .ThisRule <> 0
-'        MakeVariable = pvNewNode(ucsNdtVariable, sName)
-'        AppendChild .ThisRule, MakeVariable
-'    End With
-'End Function
+Public Function MakeVariable(sName As String) As Long
+    Dim vElem           As Variant
+    Dim lIdx            As Long
+    
+    With m_uTree
+        Debug.Assert .ThisRule <> 0
+        For Each vElem In .Nodes(.ThisRule).Variables
+            If .Nodes(vElem).Text = sName Then
+                MakeVariable = vElem
+                GoTo QH
+            End If
+        Next
+        MakeVariable = pvNewNode(ucsNdtVariable, sName)
+        .Nodes(MakeVariable).Id = UBound(.Nodes(.ThisRule).Variables) + 2
+        With .Nodes(.ThisRule)
+            lIdx = UBound(.Variables) + 1
+            ReDim Preserve .Variables(0 To lIdx) As Long
+            .Variables(lIdx) = MakeVariable
+        End With
+    End With
+QH:
+End Function
 
-Public Function MakeReference(ByVal lRule As Long) As Long
+Public Function MakeReference(ByVal lRule As Long, Optional ByVal lVariable As Long) As Long
     Dim sName           As String
     With m_uTree
         sName = .Nodes(lRule).Text
         MakeReference = pvNewNode(ucsNdtReference, sName)
-        .Nodes(MakeReference).Rule = lRule
+        With .Nodes(MakeReference)
+            .RefRule = lRule
+            .RefVar = lVariable
+        End With
         .Nodes(lRule).Flags = .Nodes(lRule).Flags Or ucsNdfUsed
     End With
 End Function
@@ -260,7 +282,7 @@ Public Function MakeAction(sText As String) As Long
         MakeAction = pvNewNode(ucsNdtAction, sText)
         .ActionsCount = .ActionsCount + 1
         .Nodes(MakeAction).Id = .ActionsCount
-        .Nodes(MakeAction).Rule = .ThisRule
+        .Nodes(MakeAction).RefRule = .ThisRule
     End With
 End Function
 
@@ -389,12 +411,20 @@ Private Sub pvOutputNode(ByVal lNode As Long, ByVal lIndent As Long)
             m_uTree.OutBuilder.Add Space$(4 * lIndent) & "[" & lNode & "] " & At(m_uTree.OutNodeTypes, .NodeType) & _
                 IIf(LenB(.Text) <> 0, ", Text=" & .Text, vbNullString) & _
                 IIf(.Id <> 0, ", Id=" & .Id, vbNullString) & _
-                IIf(.Rule <> 0, ", Rule=[" & .Rule & "]", vbNullString) & _
+                IIf(.RefRule <> 0, ", RefRule=[" & .RefRule & "]", vbNullString) & _
+                IIf(.RefVar <> 0, ", RefVar=[" & .RefVar & "]", vbNullString) & _
                 IIf(.Flags <> 0, ", Flags=(" & pvGetNodeFlags(.Flags) & ")", vbNullString) & _
                 IIf(UBound(.Children) > 0, ", NumChildren=" & UBound(.Children) + 1, vbNullString) & _
                 IIf(.RestoreFrom <> 0, ", RestoreFrom=[" & .RestoreFrom & "]", vbNullString)
         End If
         For Each vElem In .Children
+            If vElem > NODE_ROOT Then
+                pvOutputNode vElem, lIndent + 1
+            Else
+                m_uTree.OutBuilder.Add Space$(4 * (lIndent + 1)) & "Missing"
+            End If
+        Next
+        For Each vElem In .Variables
             If vElem > NODE_ROOT Then
                 pvOutputNode vElem, lIndent + 1
             Else
@@ -437,6 +467,24 @@ Private Function pvGetNodeFlags(ByVal eFlags As UcsTreeNodeFlagsEnum) As String
     End If
 End Function
 
+Public Function CheckTree() As Boolean
+    Dim vElem           As Variant
+    
+    With m_uTree.Nodes(NODE_ROOT)
+        For Each vElem In .Children
+            With m_uTree.Nodes(vElem)
+                If .Children(0) = 0 Then
+                    m_uTree.LastError = "Undefined rule '" & .Text & "'"
+                    GoTo QH
+                End If
+            End With
+        Next
+    End With
+    '--- success
+    CheckTree = True
+QH:
+End Function
+
 Public Function OptimizeTree() As Boolean
     Dim vElem           As Variant
     
@@ -470,6 +518,7 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
     
     With m_uTree.Nodes(lNode)
         For Each vElem In .Children
+            Debug.Assert vElem > NODE_ROOT
             If pvOptimizePass1(vElem) Then
                 pvOptimizePass1 = True
             End If
@@ -511,7 +560,7 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
             End If
         Case ucsNdtReference
             If (.Flags And ucsNdfAlwaysTrue) = 0 Then
-                If (m_uTree.Nodes(.Rule).Flags And ucsNdfAlwaysTrue) <> 0 Then
+                If (m_uTree.Nodes(.RefRule).Flags And ucsNdfAlwaysTrue) <> 0 Then
                     .Flags = .Flags Or ucsNdfAlwaysTrue
                     pvOptimizePass1 = True
                 End If
@@ -644,9 +693,9 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
                 pvOptimizePass2 = True
             End If
         Case ucsNdtReference
-            If (m_uTree.Nodes(.Rule).Flags And ucsNdfCanInline) <> 0 Then
+            If (m_uTree.Nodes(.RefRule).Flags And ucsNdfCanInline) <> 0 Then
                 lFlags = m_uTree.Nodes(lNode).Flags
-                m_uTree.Nodes(lNode) = m_uTree.Nodes(m_uTree.Nodes(.Rule).Children(0))
+                m_uTree.Nodes(lNode) = m_uTree.Nodes(m_uTree.Nodes(.RefRule).Children(0))
                 m_uTree.Nodes(lNode).Flags = lFlags
                 pvOptimizePass2 = True
             End If
@@ -691,8 +740,8 @@ Private Function pvUpdateUsed(ByVal lNode As Long) As Boolean
         Next
         Select Case .NodeType
         Case ucsNdtReference
-            If (m_uTree.Nodes(.Rule).Flags And ucsNdfUsed) = 0 Then
-                m_uTree.Nodes(.Rule).Flags = m_uTree.Nodes(.Rule).Flags Or ucsNdfUsed
+            If (m_uTree.Nodes(.RefRule).Flags And ucsNdfUsed) = 0 Then
+                m_uTree.Nodes(.RefRule).Flags = m_uTree.Nodes(.RefRule).Flags Or ucsNdfUsed
                 pvUpdateUsed = True
             End If
         End Select
@@ -744,7 +793,7 @@ Private Function pvUpdateHasActions(ByVal lNode As Long, bHasActions As Boolean)
                 End If
             End If
         Case ucsNdtReference
-            If (m_uTree.Nodes(.Rule).Flags And ucsNdfHasActions) <> 0 Then
+            If (m_uTree.Nodes(.RefRule).Flags And ucsNdfHasActions) <> 0 Then
                 bHasActions = True
                 If (.Flags And ucsNdfHasActions) = 0 Then
                     .Flags = .Flags Or ucsNdfHasActions

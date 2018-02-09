@@ -84,8 +84,12 @@ Private Sub Main()
         ConsoleError "Error parsing: %1" & vbCrLf, oParser.LastError
         Exit Sub
     End If
+    If Not oTree.CheckTree() Then
+        ConsoleError "%1" & vbCrLf, oTree.LastError
+        Exit Sub
+    End If
     If Not oTree.OptimizeTree() Then
-        ConsoleError "Failed tree optimize: %1" & vbCrLf, oTree.LastError
+        ConsoleError "Optimize failed: %1" & vbCrLf, oTree.LastError
         Exit Sub
     End If
     If oOpt.Item("-tree") Then

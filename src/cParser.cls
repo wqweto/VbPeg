@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 7.2.2018 11:39:35
+' Auto-generated on 8.2.2018 21:26:36
 Option Explicit
 DefObj A-Z
 
@@ -25,6 +25,8 @@ Private Declare Function RtlCompareMemory Lib "ntdll" (Source1 As Any, Source2 A
 '=========================================================================
 ' Constants and member variables
 '=========================================================================
+
+Private Const LNG_MAXINT            As Long = 2 ^ 31 - 1
 
 '= generated enum ========================================================
 
@@ -40,13 +42,15 @@ Private Enum UcsParserActionsEnum
     ucsAct_1_Suffix
     ucsAct_2_Suffix
     ucsAct_3_Suffix
-    ucsAct_1_Primary
     ucsAct_2_Primary
+    ucsAct_1_Primary
     ucsAct_3_Primary
     ucsAct_4_Primary
     ucsAct_5_Primary
     ucsAct_6_Primary
     ucsAct_7_Primary
+    ucsAct_8_Primary
+    ucsAct_9_Primary
 End Enum
 
 Private Type UcsParserThunkType
@@ -79,7 +83,7 @@ Property Get LastError() As String
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "7.2.2018 11:39:35"
+    ParserVersion = "8.2.2018 21:26:36"
 End Property
 
 '=========================================================================
@@ -167,7 +171,7 @@ Public Function ParseGrammar() As Boolean
         p7 = .BufPos
         q7 = .ThunkPos
         Call ParseSpacing
-        For i6 = 0 To 2147483647
+        For i6 = 0 To LNG_MAXINT
             If Not ParseDefinition() Then
                 Exit For
             End If
@@ -206,7 +210,7 @@ Public Function ParseDefinition() As Boolean
         q13 = .ThunkPos
         If ParseIdentifier() Then
             pvPushAction ucsAct_1_Definition
-            If ParseLEFTARROW() Then
+            If ParseAssign() Then
                 Call ParseExpression
                 pvPushAction ucsAct_2_Definition
                 ParseDefinition = True
@@ -231,11 +235,11 @@ Public Function ParseIdentifier() As Boolean
     With ctx
         .CaptureBegin = .BufPos
         Select Case .BufData(.BufPos)
-        Case 97 To 122, 65 To 90, 95                ' [a-zA-Z_]
+        Case 97 To 122, 65 To 90, 95, 92, 45        ' [a-zA-Z_\-]
             .BufPos = .BufPos + 1
             Do
                 Select Case .BufData(.BufPos)
-                Case 97 To 122, 65 To 90, 95, 48 To 57 ' [a-zA-Z_0-9]
+                Case 97 To 122, 65 To 90, 95, 92 To 48, 45, 57 ' [a-zA-Z_\-0-9]
                     .BufPos = .BufPos + 1
                 Case Else
                     Exit Do
@@ -248,20 +252,20 @@ Public Function ParseIdentifier() As Boolean
     End With
 End Function
 
-Public Function ParseLEFTARROW() As Boolean
-    With ctx
-        If pvMatchString("<-") Then                 ' "<-"
-            .BufPos = .BufPos + 2
-            Call ParseSpacing
-            ParseLEFTARROW = True
-        End If
-    End With
+Public Function ParseAssign() As Boolean
+    If ParseLEFTARROW() Then
+        ParseAssign = True
+        Exit Function
+    End If
+    If ParseEQUAL() Then
+        ParseAssign = True
+    End If
 End Function
 
 Public Sub ParseExpression()
     Call ParseSequence
     Do
-        If Not ParseSLASH() Then
+        If Not ParseChoice() Then
             Exit Do
         End If
         Call ParseSequence
@@ -281,14 +285,14 @@ Public Sub ParseSequence()
     Loop
 End Sub
 
-Public Function ParseSLASH() As Boolean
-    With ctx
-        If .BufData(.BufPos) = 47 Then              ' "/"
-            .BufPos = .BufPos + 1
-            Call ParseSpacing
-            ParseSLASH = True
-        End If
-    End With
+Public Function ParseChoice() As Boolean
+    If ParseSLASH() Then
+        ParseChoice = True
+        Exit Function
+    End If
+    If ParseBAR() Then
+        ParseChoice = True
+    End If
 End Function
 
 Public Function ParsePrefix() As Boolean
@@ -345,10 +349,10 @@ Public Function ParseAND() As Boolean
 End Function
 
 Public Function ParseAction() As Boolean
-    Dim p240 As Long
+    Dim p253 As Long
 
     With ctx
-        p240 = .BufPos
+        p253 = .BufPos
         If .BufData(.BufPos) = 123 Then             ' "{"
             .BufPos = .BufPos + 1
             .CaptureBegin = .BufPos
@@ -366,7 +370,7 @@ Public Function ParseAction() As Boolean
                 ParseAction = True
                 Exit Function
             Else
-                .BufPos = p240
+                .BufPos = p253
             End If
         End If
     End With
@@ -402,18 +406,39 @@ Public Function ParseNOT() As Boolean
 End Function
 
 Public Function ParsePrimary() As Boolean
-    Dim p83 As Long
-    Dim q83 As Long
+    Dim p86 As Long
+    Dim q86 As Long
 
     With ctx
-        p83 = .BufPos
-        q83 = .ThunkPos
+        p86 = .BufPos
+        q86 = .ThunkPos
         If ParseIdentifier() Then
-            If ParseLEFTARROW() Then
-                .BufPos = p83
-                .ThunkPos = q83
+            pvPushAction ucsAct_1_Primary
+            If ParseCOLON() Then
+                If ParseIdentifier() Then
+                    If ParseAssign() Then
+                        .BufPos = p86
+                        .ThunkPos = q86
+                    Else
+                        pvPushAction ucsAct_2_Primary
+                        ParsePrimary = True
+                        Exit Function
+                    End If
+                Else
+                    .BufPos = p86
+                    .ThunkPos = q86
+                End If
             Else
-                pvPushAction ucsAct_1_Primary
+                .BufPos = p86
+                .ThunkPos = q86
+            End If
+        End If
+        If ParseIdentifier() Then
+            If ParseAssign() Then
+                .BufPos = p86
+                .ThunkPos = q86
+            Else
+                pvPushAction ucsAct_3_Primary
                 ParsePrimary = True
                 Exit Function
             End If
@@ -424,37 +449,37 @@ Public Function ParsePrimary() As Boolean
                 ParsePrimary = True
                 Exit Function
             Else
-                .BufPos = p83
-                .ThunkPos = q83
+                .BufPos = p86
+                .ThunkPos = q86
             End If
         End If
         If ParseLiteral() Then
-            pvPushAction ucsAct_2_Primary
-            ParsePrimary = True
-            Exit Function
-        End If
-        If ParseClass() Then
-            pvPushAction ucsAct_3_Primary
-            ParsePrimary = True
-            Exit Function
-        End If
-        If ParseDOT() Then
             pvPushAction ucsAct_4_Primary
             ParsePrimary = True
             Exit Function
         End If
-        If ParseAction() Then
+        If ParseClass() Then
             pvPushAction ucsAct_5_Primary
             ParsePrimary = True
             Exit Function
         End If
-        If ParseBEGIN() Then
+        If ParseDOT() Then
             pvPushAction ucsAct_6_Primary
             ParsePrimary = True
             Exit Function
         End If
-        If ParseEND() Then
+        If ParseAction() Then
             pvPushAction ucsAct_7_Primary
+            ParsePrimary = True
+            Exit Function
+        End If
+        If ParseBEGIN() Then
+            pvPushAction ucsAct_8_Primary
+            ParsePrimary = True
+            Exit Function
+        End If
+        If ParseEND() Then
+            pvPushAction ucsAct_9_Primary
             ParsePrimary = True
         End If
     End With
@@ -490,6 +515,16 @@ Public Function ParsePLUS() As Boolean
     End With
 End Function
 
+Public Function ParseCOLON() As Boolean
+    With ctx
+        If .BufData(.BufPos) = 58 Then              ' ":"
+            .BufPos = .BufPos + 1
+            Call ParseSpacing
+            ParseCOLON = True
+        End If
+    End With
+End Function
+
 Public Function ParseOPEN() As Boolean
     With ctx
         If .BufData(.BufPos) = 40 Then              ' "("
@@ -511,10 +546,10 @@ Public Function ParseCLOSE() As Boolean
 End Function
 
 Public Function ParseLiteral() As Boolean
-    Dim p143 As Long
+    Dim p152 As Long
 
     With ctx
-        p143 = .BufPos
+        p152 = .BufPos
         If .BufData(.BufPos) = 39 Then              ' "'"
             .BufPos = .BufPos + 1
             .CaptureBegin = .BufPos
@@ -533,7 +568,7 @@ Public Function ParseLiteral() As Boolean
                 ParseLiteral = True
                 Exit Function
             Else
-                .BufPos = p143
+                .BufPos = p152
             End If
         End If
         If .BufData(.BufPos) = 34 Then              ' """
@@ -554,17 +589,17 @@ Public Function ParseLiteral() As Boolean
                 ParseLiteral = True
                 Exit Function
             Else
-                .BufPos = p143
+                .BufPos = p152
             End If
         End If
     End With
 End Function
 
 Public Function ParseClass() As Boolean
-    Dim p146 As Long
+    Dim p155 As Long
 
     With ctx
-        p146 = .BufPos
+        p155 = .BufPos
         If .BufData(.BufPos) = 91 Then              ' "["
             .BufPos = .BufPos + 1
             .CaptureBegin = .BufPos
@@ -583,7 +618,7 @@ Public Function ParseClass() As Boolean
                 ParseClass = True
                 Exit Function
             Else
-                .BufPos = p146
+                .BufPos = p155
             End If
         End If
     End With
@@ -620,10 +655,10 @@ Public Function ParseEND() As Boolean
 End Function
 
 Public Function ParseChar() As Boolean
-    Dim p170 As Long
+    Dim p181 As Long
 
     With ctx
-        p170 = .BufPos
+        p181 = .BufPos
         If .BufData(.BufPos) = 92 Then              ' "\\"
             .BufPos = .BufPos + 1
             Select Case .BufData(.BufPos)
@@ -632,7 +667,7 @@ Public Function ParseChar() As Boolean
                 ParseChar = True
                 Exit Function
             Case Else
-                .BufPos = p170
+                .BufPos = p181
             End Select
         End If
         If .BufData(.BufPos) = 92 Then              ' "\\"
@@ -649,13 +684,13 @@ Public Function ParseChar() As Boolean
                         ParseChar = True
                         Exit Function
                     Case Else
-                        .BufPos = p170
+                        .BufPos = p181
                     End Select
                 Case Else
-                    .BufPos = p170
+                    .BufPos = p181
                 End Select
             Case Else
-                .BufPos = p170
+                .BufPos = p181
             End Select
         End If
         If .BufData(.BufPos) = 92 Then              ' "\\"
@@ -672,10 +707,10 @@ L2:
                 ParseChar = True
                 Exit Function
             Case Else
-                .BufPos = p170
+                .BufPos = p181
             End Select
         End If
-        If pvMatchString("\-") Then                 ' "\\-"
+        If .BufData(.BufPos) = 92 And .BufData(.BufPos + 1) = 45 Then ' "\\-"
             .BufPos = .BufPos + 2
             ParseChar = True
             Exit Function
@@ -690,25 +725,49 @@ L2:
 End Function
 
 Public Function ParseRange() As Boolean
-    Dim p161 As Long
+    Dim p172 As Long
 
     With ctx
-        p161 = .BufPos
+        p172 = .BufPos
         If ParseChar() Then
             If .BufData(.BufPos) = 45 Then          ' "-"
                 .BufPos = .BufPos + 1
-                If ParseChar() Then
-                    ParseRange = True
-                    Exit Function
+                If .BufData(.BufPos) = 93 Then      ' "]"
+                    .BufPos = p172
                 Else
-                    .BufPos = p161
+                    If ParseChar() Then
+                        ParseRange = True
+                        Exit Function
+                    Else
+                        .BufPos = p172
+                    End If
                 End If
             Else
-                .BufPos = p161
+                .BufPos = p172
             End If
         End If
         If ParseChar() Then
             ParseRange = True
+        End If
+    End With
+End Function
+
+Public Function ParseLEFTARROW() As Boolean
+    With ctx
+        If .BufData(.BufPos) = 60 And .BufData(.BufPos + 1) = 45 Then ' "<-"
+            .BufPos = .BufPos + 2
+            Call ParseSpacing
+            ParseLEFTARROW = True
+        End If
+    End With
+End Function
+
+Public Function ParseSLASH() As Boolean
+    With ctx
+        If .BufData(.BufPos) = 47 Then              ' "/"
+            .BufPos = .BufPos + 1
+            Call ParseSpacing
+            ParseSLASH = True
         End If
     End With
 End Function
@@ -732,23 +791,23 @@ Public Function ParseSpace() As Boolean
 End Function
 
 Public Function ParseComment() As Boolean
-    Dim p226 As Long
-    Dim p224 As Long
+    Dim p239 As Long
+    Dim p237 As Long
 
     With ctx
-        p226 = .BufPos
+        p239 = .BufPos
         If .BufData(.BufPos) = 35 Then              ' "#"
             .BufPos = .BufPos + 1
             Do
-                p224 = .BufPos
+                p237 = .BufPos
                 If ParseEndOfLine() Then
-                    .BufPos = p224
+                    .BufPos = p237
                     Exit Do
                 End If
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
-                    .BufPos = p224
+                    .BufPos = p237
                     Exit Do
                 End If
             Loop
@@ -756,7 +815,7 @@ Public Function ParseComment() As Boolean
                 ParseComment = True
                 Exit Function
             Else
-                .BufPos = p226
+                .BufPos = p239
             End If
         End If
     End With
@@ -764,7 +823,7 @@ End Function
 
 Public Function ParseEndOfLine() As Boolean
     With ctx
-        If pvMatchString(vbCrLf) Then               ' "\r\n"
+        If .BufData(.BufPos) = 13 And .BufData(.BufPos + 1) = 10 Then ' "\r\n"
             .BufPos = .BufPos + 2
             ParseEndOfLine = True
             Exit Function
@@ -777,6 +836,26 @@ Public Function ParseEndOfLine() As Boolean
         If .BufData(.BufPos) = 13 Then              ' "\r"
             .BufPos = .BufPos + 1
             ParseEndOfLine = True
+        End If
+    End With
+End Function
+
+Public Function ParseEQUAL() As Boolean
+    With ctx
+        If .BufData(.BufPos) = 61 Then              ' "="
+            .BufPos = .BufPos + 1
+            Call ParseSpacing
+            ParseEQUAL = True
+        End If
+    End With
+End Function
+
+Public Function ParseBAR() As Boolean
+    With ctx
+        If .BufData(.BufPos) = 124 Then             ' "|"
+            .BufPos = .BufPos + 1
+            Call ParseSpacing
+            ParseBAR = True
         End If
     End With
 End Function
@@ -812,19 +891,23 @@ Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As
              .Push .MakeStar(.Pop)
         Case ucsAct_3_Suffix
              .Push .MakePlus(.Pop)
-        Case ucsAct_1_Primary
-             .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
         Case ucsAct_2_Primary
-             .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize))
+             .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize)), .Pop)
+        Case ucsAct_1_Primary
+             .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize))
         Case ucsAct_3_Primary
-             .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize))
+             .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
         Case ucsAct_4_Primary
-             .Push .MakeDot()
+             .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize))
         Case ucsAct_5_Primary
-             .Push .MakeAction(Mid$(ctx.Contents, lOffset, lSize))
+             .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize))
         Case ucsAct_6_Primary
-             .Push .MakePredicate("YY_BEGIN")
+             .Push .MakeDot()
         Case ucsAct_7_Primary
+             .Push .MakeAction(Mid$(ctx.Contents, lOffset, lSize))
+        Case ucsAct_8_Primary
+             .Push .MakePredicate("YY_BEGIN")
+        Case ucsAct_9_Primary
              .Push .MakePredicate("YY_END")
         End Select
     End With

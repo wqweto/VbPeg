@@ -24,8 +24,8 @@ Definition      <- Identifier                   {
             End If
             .Push lNode
 }
-                     LEFTARROW Expression       { Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode }
-Expression      <- Sequence (SLASH Sequence     { lNode = .Pop(): .Push .AppendChild(.MakeAlternate(.Pop), lNode) }
+                     Assign Expression          { Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode }
+Expression      <- Sequence (Choice Sequence    { lNode = .Pop(): .Push .AppendChild(.MakeAlternate(.Pop), lNode) }
                             )*
 Sequence        <- Prefix (Prefix               { lNode = .Pop(): .Push .AppendSequence(.MakeSequence(.Pop), lNode) }
                           )*
@@ -38,7 +38,9 @@ Suffix          <- Primary (QUESTION            { .Push .MakeQuery(.Pop) }
                              / STAR             { .Push .MakeStar(.Pop) }
                              / PLUS             { .Push .MakePlus(.Pop) }
                            )?
-Primary         <- Identifier !LEFTARROW        { .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize))) }
+Primary         <- Identifier                   { .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize)) }
+                      COLON Identifier !Assign  { .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize)), .Pop) }
+                 / Identifier !Assign           { .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize))) }
                  / OPEN Expression CLOSE
                  / Literal                      { .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)) }
                  / Class                        { .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize)) }
@@ -50,12 +52,12 @@ Primary         <- Identifier !LEFTARROW        { .Push .MakeReference(.FindRule
 # Lexical syntax
 
 Identifier      <- < IdentStart IdentCont* > Spacing
-IdentStart      <- [a-zA-Z_]
+IdentStart      <- [a-zA-Z_\-]
 IdentCont       <- IdentStart / [0-9]
 Literal         <- ['] < (!['] Char )* > ['] Spacing
                  / ["] < (!["] Char )* > ["] Spacing
 Class           <- '[' < (!']' Range)* > ']' Spacing
-Range           <- Char '-' Char / Char
+Range           <- Char '-' !']' Char / Char
 Char            <- '\\' [abefnrtv'"\[\]\\]
                  / '\\' [0-3][0-7][0-7]
                  / '\\' [0-7][0-7]?
@@ -80,3 +82,9 @@ EndOfFile       <- !.
 Action          <- '{' < [^}]* > '}' Spacing
 BEGIN           <- '<' Spacing
 END             <- '>' Spacing
+
+Assign          <- LEFTARROW / EQUAL
+Choice          <- SLASH / BAR
+EQUAL           <- '=' Spacing
+BAR             <- '|' Spacing
+COLON           <- ':' Spacing
