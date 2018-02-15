@@ -1,26 +1,26 @@
 
-Stmt    = - e:Expr EOL                  { printf("%d\n", e); }
-        | ( !EOL . )* EOL               { printf("error\n"); }
+Stmt    = - e:Expr EOL                  { Debug.Print $e }
+        | ( !EOL . )* EOL               { Debug.Print "error" }
 
-Expr    = i:ID ASSIGN s:Sum             { $$= vars[i]= s; }
-        | s:Sum                         { $$= s; }
+Expr    = i:ID ASSIGN s:Sum             { .vars($i) = $s : $$ = $s }
+        | s:Sum                         { $$ = $s }
 
 Sum     = l:Product
-                ( PLUS  r:Product       { l += r; }
-                | MINUS r:Product       { l -= r; }
-                )*                      { $$= l; }
+                ( PLUS  r:Product       { $l = $l + $r }
+                | MINUS r:Product       { $l = $l - $r }
+                )*                      { $$ = $l }
 
 Product = l:Value
-                ( TIMES  r:Value        { l *= r; }
-                | DIVIDE r:Value        { l /= r; }
-                )*                      { $$= l; }
+                ( TIMES  r:Value        { $l = $l * $r }
+                | DIVIDE r:Value        { $l = $l / $r }
+                )*                      { $$ = $l }
 
-Value   = i:NUMBER                      { $$= atoi(yytext); }
-        | i:ID !ASSIGN                  { $$= vars[i]; }
-        | OPEN i:Expr CLOSE             { $$= i; }
+Value   = i:NUMBER                      { $$ = CLng($$text) }
+        | i:ID !ASSIGN                  { $$ = .vars($i) }
+        | OPEN i:Expr CLOSE             { $$ = $i }
 
-NUMBER  = < [0-9]+ >    -               { $$= atoi(yytext); }
-ID      = < [a-z]  >    -               { $$= yytext[0] - 'a'; }
+NUMBER  = < [0-9]+ >    -               { $$ = CLng($$text) }
+ID      = < [a-z]  >    -               { $$ = Asc($$text) }
 ASSIGN  = '='           -
 PLUS    = '+'           -
 MINUS   = '-'           -
