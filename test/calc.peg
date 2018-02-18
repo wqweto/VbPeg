@@ -2,7 +2,7 @@
 Stmt    = - e:Expr EOL                  { Debug.Print $e }
         | ( !EOL . )* EOL               { Debug.Print "error" }
 
-Expr    = i:ID ASSIGN s:Sum             { .vars($i) = $s : $$ = $s }
+Expr    = i:ID ASSIGN s:Sum             { .UserData($i) = $s : $$ = $s }
         | s:Sum                         { $$ = $s }
 
 Sum     = l:Product
@@ -16,7 +16,7 @@ Product = l:Value
                 )*                      { $$ = $l }
 
 Value   = i:NUMBER                      { $$ = CLng($$text) }
-        | i:ID !ASSIGN                  { $$ = .vars($i) }
+        | i:ID !ASSIGN                  { $$ = .UserData($i) }
         | OPEN i:Expr CLOSE             { $$ = $i }
 
 NUMBER  = < [0-9]+ >    -               { $$ = CLng($$text) }

@@ -271,7 +271,7 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
         If .IrActionsSelect <> 0 Then
             lIrNode = AddChild( _
                 AddNode(ucsIrtDeclFunc, "pvImplAction(ByVal eAction As " & STR_ACTIONS_ENUM_NAME & ", ByVal lOffset As Long, ByVal lSize As Long)"), AddChild( _
-                    AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME & ".UserData"), _
+                    AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME), _
                         .IrActionsSelect))
             IrFlag(lIrNode, ucsIrfVoid) = True
         End If
@@ -591,16 +591,43 @@ QH:
 End Function
 
 Private Function pvCodeGenAction(sText As String, ByVal lRule As Long) As String
-    Dim sDumpVars   As String
-    Dim lIdx        As Long
+    Dim lIdx            As Long
+    Dim cOutput         As Collection
+    Dim oMatch          As Object
+    Dim lPos            As Long
+    Dim oVars           As Object
     
+    Set oVars = CreateObject("Scripting.Dictionary")
+    oVars.CompareMode = vbTextCompare
+    oVars.Item("$$") = ".VarResult"
+    oVars.Item("$$text") = "Mid$(.Contents, lOffset, lSize)"
     With m_uIr.CodeGenTree
         For lIdx = 0 To .NodeNumVariables(lRule) - 1
-            sDumpVars = IIf(LenB(sDumpVars) <> 0, sDumpVars & ", ", " ' ") & _
-                .NodeText(.NodeVariable(lRule, lIdx))
+            lPos = .NodeVariable(lRule, lIdx)
+            oVars.Item("$" & .NodeText(lPos)) = ".VarStack(.VarPos - " & .NodeId(lPos) & ")"
         Next
     End With
-    pvCodeGenAction = sText & sDumpVars
+    lPos = 1
+    Set cOutput = New Collection
+    For Each oMatch In pvCodeGenEnumVars(sText)
+        cOutput.Add Mid$(sText, lPos, oMatch.FirstIndex - lPos + 1)
+        If oVars.Exists(oMatch.Value) Then
+            cOutput.Add oVars.Item(oMatch.Value)
+        Else
+            cOutput.Add oMatch.Value
+        End If
+        lPos = oMatch.FirstIndex + oMatch.Length + 1
+    Next
+    cOutput.Add Mid$(sText, lPos)
+    pvCodeGenAction = ConcatCollection(cOutput)
+End Function
+
+Public Function pvCodeGenEnumVars(sAction As String) As Object
+    With CreateObject("VBScript.RegExp")
+        .Global = True
+        .Pattern = "\$[\$\w_][\d\w_]*"
+        Set pvCodeGenEnumVars = .Execute(sAction)
+    End With
 End Function
 
 Private Function pvCodeGenId() As Long
@@ -920,9 +947,9 @@ Public Function EmitCode( _
 "        For lIdx = 0 To .ThunkPos - 1" & vbCrLf & _
 "            Select Case .ThunkData(lIdx).Action" & vbCrLf & _
 "            Case ucsActVarAlloc" & vbCrLf & _
-"                .VarPos = .VarPos + .CaptureBegin" & vbCrLf & _
+"                .VarPos = .VarPos + .ThunkData(lIdx).CaptureBegin" & vbCrLf & _
 "            Case ucsActVarSet" & vbCrLf & _
-"                .VarStack(.VarPos - .CaptureBegin) = .VarResult" & vbCrLf & _
+"                .VarStack(.VarPos - .ThunkData(lIdx).CaptureBegin) = .VarResult" & vbCrLf & _
 "            Case Else" & vbCrLf & _
 "                With .ThunkData(lIdx)" & vbCrLf & _
 "                    pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin" & vbCrLf & _
