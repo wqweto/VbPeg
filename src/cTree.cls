@@ -149,12 +149,24 @@ Property Get NodeRestoreFrom(ByVal lNode As Long) As Long
     NodeRestoreFrom = m_uTree.Nodes(lNode).RestoreFrom
 End Property
 
-Property Get NodeRule(ByVal lNode As Long) As Long
-    NodeRule = m_uTree.Nodes(lNode).RefRule
+Property Get NodeRefRule(ByVal lNode As Long) As Long
+    NodeRefRule = m_uTree.Nodes(lNode).RefRule
+End Property
+
+Property Get NodeRefVar(ByVal lNode As Long) As Long
+    NodeRefVar = m_uTree.Nodes(lNode).RefVar
 End Property
 
 Property Get NodeId(ByVal lNode As Long) As Long
     NodeId = m_uTree.Nodes(lNode).Id
+End Property
+
+Property Get NodeVariable(ByVal lNode As Long, ByVal lIdx As Long) As Long
+    NodeVariable = m_uTree.Nodes(lNode).Variables(lIdx)
+End Property
+
+Property Get NodeNumVariables(ByVal lNode As Long) As Long
+    NodeNumVariables = UBound(m_uTree.Nodes(lNode).Variables) + 1
 End Property
 
 Property Get StartRule() As Long

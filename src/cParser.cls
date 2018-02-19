@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 8.2.2018 21:26:36
+' Auto-generated on 19.2.2018 23:33:42
 Option Explicit
 DefObj A-Z
 
@@ -83,7 +83,7 @@ Property Get LastError() As String
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "8.2.2018 21:26:36"
+    ParserVersion = "19.2.2018 23:33:42"
 End Property
 
 '=========================================================================
@@ -139,14 +139,18 @@ Public Function EndMatch() As Long
 End Function
 
 Private Sub pvPushAction(ByVal eAction As UcsParserActionsEnum)
+    pvPushThunk eAction, ctx.CaptureBegin, ctx.CaptureEnd
+End Sub
+
+Private Sub pvPushThunk(ByVal eAction As UcsParserActionsEnum, ByVal lBegin As Long, Optional ByVal lEnd As Long)
     With ctx
         If UBound(.ThunkData) < .ThunkPos Then
             ReDim Preserve .ThunkData(0 To 2 * UBound(.ThunkData)) As UcsParserThunkType
         End If
         With .ThunkData(.ThunkPos)
             .Action = eAction
-            .CaptureBegin = ctx.CaptureBegin
-            .CaptureEnd = ctx.CaptureEnd
+            .CaptureBegin = lBegin
+            .CaptureEnd = lEnd
         End With
         .ThunkPos = .ThunkPos + 1
     End With
@@ -338,7 +342,7 @@ Public Function ParsePrefix() As Boolean
     End With
 End Function
 
-Public Function ParseAND() As Boolean
+Private Function ParseAND() As Boolean
     With ctx
         If .BufData(.BufPos) = 38 Then              ' "&"
             .BufPos = .BufPos + 1
@@ -395,7 +399,7 @@ L1:
     End If
 End Function
 
-Public Function ParseNOT() As Boolean
+Private Function ParseNOT() As Boolean
     With ctx
         If .BufData(.BufPos) = 33 Then              ' "!"
             .BufPos = .BufPos + 1
@@ -485,7 +489,7 @@ Public Function ParsePrimary() As Boolean
     End With
 End Function
 
-Public Function ParseQUESTION() As Boolean
+Private Function ParseQUESTION() As Boolean
     With ctx
         If .BufData(.BufPos) = 63 Then              ' "?"
             .BufPos = .BufPos + 1
@@ -495,7 +499,7 @@ Public Function ParseQUESTION() As Boolean
     End With
 End Function
 
-Public Function ParseSTAR() As Boolean
+Private Function ParseSTAR() As Boolean
     With ctx
         If .BufData(.BufPos) = 42 Then              ' "*"
             .BufPos = .BufPos + 1
@@ -505,7 +509,7 @@ Public Function ParseSTAR() As Boolean
     End With
 End Function
 
-Public Function ParsePLUS() As Boolean
+Private Function ParsePLUS() As Boolean
     With ctx
         If .BufData(.BufPos) = 43 Then              ' "+"
             .BufPos = .BufPos + 1
@@ -515,7 +519,7 @@ Public Function ParsePLUS() As Boolean
     End With
 End Function
 
-Public Function ParseCOLON() As Boolean
+Private Function ParseCOLON() As Boolean
     With ctx
         If .BufData(.BufPos) = 58 Then              ' ":"
             .BufPos = .BufPos + 1
@@ -525,7 +529,7 @@ Public Function ParseCOLON() As Boolean
     End With
 End Function
 
-Public Function ParseOPEN() As Boolean
+Private Function ParseOPEN() As Boolean
     With ctx
         If .BufData(.BufPos) = 40 Then              ' "("
             .BufPos = .BufPos + 1
@@ -535,7 +539,7 @@ Public Function ParseOPEN() As Boolean
     End With
 End Function
 
-Public Function ParseCLOSE() As Boolean
+Private Function ParseCLOSE() As Boolean
     With ctx
         If .BufData(.BufPos) = 41 Then              ' ")"
             .BufPos = .BufPos + 1
@@ -624,7 +628,7 @@ Public Function ParseClass() As Boolean
     End With
 End Function
 
-Public Function ParseDOT() As Boolean
+Private Function ParseDOT() As Boolean
     With ctx
         If .BufData(.BufPos) = 46 Then              ' "."
             .BufPos = .BufPos + 1
@@ -634,7 +638,7 @@ Public Function ParseDOT() As Boolean
     End With
 End Function
 
-Public Function ParseBEGIN() As Boolean
+Private Function ParseBEGIN() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -644,7 +648,7 @@ Public Function ParseBEGIN() As Boolean
     End With
 End Function
 
-Public Function ParseEND() As Boolean
+Private Function ParseEND() As Boolean
     With ctx
         If .BufData(.BufPos) = 62 Then              ' ">"
             .BufPos = .BufPos + 1
@@ -752,7 +756,7 @@ Public Function ParseRange() As Boolean
     End With
 End Function
 
-Public Function ParseLEFTARROW() As Boolean
+Private Function ParseLEFTARROW() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 And .BufData(.BufPos + 1) = 45 Then ' "<-"
             .BufPos = .BufPos + 2
@@ -762,7 +766,7 @@ Public Function ParseLEFTARROW() As Boolean
     End With
 End Function
 
-Public Function ParseSLASH() As Boolean
+Private Function ParseSLASH() As Boolean
     With ctx
         If .BufData(.BufPos) = 47 Then              ' "/"
             .BufPos = .BufPos + 1
@@ -840,7 +844,7 @@ Public Function ParseEndOfLine() As Boolean
     End With
 End Function
 
-Public Function ParseEQUAL() As Boolean
+Private Function ParseEQUAL() As Boolean
     With ctx
         If .BufData(.BufPos) = 61 Then              ' "="
             .BufPos = .BufPos + 1
@@ -850,7 +854,7 @@ Public Function ParseEQUAL() As Boolean
     End With
 End Function
 
-Public Function ParseBAR() As Boolean
+Private Function ParseBAR() As Boolean
     With ctx
         If .BufData(.BufPos) = 124 Then             ' "|"
             .BufPos = .BufPos + 1
@@ -861,54 +865,54 @@ Public Function ParseBAR() As Boolean
 End Function
 
 Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As Long, ByVal lSize As Long)
-    With ctx.UserData
+    With ctx
         Select Case eAction
         Case ucsAct_2_Definition
-             Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode
+             With .UserData: Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With
         Case ucsAct_1_Definition
-            
-            lNode = .BeginRule(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
-            If .RuleExpression(lNode) <> 0 Then
-                ConsoleError "Rule '%1' redefined" & vbCrLf, Mid$(ctx.Contents, lOffset, lSize)
-            End If
-            .Push lNode
-
+             With .UserData
+                lNode = .BeginRule(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
+                If .RuleExpression(lNode) <> 0 Then
+                    ConsoleError "Rule '%1' redefined" & vbCrLf, Mid$(ctx.Contents, lOffset, lSize)
+                End If
+                .Push lNode
+             End With
         Case ucsAct_1_Expression
-             lNode = .Pop(): .Push .AppendChild(.MakeAlternate(.Pop), lNode)
+             With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(.Pop), lNode): End With
         Case ucsAct_2_Sequence
-             .Push .MakePredicate("1")
+             With .UserData: .Push .MakePredicate("1"): End With
         Case ucsAct_1_Sequence
-             lNode = .Pop(): .Push .AppendSequence(.MakeSequence(.Pop), lNode)
+             With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(.Pop), lNode): End With
         Case ucsAct_1_Prefix
-             .Push .MakePredicate(Mid$(ctx.Contents, lOffset, lSize))
+             With .UserData: .Push .MakePredicate(Mid$(ctx.Contents, lOffset, lSize)): End With
         Case ucsAct_2_Prefix
-             .Push .MakePeekFor(.Pop)
+             With .UserData: .Push .MakePeekFor(.Pop): End With
         Case ucsAct_3_Prefix
-             .Push .MakePeekNot(.Pop)
+             With .UserData: .Push .MakePeekNot(.Pop): End With
         Case ucsAct_1_Suffix
-             .Push .MakeQuery(.Pop)
+             With .UserData: .Push .MakeQuery(.Pop): End With
         Case ucsAct_2_Suffix
-             .Push .MakeStar(.Pop)
+             With .UserData: .Push .MakeStar(.Pop): End With
         Case ucsAct_3_Suffix
-             .Push .MakePlus(.Pop)
+             With .UserData: .Push .MakePlus(.Pop): End With
         Case ucsAct_2_Primary
-             .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize)), .Pop)
+             With .UserData: .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize)), .Pop): End With
         Case ucsAct_1_Primary
-             .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize))
+             With .UserData: .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize)): End With
         Case ucsAct_3_Primary
-             .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
+             With .UserData: .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize))): End With
         Case ucsAct_4_Primary
-             .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize))
+             With .UserData: .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)): End With
         Case ucsAct_5_Primary
-             .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize))
+             With .UserData: .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize)): End With
         Case ucsAct_6_Primary
-             .Push .MakeDot()
+             With .UserData: .Push .MakeDot(): End With
         Case ucsAct_7_Primary
-             .Push .MakeAction(Mid$(ctx.Contents, lOffset, lSize))
+             With .UserData: .Push .MakeAction(Mid$(ctx.Contents, lOffset, lSize)): End With
         Case ucsAct_8_Primary
-             .Push .MakePredicate("YY_BEGIN")
+             With .UserData: .Push .MakePredicate("YY_BEGIN"): End With
         Case ucsAct_9_Primary
-             .Push .MakePredicate("YY_END")
+             With .UserData: .Push .MakePredicate("YY_END"): End With
         End Select
     End With
 End Sub
