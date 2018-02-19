@@ -1,8 +1,8 @@
 
-Stmt    = - e:Expr EOL                  { Debug.Print $e }
-        | ( !EOL . )* EOL               { Debug.Print "error" }
+Stmt    = - e:Expr EOL                  { ConsolePrint $e & vbCrLf }
+        | ( !EOL . )* EOL               { ConsolePrint "error" & vbCrLf }
 
-Expr    = i:ID ASSIGN s:Sum             { .UserData($i) = $s : $$ = $s }
+Expr    = i:ID ASSIGN s:Expr            { .UserData($i) = $s : $$ = $s }
         | s:Sum                         { $$ = $s }
 
 Sum     = l:Product
