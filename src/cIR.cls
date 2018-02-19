@@ -222,7 +222,7 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
             For Each vElem In .NodeChildren(NODE_ROOT)
                 If .NodeFlag(vElem, ucsNdfUsed) Or bAllRules Then
                     lBody = AddNode(ucsIrtDeclFunc, STR_FUNC_PREFIX & .NodeText(vElem))
-                    IrFlag(lBody, ucsIrfPublic) = True
+                    IrFlag(lBody, ucsIrfPublic) = (.NodeText(vElem) <> UCase$(.NodeText(vElem)))
                     If .NodeFlag(vElem, ucsNdfSavePos) Then
                         AddChild lBody, AddNode(ucsIrtStmtSavePos, STR_BUFPOS_PREFIX & vElem)
                         If .NodeFlag(vElem, ucsNdfHasActions) Then
@@ -893,10 +893,10 @@ Public Function EmitCode( _
 "'=========================================================================" & vbCrLf
         If LenB(.CodeGenStartFunc) <> 0 Then
             pvOutput _
-"Public Function " & .OutModulePrefix & "Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & ") As Long" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & ", Optional Result As " & sVarData & ") As Long" & vbCrLf & _
 "    If " & .OutModulePrefix & "BeginMatch(sSubject, StartPos, UserData) Then" & vbCrLf & _
-"        If " & .CodeGenStartFunc & "() Then" & vbCrLf & _
-"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch()" & vbCrLf & _
+"        If " & .OutModulePrefix & .CodeGenStartFunc & "() Then" & vbCrLf & _
+"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(Result)" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End If" & vbCrLf & _
 "End Function" & vbCrLf
@@ -936,7 +936,7 @@ Public Function EmitCode( _
 "End Function" & vbCrLf
         Else
             pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch() As Long" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "EndMatch(Optional Result As " & sVarData & ") As Long" & vbCrLf & _
 "    Dim lIdx            As Long" & vbCrLf & _
 "    Dim uEmpty          As UcsParserType" & vbCrLf & _
 "    " & vbCrLf & _
@@ -955,7 +955,12 @@ Public Function EmitCode( _
 "                    pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin" & vbCrLf & _
 "                End With" & vbCrLf & _
 "            End Select" & vbCrLf & _
-"        Next"
+"        Next" & vbCrLf & _
+"        If IsObject(.VarResult) Then" & vbCrLf & _
+"            Set Result = .VarResult" & vbCrLf & _
+"        Else" & vbCrLf & _
+"            Result = .VarResult" & vbCrLf & _
+"        End If"
             Else
                 pvOutput _
 "        For lIdx = 0 To .ThunkPos - 1" & vbCrLf & _
@@ -1024,14 +1029,19 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
             bDontIndent = True
             GoSub EmitChildren
         Case ucsIrtDeclFunc
-            m_uIr.OutFuncScope = IIf((.Flags And ucsIrfPublic) <> 0, "Public", "Private")
-            m_uIr.OutFuncName = .Text
+            If (.Flags And ucsIrfPublic) <> 0 Then
+                m_uIr.OutFuncScope = "Public"
+                m_uIr.OutFuncName = m_uIr.OutModulePrefix & .Text
+            Else
+                m_uIr.OutFuncScope = "Private"
+                m_uIr.OutFuncName = .Text
+            End If
             If (.Flags And ucsIrfVoid) <> 0 Then
                 m_uIr.OutFuncType = "Sub"
-                pvOutput m_uIr.OutFuncScope & " Sub " & .Text & IIf(Right$(.Text, 1) <> ")", "()", vbNullString)
+                pvOutput m_uIr.OutFuncScope & " Sub " & m_uIr.OutFuncName & IIf(Right$(.Text, 1) <> ")", "()", vbNullString)
             Else
                 m_uIr.OutFuncType = "Function"
-                pvOutput m_uIr.OutFuncScope & " Function " & .Text & "() As Boolean"
+                pvOutput m_uIr.OutFuncScope & " Function " & m_uIr.OutFuncName & "() As Boolean"
             End If
             m_uIr.OutDictionary.RemoveAll
             pvEmitCollectDeclVar lNode
@@ -1053,7 +1063,11 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
             '--- note: no indent
             m_uIr.OutBuilder.Add .Text & ":"
         Case ucsIrtStmtCall
-            pvOutput "Call " & .Text
+            If pvEmitIsPublic(.Text) Then
+                pvOutput "Call " & m_uIr.OutModulePrefix & .Text
+            Else
+                pvOutput "Call " & .Text
+            End If
         Case ucsIrtStmtRetVal
             pvOutput m_uIr.OutFuncName & " = " & .Text
         Case ucsIrtStmtExit
@@ -1170,13 +1184,27 @@ Private Function pvEmitExpr(ByVal lNode As Long) As String
     With m_uIr.Nodes(lNode)
         Select Case .NodeType
         Case ucsIrtExprCall
-            pvEmitExpr = .Text & "()"
+            If pvEmitIsPublic(.Text) Then
+                pvEmitExpr = m_uIr.OutModulePrefix & .Text & "()"
+            Else
+                pvEmitExpr = .Text & "()"
+            End If
         Case ucsIrtExprNot
             pvEmitExpr = "Not " & pvEmitExpr(.Children(0))
         Case ucsIrtExprEmit
             pvEmitExpr = .Text
         End Select
     End With
+End Function
+
+Private Function pvEmitIsPublic(sText As String) As Boolean
+    Dim lSize           As Long
+    
+    '--- ToDo: check func decl
+    lSize = Len(STR_FUNC_PREFIX)
+    If Left$(sText, lSize) = STR_FUNC_PREFIX And Mid$(sText, lSize + 1) <> UCase$(Mid$(sText, lSize + 1)) Then
+        pvEmitIsPublic = True
+    End If
 End Function
 
 Private Sub pvOutput(ByVal sText As String, Optional Comment As String)
