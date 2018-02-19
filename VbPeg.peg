@@ -17,37 +17,37 @@
 
 Grammar         <- Spacing Definition+ EndOfFile
 
-Definition      <- Identifier                   {
-            lNode = .BeginRule(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
-            If .RuleExpression(lNode) <> 0 Then
-                ConsoleError "Rule '%1' redefined" & vbCrLf, Mid$(ctx.Contents, lOffset, lSize)
-            End If
-            .Push lNode
-}
-                     Assign Expression          { Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode }
-Expression      <- Sequence (Choice Sequence    { lNode = .Pop(): .Push .AppendChild(.MakeAlternate(.Pop), lNode) }
+Definition      <- Identifier                   { With .UserData
+                lNode = .BeginRule(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
+                If .RuleExpression(lNode) <> 0 Then
+                    ConsoleError "Rule '%1' redefined" & vbCrLf, Mid$(ctx.Contents, lOffset, lSize)
+                End If
+                .Push lNode
+             End With }
+                     Assign Expression          { With .UserData: Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
+Expression      <- Sequence (Choice Sequence    { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(.Pop), lNode): End With }
                             )*
-Sequence        <- Prefix (Prefix               { lNode = .Pop(): .Push .AppendSequence(.MakeSequence(.Pop), lNode) }
+Sequence        <- Prefix (Prefix               { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(.Pop), lNode): End With }
                           )*
-                 /                              { .Push .MakePredicate("1") }
-Prefix          <- AND Action                   { .Push .MakePredicate(Mid$(ctx.Contents, lOffset, lSize)) }
-                 / AND Suffix                   { .Push .MakePeekFor(.Pop) }
-                 / NOT Suffix                   { .Push .MakePeekNot(.Pop) }
+                 /                              { With .UserData: .Push .MakePredicate("1"): End With }
+Prefix          <- AND Action                   { With .UserData: .Push .MakePredicate(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / AND Suffix                   { With .UserData: .Push .MakePeekFor(.Pop): End With }
+                 / NOT Suffix                   { With .UserData: .Push .MakePeekNot(.Pop): End With }
                  /     Suffix
-Suffix          <- Primary (QUESTION            { .Push .MakeQuery(.Pop) }
-                             / STAR             { .Push .MakeStar(.Pop) }
-                             / PLUS             { .Push .MakePlus(.Pop) }
+Suffix          <- Primary (QUESTION            { With .UserData: .Push .MakeQuery(.Pop): End With }
+                             / STAR             { With .UserData: .Push .MakeStar(.Pop): End With }
+                             / PLUS             { With .UserData: .Push .MakePlus(.Pop): End With }
                            )?
-Primary         <- Identifier                   { .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize)) }
-                      COLON Identifier !Assign  { .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize)), .Pop) }
-                 / Identifier !Assign           { .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize))) }
+Primary         <- Identifier                   { With .UserData: .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                      COLON Identifier !Assign  { With .UserData: .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize)), .Pop): End With }
+                 / Identifier !Assign           { With .UserData: .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize))): End With }
                  / OPEN Expression CLOSE
-                 / Literal                      { .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)) }
-                 / Class                        { .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize)) }
-                 / DOT                          { .Push .MakeDot() }
-                 / Action                       { .Push .MakeAction(Mid$(ctx.Contents, lOffset, lSize)) }
-                 / BEGIN                        { .Push .MakePredicate("YY_BEGIN") }
-                 / END                          { .Push .MakePredicate("YY_END") }
+                 / Literal                      { With .UserData: .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / Class                        { With .UserData: .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / DOT                          { With .UserData: .Push .MakeDot(): End With }
+                 / Action                       { With .UserData: .Push .MakeAction(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / BEGIN                        { With .UserData: .Push .MakePredicate("YY_BEGIN"): End With }
+                 / END                          { With .UserData: .Push .MakePredicate("YY_END"): End With }
 
 # Lexical syntax
 
