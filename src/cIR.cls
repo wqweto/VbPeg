@@ -868,10 +868,14 @@ Public Function EmitCode( _
 "    CaptureBegin        As Long" & vbCrLf & _
 "    CaptureEnd          As Long" & vbCrLf & _
 "    LastError           As String" & vbCrLf & _
-"    UserData            As " & sUserData & vbCrLf & _
+"    UserData            As " & sUserData
+        If .CodeGenVarStack Then
+            pvOutput _
 "    VarResult           As " & sVarData & vbCrLf & _
 "    VarStack()          As " & sVarData & vbCrLf & _
-"    VarPos              As Long" & vbCrLf & _
+"    VarPos              As Long"
+        End If
+        pvOutput _
 "End Type" & vbCrLf
         pvOutput _
 "Private " & STR_CTX_VAR_NAME & "                     As UcsParserType" & vbCrLf
@@ -893,10 +897,10 @@ Public Function EmitCode( _
 "'=========================================================================" & vbCrLf
         If LenB(.CodeGenStartFunc) <> 0 Then
             pvOutput _
-"Public Function " & .OutModulePrefix & "Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & ", Optional Result As " & sVarData & ") As Long" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & IIf(.CodeGenVarStack, ", Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
 "    If " & .OutModulePrefix & "BeginMatch(sSubject, StartPos, UserData) Then" & vbCrLf & _
 "        If " & .OutModulePrefix & .CodeGenStartFunc & "() Then" & vbCrLf & _
-"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(Result)" & vbCrLf & _
+"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(" & IIf(.CodeGenVarStack, "Result", vbNullString) & ")" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End If" & vbCrLf & _
 "End Function" & vbCrLf
@@ -936,7 +940,7 @@ Public Function EmitCode( _
 "End Function" & vbCrLf
         Else
             pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch(Optional Result As " & sVarData & ") As Long" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "EndMatch(" & IIf(.CodeGenVarStack, "Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
 "    Dim lIdx            As Long" & vbCrLf & _
 "    Dim uEmpty          As UcsParserType" & vbCrLf & _
 "    " & vbCrLf & _
