@@ -40,6 +40,7 @@ Private Const STR_FOR_PREFIX        As String = "i"
 Private Const STR_CTX_VAR_NAME      As String = "ctx"
 Private Const STR_ACTIONS_ENUM_NAME As String = "UcsParserActionsEnum"
 Private Const STR_ACTIONS_ENUM_FMT  As String = "ucsAct_%1_%2"
+Private Const STR_ACTIONS_ENUM_VARS As String = "ucsActVarAlloc = -1|ucsActVarSet = -2"
 
 Public Enum UcsIrNodeTypeEnum
     ucsIrtBlock = 1
@@ -88,6 +89,7 @@ Private Type UcsIrType
     CodeGenTree         As cTree
     CodeGenId           As Long
     CodeGenStartFunc    As String
+    CodeGenVarStack     As Boolean
     IrActionsEnum       As Long
     IrActionsSelect     As Long
     OutModulePrefix     As String
@@ -212,12 +214,15 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
             For Each vElem In .NodeChildren(NODE_ROOT)
                 If .NodeFlag(vElem, ucsNdfUsed) Or bAllRules Then
                     pvCodeGenUniqueName vElem
+                    If .NodeNumVariables(vElem) > 0 Then
+                        m_uIr.CodeGenVarStack = True
+                    End If
                 End If
             Next
             For Each vElem In .NodeChildren(NODE_ROOT)
                 If .NodeFlag(vElem, ucsNdfUsed) Or bAllRules Then
                     lBody = AddNode(ucsIrtDeclFunc, STR_FUNC_PREFIX & .NodeText(vElem))
-                    IrFlag(lBody, ucsIrfPublic) = True
+                    IrFlag(lBody, ucsIrfPublic) = (.NodeText(vElem) <> UCase$(.NodeText(vElem)))
                     If .NodeFlag(vElem, ucsNdfSavePos) Then
                         AddChild lBody, AddNode(ucsIrtStmtSavePos, STR_BUFPOS_PREFIX & vElem)
                         If .NodeFlag(vElem, ucsNdfHasActions) Then
@@ -229,16 +234,29 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                         lSuccess = IR_CONTINUE
                         lFailure = IR_CONTINUE
                     Else
-                        lSuccess = AddChild(AddChild(AddNode(ucsIrtBlock), _
-                            AddNode(ucsIrtStmtRetVal, "True")), _
-                            AddNode(ucsIrtStmtExit))
-                        lFailure = IR_CONTINUE ' AddNode(ucsIrtStmtExit)
+                        lSuccess = AddChild(AddChild( _
+                            AddNode(ucsIrtBlock), _
+                                AddNode(ucsIrtStmtRetVal, "True")), _
+                                AddNode(ucsIrtStmtExit))
+                        lFailure = IR_CONTINUE
+                    End If
+                    If .NodeNumVariables(vElem) > 0 Then
+                        lSuccess = AddChild(AddChild( _
+                            AddNode(ucsIrtBlock), _
+                                AddNode(ucsIrtStmtEmit, "pvPushThunk ucsActVarAlloc, -" & .NodeNumVariables(vElem))), _
+                                lSuccess)
                     End If
                     lIrNode = pvCodeGenNode(.NodeChild(vElem, 0), lSuccess, lFailure)
                     If lIrNode = 0 Then
                         GoTo QH
                     End If
                     pvCodeGenTrimLastExit lIrNode
+                    If .NodeNumVariables(vElem) > 0 Then
+                        lIrNode = AddChild(AddChild( _
+                            AddNode(ucsIrtBlock), _
+                                AddNode(ucsIrtStmtEmit, "pvPushThunk ucsActVarAlloc, " & .NodeNumVariables(vElem))), _
+                                lIrNode)
+                    End If
                     If pvCodeGenFindCtxUse(lIrNode) Then
                         AddChild lBody, AddChild(AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME), lIrNode)
                     Else
@@ -253,9 +271,18 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
         If .IrActionsSelect <> 0 Then
             lIrNode = AddChild( _
                 AddNode(ucsIrtDeclFunc, "pvImplAction(ByVal eAction As " & STR_ACTIONS_ENUM_NAME & ", ByVal lOffset As Long, ByVal lSize As Long)"), AddChild( _
-                    AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME & ".UserData"), _
+                    AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME), _
                         .IrActionsSelect))
             IrFlag(lIrNode, ucsIrfVoid) = True
+        End If
+        If m_uIr.CodeGenVarStack Then
+            If m_uIr.IrActionsEnum = 0 Then
+                m_uIr.IrActionsEnum = AddNode(ucsIrtDeclEnum, STR_ACTIONS_ENUM_NAME)
+            End If
+            For Each vElem In Split(STR_ACTIONS_ENUM_VARS, "|")
+                AddChild m_uIr.IrActionsEnum, _
+                    AddNode(ucsIrtStmtEmit, CStr(vElem))
+            Next
         End If
     End With
     '--- success
@@ -267,6 +294,7 @@ Private Sub pvCodeGenUniqueName(ByVal lNode As Long)
     Dim lIdx            As Long
     
     With m_uIr.CodeGenTree
+        .NodeText(lNode) = Replace(.NodeText(lNode), "-", "_")
         If m_uIr.OutDictionary.Exists(.NodeText(lNode)) Then
             For lIdx = 2 To 1000
                 If Not m_uIr.OutDictionary.Exists(.NodeText(lNode) & lIdx) Then
@@ -359,28 +387,34 @@ Private Function pvCodeGenNode( _
                 AddChild pvCodeGenNode, lFailure
             End If
         Case ucsNdtReference
+            If .NodeRefVar(lNode) <> 0 Then
+                lSuccess = AddChild(AddChild( _
+                    AddNode(ucsIrtBlock), _
+                        AddNode(ucsIrtStmtEmit, "pvPushThunk ucsActVarSet, " & .NodeId(.NodeRefVar(lNode)))), _
+                        lSuccess)
+            End If
             If .NodeFlag(lNode, ucsNdfAlwaysTrue) Or _
                     lSuccess = IR_CONTINUE And lFailure = IR_CONTINUE Then
                 pvCodeGenNode = AddChild(AddChild( _
                     AddNode(ucsIrtBlock), _
-                        AddNode(ucsIrtStmtCall, STR_FUNC_PREFIX & .NodeText(.NodeRule(lNode)))), _
+                        AddNode(ucsIrtStmtCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
                         lSuccess)
             ElseIf lSuccess = IR_CONTINUE Then
                 pvCodeGenNode = AddChild(AddChild( _
                     AddNode(ucsIrtStmtIf), AddChild( _
                         AddNode(ucsIrtExprNot), _
-                            AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRule(lNode))))), _
+                            AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode))))), _
                         lFailure)
             Else
                 pvCodeGenNode = AddChild(AddChild(AddChild( _
                     AddNode(ucsIrtStmtIf), _
-                        AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRule(lNode)))), _
+                        AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
                         lSuccess), _
                         lFailure)
             End If
         Case ucsNdtAction
             '-- always true -> discard lFailure
-            sText = Replace(Replace(STR_ACTIONS_ENUM_FMT, "%1", .NodeId(lNode)), "%2", .NodeText(.NodeRule(lNode)))
+            sText = Replace(Replace(STR_ACTIONS_ENUM_FMT, "%1", .NodeId(lNode)), "%2", .NodeText(.NodeRefRule(lNode)))
             pvCodeGenNode = AddChild(AddChild( _
                 AddNode(ucsIrtBlock), _
                     AddNode(ucsIrtStmtEmit, "pvPushAction " & sText)), _
@@ -395,7 +429,7 @@ Private Function pvCodeGenNode( _
             End If
             AddChild m_uIr.IrActionsSelect, AddChild( _
                 AddNode(ucsIrtStmtCase, sText), _
-                    AddNode(ucsIrtStmtEmit, .NodeText(lNode)))
+                    AddNode(ucsIrtStmtEmit, pvCodeGenAction(.NodeText(lNode), .NodeRefRule(lNode))))
         Case ucsNdtStar
             '-- always true -> discard lFailure
             lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, AddNode(ucsIrtStmtDoExit))
@@ -554,6 +588,46 @@ EmitStmtIfOnIrNode:
     End With
     Exit Function
 QH:
+End Function
+
+Private Function pvCodeGenAction(sText As String, ByVal lRule As Long) As String
+    Dim lIdx            As Long
+    Dim cOutput         As Collection
+    Dim oMatch          As Object
+    Dim lPos            As Long
+    Dim oVars           As Object
+    
+    Set oVars = CreateObject("Scripting.Dictionary")
+    oVars.CompareMode = vbTextCompare
+    oVars.Item("$$") = ".VarResult"
+    oVars.Item("$$text") = "Mid$(.Contents, lOffset, lSize)"
+    With m_uIr.CodeGenTree
+        For lIdx = 0 To .NodeNumVariables(lRule) - 1
+            lPos = .NodeVariable(lRule, lIdx)
+            oVars.Item("$" & .NodeText(lPos)) = ".VarStack(.VarPos - " & .NodeId(lPos) & ")"
+        Next
+    End With
+    lPos = 1
+    Set cOutput = New Collection
+    For Each oMatch In pvCodeGenEnumVars(sText)
+        cOutput.Add Mid$(sText, lPos, oMatch.FirstIndex - lPos + 1)
+        If oVars.Exists(oMatch.Value) Then
+            cOutput.Add oVars.Item(oMatch.Value)
+        Else
+            cOutput.Add oMatch.Value
+        End If
+        lPos = oMatch.FirstIndex + oMatch.Length + 1
+    Next
+    cOutput.Add Mid$(sText, lPos)
+    pvCodeGenAction = ConcatCollection(cOutput)
+End Function
+
+Public Function pvCodeGenEnumVars(sAction As String) As Object
+    With CreateObject("VBScript.RegExp")
+        .Global = True
+        .Pattern = "\$[\$\w_][\d\w_]*"
+        Set pvCodeGenEnumVars = .Execute(sAction)
+    End With
 End Function
 
 Private Function pvCodeGenId() As Long
@@ -716,6 +790,7 @@ Public Function EmitCode( _
             sUserData As String, _
             sOutput As String) As Boolean
     Dim lIdx            As Long
+    Dim sVarData        As String
     
     If LenB(sModuleName) = 0 Then
         sModuleName = IIf(bClass, "cParser", "mdParser")
@@ -723,6 +798,7 @@ Public Function EmitCode( _
     If LenB(sUserData) = 0 Then
         sUserData = "Variant"
     End If
+    sVarData = "Variant"
     With m_uIr
         Set .OutBuilder = New Collection
         .OutIndent = 0
@@ -792,7 +868,14 @@ Public Function EmitCode( _
 "    CaptureBegin        As Long" & vbCrLf & _
 "    CaptureEnd          As Long" & vbCrLf & _
 "    LastError           As String" & vbCrLf & _
-"    UserData            As " & sUserData & vbCrLf & _
+"    UserData            As " & sUserData
+        If .CodeGenVarStack Then
+            pvOutput _
+"    VarResult           As " & sVarData & vbCrLf & _
+"    VarStack()          As " & sVarData & vbCrLf & _
+"    VarPos              As Long"
+        End If
+        pvOutput _
 "End Type" & vbCrLf
         pvOutput _
 "Private " & STR_CTX_VAR_NAME & "                     As UcsParserType" & vbCrLf
@@ -814,10 +897,10 @@ Public Function EmitCode( _
 "'=========================================================================" & vbCrLf
         If LenB(.CodeGenStartFunc) <> 0 Then
             pvOutput _
-"Public Function " & .OutModulePrefix & "Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & ") As Long" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & IIf(.CodeGenVarStack, ", Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
 "    If " & .OutModulePrefix & "BeginMatch(sSubject, StartPos, UserData) Then" & vbCrLf & _
-"        If " & .CodeGenStartFunc & "() Then" & vbCrLf & _
-"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch()" & vbCrLf & _
+"        If " & .OutModulePrefix & .CodeGenStartFunc & "() Then" & vbCrLf & _
+"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(" & IIf(.CodeGenVarStack, "Result", vbNullString) & ")" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End If" & vbCrLf & _
 "End Function" & vbCrLf
@@ -857,30 +940,58 @@ Public Function EmitCode( _
 "End Function" & vbCrLf
         Else
             pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch() As Long" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "EndMatch(" & IIf(.CodeGenVarStack, "Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
 "    Dim lIdx            As Long" & vbCrLf & _
 "    Dim uEmpty          As UcsParserType" & vbCrLf & _
 "    " & vbCrLf & _
-"    With " & STR_CTX_VAR_NAME & vbCrLf & _
+"    With " & STR_CTX_VAR_NAME
+            If .CodeGenVarStack Then
+                pvOutput _
+"        ReDim .VarStack(0 To 1024) As " & sVarData & vbCrLf & _
+"        For lIdx = 0 To .ThunkPos - 1" & vbCrLf & _
+"            Select Case .ThunkData(lIdx).Action" & vbCrLf & _
+"            Case ucsActVarAlloc" & vbCrLf & _
+"                .VarPos = .VarPos + .ThunkData(lIdx).CaptureBegin" & vbCrLf & _
+"            Case ucsActVarSet" & vbCrLf & _
+"                .VarStack(.VarPos - .ThunkData(lIdx).CaptureBegin) = .VarResult" & vbCrLf & _
+"            Case Else" & vbCrLf & _
+"                With .ThunkData(lIdx)" & vbCrLf & _
+"                    pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin" & vbCrLf & _
+"                End With" & vbCrLf & _
+"            End Select" & vbCrLf & _
+"        Next" & vbCrLf & _
+"        If IsObject(.VarResult) Then" & vbCrLf & _
+"            Set Result = .VarResult" & vbCrLf & _
+"        Else" & vbCrLf & _
+"            Result = .VarResult" & vbCrLf & _
+"        End If"
+            Else
+                pvOutput _
 "        For lIdx = 0 To .ThunkPos - 1" & vbCrLf & _
 "            With .ThunkData(lIdx)" & vbCrLf & _
 "                pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin" & vbCrLf & _
 "            End With" & vbCrLf & _
-"        Next" & vbCrLf & _
+"        Next"
+            End If
+            pvOutput _
 "        " & .OutModulePrefix & "EndMatch = .BufPos" & vbCrLf & _
 "    End With" & vbCrLf & _
 "    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
 "End Function" & vbCrLf
             pvOutput _
-"Private Sub pvPushAction(ByVal eAction As " & STR_ACTIONS_ENUM_NAME & ")" & vbCrLf & _
+"Private Sub pvPushAction(ByVal eAction As UcsParserActionsEnum)" & vbCrLf & _
+"    pvPushThunk eAction, " & STR_CTX_VAR_NAME & ".CaptureBegin, " & STR_CTX_VAR_NAME & ".CaptureEnd" & vbCrLf & _
+"End Sub" & vbCrLf
+            pvOutput _
+"Private Sub pvPushThunk(ByVal eAction As UcsParserActionsEnum, ByVal lBegin As Long, Optional ByVal lEnd As Long)" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        If UBound(.ThunkData) < .ThunkPos Then" & vbCrLf & _
 "            ReDim Preserve .ThunkData(0 To 2 * UBound(.ThunkData)) As UcsParserThunkType" & vbCrLf & _
 "        End If" & vbCrLf & _
 "        With .ThunkData(.ThunkPos)" & vbCrLf & _
 "            .Action = eAction" & vbCrLf & _
-"            .CaptureBegin = " & STR_CTX_VAR_NAME & ".CaptureBegin" & vbCrLf & _
-"            .CaptureEnd = " & STR_CTX_VAR_NAME & ".CaptureEnd" & vbCrLf & _
+"            .CaptureBegin = lBegin" & vbCrLf & _
+"            .CaptureEnd = lEnd" & vbCrLf & _
 "        End With" & vbCrLf & _
 "        .ThunkPos = .ThunkPos + 1" & vbCrLf & _
 "    End With" & vbCrLf & _
@@ -922,14 +1033,19 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
             bDontIndent = True
             GoSub EmitChildren
         Case ucsIrtDeclFunc
-            m_uIr.OutFuncScope = IIf((.Flags And ucsIrfPublic) <> 0, "Public", "Private")
-            m_uIr.OutFuncName = .Text
+            If (.Flags And ucsIrfPublic) <> 0 Then
+                m_uIr.OutFuncScope = "Public"
+                m_uIr.OutFuncName = m_uIr.OutModulePrefix & .Text
+            Else
+                m_uIr.OutFuncScope = "Private"
+                m_uIr.OutFuncName = .Text
+            End If
             If (.Flags And ucsIrfVoid) <> 0 Then
                 m_uIr.OutFuncType = "Sub"
-                pvOutput m_uIr.OutFuncScope & " Sub " & .Text & IIf(Right$(.Text, 1) <> ")", "()", vbNullString)
+                pvOutput m_uIr.OutFuncScope & " Sub " & m_uIr.OutFuncName & IIf(Right$(.Text, 1) <> ")", "()", vbNullString)
             Else
                 m_uIr.OutFuncType = "Function"
-                pvOutput m_uIr.OutFuncScope & " Function " & .Text & "() As Boolean"
+                pvOutput m_uIr.OutFuncScope & " Function " & m_uIr.OutFuncName & "() As Boolean"
             End If
             m_uIr.OutDictionary.RemoveAll
             pvEmitCollectDeclVar lNode
@@ -951,7 +1067,11 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
             '--- note: no indent
             m_uIr.OutBuilder.Add .Text & ":"
         Case ucsIrtStmtCall
-            pvOutput "Call " & .Text
+            If pvEmitIsPublic(.Text) Then
+                pvOutput "Call " & m_uIr.OutModulePrefix & .Text
+            Else
+                pvOutput "Call " & .Text
+            End If
         Case ucsIrtStmtRetVal
             pvOutput m_uIr.OutFuncName & " = " & .Text
         Case ucsIrtStmtExit
@@ -1068,13 +1188,27 @@ Private Function pvEmitExpr(ByVal lNode As Long) As String
     With m_uIr.Nodes(lNode)
         Select Case .NodeType
         Case ucsIrtExprCall
-            pvEmitExpr = .Text & "()"
+            If pvEmitIsPublic(.Text) Then
+                pvEmitExpr = m_uIr.OutModulePrefix & .Text & "()"
+            Else
+                pvEmitExpr = .Text & "()"
+            End If
         Case ucsIrtExprNot
             pvEmitExpr = "Not " & pvEmitExpr(.Children(0))
         Case ucsIrtExprEmit
             pvEmitExpr = .Text
         End Select
     End With
+End Function
+
+Private Function pvEmitIsPublic(sText As String) As Boolean
+    Dim lSize           As Long
+    
+    '--- ToDo: check func decl
+    lSize = Len(STR_FUNC_PREFIX)
+    If Left$(sText, lSize) = STR_FUNC_PREFIX And Mid$(sText, lSize + 1) <> UCase$(Mid$(sText, lSize + 1)) Then
+        pvEmitIsPublic = True
+    End If
 End Function
 
 Private Sub pvOutput(ByVal sText As String, Optional Comment As String)
