@@ -1,0 +1,35 @@
+Stmt    = - e:Sum
+                ( EOL
+                | < ( !EOL . )+ > EOL   { .LastError = "Extra characters: " & $$text }
+                )
+
+Sum     = l:Product
+                ( PLUS  r:Product       { $l = $l + $r }
+                | MINUS r:Product       { $l = $l - $r }
+                )*                      { $$ = $l }
+
+Product = l:Value
+                ( TIMES  r:Value        { $l = $l * $r }
+                | DIVIDE r:Value        { $l = $l / $r }
+                )*                      { $$ = $l }
+
+Value   = i:NUMBER                      {
+            On Error Resume Next
+            $$ = CDbl($$text) 
+            If Err.Number <> 0 Then
+                $$ = 0
+                .LastError = Err.Description
+            End If 
+}
+        | OPEN i:Sum CLOSE              { $$ = $i }
+
+NUMBER  = < [0-9]+ ('.' [0-9]*)? >    -
+PLUS    = '+'           -
+MINUS   = '-'           -
+TIMES   = '*'           -
+DIVIDE  = '/'           -
+OPEN    = '('           -
+CLOSE   = ')'           -
+
+-       = [ \t]*
+EOL     = !.
