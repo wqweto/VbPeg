@@ -429,7 +429,8 @@ Private Function pvCodeGenNode( _
                     AddNode(ucsIrtStmtEmit, pvCodeGenAction(.NodeText(lNode), .NodeRefRule(lNode))))
         Case ucsNdtStar
             '-- always true -> discard lFailure
-            lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, AddNode(ucsIrtStmtDoExit))
+            lIrNode = AddNode(ucsIrtStmtDoExit)
+            lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), lIrNode, lIrNode)
             If lIrNode = 0 Then
                 GoTo QH
             End If
