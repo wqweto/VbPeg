@@ -315,9 +315,6 @@ Private Function pvCodeGenNode( _
     Dim lIrNode         As Long
     Dim sText           As String
     
-    If lNode = 74 Then
-        lNode = lNode
-    End If
     With m_uIr.CodeGenTree
         If .NodeFlag(lNode, ucsNdfRestorePos) Then
             If .NodeFlag(lNode, ucsNdfHasActions) Then
@@ -900,7 +897,7 @@ Public Function EmitCode( _
 "Public Function " & .OutModulePrefix & "Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & IIf(.CodeGenVarStack, ", Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
 "    If " & .OutModulePrefix & "BeginMatch(sSubject, StartPos, UserData) Then" & vbCrLf & _
 "        If " & .OutModulePrefix & .CodeGenStartFunc & "() Then" & vbCrLf & _
-"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(" & IIf(.CodeGenVarStack, "Result", vbNullString) & ")" & vbCrLf & _
+"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(UserData" & IIf(.CodeGenVarStack, ", Result", vbNullString) & ")" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End If" & vbCrLf & _
 "End Function" & vbCrLf
@@ -932,15 +929,16 @@ Public Function EmitCode( _
 "End Function" & vbCrLf
         If .IrActionsEnum = 0 Then
             pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch() As Long" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "EndMatch(Optional UserData As " & sUserData & ") As Long" & vbCrLf & _
 "    Dim uEmpty          As UcsParserType" & vbCrLf & _
 "    " & vbCrLf & _
 "    " & .OutModulePrefix & "EndMatch = " & STR_CTX_VAR_NAME & ".BufPos" & vbCrLf & _
+"    uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
 "    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
 "End Function" & vbCrLf
         Else
             pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch(" & IIf(.CodeGenVarStack, "Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "EndMatch(Optional UserData As " & sUserData & IIf(.CodeGenVarStack, ", Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
 "    Dim lIdx            As Long" & vbCrLf & _
 "    Dim uEmpty          As UcsParserType" & vbCrLf & _
 "    " & vbCrLf & _
@@ -974,8 +972,14 @@ Public Function EmitCode( _
 "        Next"
             End If
             pvOutput _
+"        If IsObject(.UserData) Then" & vbCrLf & _
+"            Set UserData = .UserData" & vbCrLf & _
+"        Else" & vbCrLf & _
+"            UserData = .UserData" & vbCrLf & _
+"        End If" & vbCrLf & _
 "        " & .OutModulePrefix & "EndMatch = .BufPos" & vbCrLf & _
 "    End With" & vbCrLf & _
+"    uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
 "    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
 "End Function" & vbCrLf
             pvOutput _
