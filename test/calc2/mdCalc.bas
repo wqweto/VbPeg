@@ -1,5 +1,5 @@
 Attribute VB_Name = "mdCalc"
-' Auto-generated on 16.3.2018 10:07:47
+' Auto-generated on 16.3.2018 11:08:31
 Option Explicit
 DefObj A-Z
 
@@ -20,12 +20,13 @@ Private Const LNG_MAXINT            As Long = 2 ^ 31 - 1
 
 Private Enum UcsParserActionsEnum
     ucsAct_1_Stmt
+    ucsAct_2_Stmt
     ucsAct_3_Sum
-    ucsAct_2_Sum
     ucsAct_1_Sum
+    ucsAct_2_Sum
     ucsAct_3_Product
-    ucsAct_2_Product
     ucsAct_1_Product
+    ucsAct_2_Product
     ucsAct_1_Value
     ucsAct_2_Value
     ucsActVarAlloc = -1
@@ -65,7 +66,7 @@ Property Get VbPegLastError() As String
 End Property
 
 Property Get VbPegParserVersion() As String
-    VbPegParserVersion = "16.3.2018 10:07:47"
+    VbPegParserVersion = "16.3.2018 11:08:31"
 End Property
 
 '=========================================================================
@@ -170,11 +171,11 @@ End Function
 Public Function VbPegParseStmt() As Boolean
     Dim p7 As Long
     Dim q7 As Long
-    Dim p20 As Long
-    Dim q20 As Long
-    Dim i15 As Long
-    Dim p14 As Long
-    Dim q14 As Long
+    Dim p22 As Long
+    Dim q22 As Long
+    Dim i17 As Long
+    Dim p16 As Long
+    Dim q16 As Long
 
     With ctx
         pvPushThunk ucsActVarAlloc, 1
@@ -183,40 +184,41 @@ Public Function VbPegParseStmt() As Boolean
         Call Parse_
         If VbPegParseSum() Then
             pvPushThunk ucsActVarSet, 1
-            p20 = .BufPos
-            q20 = .ThunkPos
+            p22 = .BufPos
+            q22 = .ThunkPos
             If ParseEOL() Then
+                pvPushAction ucsAct_1_Stmt
                 pvPushThunk ucsActVarAlloc, -1
                 VbPegParseStmt = True
                 Exit Function
             End If
             .CaptureBegin = .BufPos
-            For i15 = 0 To LNG_MAXINT
-                p14 = .BufPos
-                q14 = .ThunkPos
+            For i17 = 0 To LNG_MAXINT
+                p16 = .BufPos
+                q16 = .ThunkPos
                 If ParseEOL() Then
-                    .BufPos = p14
-                    .ThunkPos = q14
+                    .BufPos = p16
+                    .ThunkPos = q16
                     Exit For
                 End If
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
-                    .BufPos = p14
-                    .ThunkPos = q14
+                    .BufPos = p16
+                    .ThunkPos = q16
                     Exit For
                 End If
             Next
-            If i15 <> 0 Then
+            If i17 <> 0 Then
                 .CaptureEnd = .BufPos
                 If ParseEOL() Then
-                    pvPushAction ucsAct_1_Stmt
+                    pvPushAction ucsAct_2_Stmt
                     pvPushThunk ucsActVarAlloc, -1
                     VbPegParseStmt = True
                     Exit Function
                 Else
-                    .BufPos = p20
-                    .ThunkPos = q20
+                    .BufPos = p22
+                    .ThunkPos = q22
                 End If
             End If
             .BufPos = p7
@@ -234,6 +236,7 @@ Private Sub Parse_()
             Select Case .BufData(.BufPos)
             Case 32, 9                              ' [ \t]
                 .BufPos = .BufPos + 1
+                Exit Do
             Case Else
                 Exit Do
             End Select
@@ -242,47 +245,37 @@ Private Sub Parse_()
 End Sub
 
 Public Function VbPegParseSum() As Boolean
-    Dim p35 As Long
-    Dim q35 As Long
+    Dim p37 As Long
+    Dim q37 As Long
 
     With ctx
         pvPushThunk ucsActVarAlloc, 2
         If VbPegParseProduct() Then
             pvPushThunk ucsActVarSet, 1
             Do
-                p35 = .BufPos
-                q35 = .ThunkPos
-                If Not ParsePLUS() Then
-                    If Not ParseMINUS() Then
-                        Exit Do
-                    End If
+                p37 = .BufPos
+                q37 = .ThunkPos
+                If ParsePLUS() Then
                     If VbPegParseProduct() Then
                         pvPushThunk ucsActVarSet, 2
+                        pvPushAction ucsAct_1_Sum
+                        Exit Do
                     Else
-                        .BufPos = p35
-                        .ThunkPos = q35
-                        Exit Do
+                        .BufPos = p37
+                        .ThunkPos = q37
                     End If
-                    pvPushAction ucsAct_2_Sum
                 End If
-                If VbPegParseProduct() Then
-                    pvPushThunk ucsActVarSet, 2
-                Else
-                    .BufPos = p35
-                    .ThunkPos = q35
-                    If Not ParseMINUS() Then
-                        Exit Do
-                    End If
+                If ParseMINUS() Then
                     If VbPegParseProduct() Then
                         pvPushThunk ucsActVarSet, 2
-                    Else
-                        .BufPos = p35
-                        .ThunkPos = q35
+                        pvPushAction ucsAct_2_Sum
                         Exit Do
+                    Else
+                        .BufPos = p37
+                        .ThunkPos = q37
                     End If
-                    pvPushAction ucsAct_2_Sum
                 End If
-                pvPushAction ucsAct_1_Sum
+                Exit Do
             Loop
             pvPushAction ucsAct_3_Sum
             pvPushThunk ucsActVarAlloc, -2
@@ -300,47 +293,37 @@ Private Function ParseEOL() As Boolean
 End Function
 
 Public Function VbPegParseProduct() As Boolean
-    Dim p53 As Long
-    Dim q53 As Long
+    Dim p55 As Long
+    Dim q55 As Long
 
     With ctx
         pvPushThunk ucsActVarAlloc, 2
         If VbPegParseValue() Then
             pvPushThunk ucsActVarSet, 1
             Do
-                p53 = .BufPos
-                q53 = .ThunkPos
-                If Not ParseTIMES() Then
-                    If Not ParseDIVIDE() Then
-                        Exit Do
-                    End If
+                p55 = .BufPos
+                q55 = .ThunkPos
+                If ParseTIMES() Then
                     If VbPegParseValue() Then
                         pvPushThunk ucsActVarSet, 2
+                        pvPushAction ucsAct_1_Product
+                        Exit Do
                     Else
-                        .BufPos = p53
-                        .ThunkPos = q53
-                        Exit Do
+                        .BufPos = p55
+                        .ThunkPos = q55
                     End If
-                    pvPushAction ucsAct_2_Product
                 End If
-                If VbPegParseValue() Then
-                    pvPushThunk ucsActVarSet, 2
-                Else
-                    .BufPos = p53
-                    .ThunkPos = q53
-                    If Not ParseDIVIDE() Then
-                        Exit Do
-                    End If
+                If ParseDIVIDE() Then
                     If VbPegParseValue() Then
                         pvPushThunk ucsActVarSet, 2
-                    Else
-                        .BufPos = p53
-                        .ThunkPos = q53
+                        pvPushAction ucsAct_2_Product
                         Exit Do
+                    Else
+                        .BufPos = p55
+                        .ThunkPos = q55
                     End If
-                    pvPushAction ucsAct_2_Product
                 End If
-                pvPushAction ucsAct_1_Product
+                Exit Do
             Loop
             pvPushAction ucsAct_3_Product
             pvPushThunk ucsActVarAlloc, -2
@@ -370,13 +353,13 @@ Private Function ParseMINUS() As Boolean
 End Function
 
 Public Function VbPegParseValue() As Boolean
-    Dim p69 As Long
-    Dim q69 As Long
+    Dim p71 As Long
+    Dim q71 As Long
 
     With ctx
         pvPushThunk ucsActVarAlloc, 1
-        p69 = .BufPos
-        q69 = .ThunkPos
+        p71 = .BufPos
+        q71 = .ThunkPos
         If ParseNUMBER() Then
             pvPushThunk ucsActVarSet, 1
             pvPushAction ucsAct_1_Value
@@ -393,12 +376,12 @@ Public Function VbPegParseValue() As Boolean
                     VbPegParseValue = True
                     Exit Function
                 Else
-                    .BufPos = p69
-                    .ThunkPos = q69
+                    .BufPos = p71
+                    .ThunkPos = q71
                 End If
             Else
-                .BufPos = p69
-                .ThunkPos = q69
+                .BufPos = p71
+                .ThunkPos = q71
             End If
         End If
     End With
@@ -425,11 +408,11 @@ Private Function ParseDIVIDE() As Boolean
 End Function
 
 Private Function ParseNUMBER() As Boolean
-    Dim i72 As Long
+    Dim i74 As Long
 
     With ctx
         .CaptureBegin = .BufPos
-        For i72 = 0 To LNG_MAXINT
+        For i74 = 0 To LNG_MAXINT
             Select Case .BufData(.BufPos)
             Case 48 To 57                           ' [0-9]
                 .BufPos = .BufPos + 1
@@ -437,13 +420,14 @@ Private Function ParseNUMBER() As Boolean
                 Exit For
             End Select
         Next
-        If i72 <> 0 Then
+        If i74 <> 0 Then
             If .BufData(.BufPos) = 46 Then          ' "."
                 .BufPos = .BufPos + 1
                 Do
                     Select Case .BufData(.BufPos)
                     Case 48 To 57                   ' [0-9]
                         .BufPos = .BufPos + 1
+                        Exit Do
                     Case Else
                         Exit Do
                     End Select
@@ -482,19 +466,21 @@ Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As
     With ctx
         Select Case eAction
         Case ucsAct_1_Stmt
-             .LastError = "Extra characters: " & Mid$(.Contents, lOffset, lSize)
+             .VarResult = .VarStack(.VarPos - 1)
+        Case ucsAct_2_Stmt
+             .VarResult = .VarStack(.VarPos - 1): .LastError = "Extra characters: " & Mid$(.Contents, lOffset, lSize)
         Case ucsAct_3_Sum
              .VarResult = .VarStack(.VarPos - 1)
-        Case ucsAct_2_Sum
-             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) - .VarStack(.VarPos - 2)
         Case ucsAct_1_Sum
              .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) + .VarStack(.VarPos - 2)
+        Case ucsAct_2_Sum
+             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) - .VarStack(.VarPos - 2)
         Case ucsAct_3_Product
              .VarResult = .VarStack(.VarPos - 1)
-        Case ucsAct_2_Product
-             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) / .VarStack(.VarPos - 2)
         Case ucsAct_1_Product
              .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) * .VarStack(.VarPos - 2)
+        Case ucsAct_2_Product
+             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) / .VarStack(.VarPos - 2)
         Case ucsAct_1_Value
             
             On Error Resume Next

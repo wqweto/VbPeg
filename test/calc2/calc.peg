@@ -1,6 +1,6 @@
 Stmt    = - e:Sum
-                ( EOL
-                | < ( !EOL . )+ > EOL   { .LastError = "Extra characters: " & $$text }
+                ( EOL                   { $$ = $e }
+                | < ( !EOL . )+ > EOL   { $$ = $e: .LastError = "Extra characters: " & $$text }
                 )
 
 Sum     = l:Product
