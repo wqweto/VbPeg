@@ -338,6 +338,13 @@ Private Function pvCodeGenNode( _
                 End If
             End If
             If lSuccess = IR_CONTINUE Then
+                If Not pvCodeGenIsFinalJump(lFailure) Then
+                    sText = "L" & pvCodeGenId
+                    lFailure = AddChild(AddChild( _
+                        AddNode(ucsIrtBlock), _
+                            lFailure), _
+                            AddNode(ucsIrtStmtGoTo, sText))
+                End If
                 For lIdx = 0 To .NodeNumChildren(lNode) - 1
                     lIrNode = pvCodeGenNode(.NodeChild(lNode, lIdx), IR_CONTINUE, lFailure)
                     If lIrNode = 0 Then
@@ -345,6 +352,9 @@ Private Function pvCodeGenNode( _
                     End If
                     AddChild pvCodeGenNode, lIrNode
                 Next
+                If LenB(sText) <> 0 Then
+                    AddChild pvCodeGenNode, AddNode(ucsIrtDeclLabel, sText)
+                End If
             Else
                 lIrNode = lSuccess
                 For lIdx = .NodeNumChildren(lNode) - 1 To 0 Step -1
@@ -374,6 +384,13 @@ Private Function pvCodeGenNode( _
                 Next
                 AddChild pvCodeGenNode, lIrNode
             Else
+                If Not pvCodeGenIsFinalJump(lSuccess) Then
+                    sText = "L" & pvCodeGenId
+                    lSuccess = AddChild(AddChild( _
+                        AddNode(ucsIrtBlock), _
+                            lSuccess), _
+                            AddNode(ucsIrtStmtGoTo, sText))
+                End If
                 For lIdx = 0 To .NodeNumChildren(lNode) - 1
                     lIrNode = pvCodeGenNode(.NodeChild(lNode, lIdx), lSuccess, IR_CONTINUE)
                     If lIrNode = 0 Then
@@ -382,6 +399,9 @@ Private Function pvCodeGenNode( _
                     AddChild pvCodeGenNode, lIrNode
                 Next
                 AddChild pvCodeGenNode, lFailure
+                If LenB(sText) <> 0 Then
+                    AddChild pvCodeGenNode, AddNode(ucsIrtDeclLabel, sText)
+                End If
             End If
         Case ucsNdtReference
             If .NodeRefVar(lNode) <> 0 Then
@@ -429,8 +449,7 @@ Private Function pvCodeGenNode( _
                     AddNode(ucsIrtStmtEmit, pvCodeGenAction(.NodeText(lNode), .NodeRefRule(lNode))))
         Case ucsNdtStar
             '-- always true -> discard lFailure
-            lIrNode = AddNode(ucsIrtStmtDoExit)
-            lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), lIrNode, lIrNode)
+            lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, AddNode(ucsIrtStmtDoExit))
             If lIrNode = 0 Then
                 GoTo QH
             End If
@@ -667,6 +686,19 @@ Private Function pvCodeGenTrimLastExit(ByVal lNode As Long) As Boolean
                 pvCodeGenTrimLastExit = True
             End If
         End If
+    End With
+End Function
+
+Private Function pvCodeGenIsFinalJump(ByVal lNode As Long) As Boolean
+    With m_uIr.Nodes(lNode)
+        Select Case .NodeType
+        Case ucsIrtStmtExit, ucsIrtStmtDoExit, ucsIrtStmtForExit, ucsIrtStmtGoTo
+            pvCodeGenIsFinalJump = True
+        Case Else
+            If .Count > 0 Then
+                pvCodeGenIsFinalJump = pvCodeGenIsFinalJump(.Children(.Count - 1))
+            End If
+        End Select
     End With
 End Function
 
