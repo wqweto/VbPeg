@@ -17,6 +17,8 @@ Sub Main()
         If LenB(VbPegLastError) <> 0 Then
             ConsolePrint "Error: %1" & vbCrLf, VbPegLastError
         End If
+    Else
+        ConsolePrint "Error: %1" & vbCrLf, VbPegLastError
     End If
 End Sub
 
