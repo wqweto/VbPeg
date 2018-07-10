@@ -543,6 +543,13 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
                 .Flags = .Flags Or ucsNdfAlwaysTrue
                 pvOptimizePass1 = True
             End If
+        Case ucsNdtString
+            If LenB(.Text) = 0 Then
+                If (.Flags And ucsNdfAlwaysTrue) = 0 Then
+                    .Flags = .Flags Or ucsNdfAlwaysTrue
+                    pvOptimizePass1 = True
+                End If
+            End If
         Case ucsNdtSequence, ucsNdtRule
             lFlags = .Flags Or ucsNdfAlwaysTrue
             For Each vElem In .Children
