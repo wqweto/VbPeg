@@ -253,6 +253,7 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                         GoTo QH
                     End If
                     pvCodeGenTrimLastExit lIrNode
+                    pvCodeGenTrimGotoNext lIrNode
                     If .NodeNumVariables(vElem) > 0 Then
                         lIrNode = AddChild(AddChild( _
                             AddNode(ucsIrtBlock), _
@@ -560,6 +561,21 @@ Private Function pvCodeGenNode( _
                 Else
                     lIrNode = AddNode(ucsIrtExprEmit, "(.BufData(.BufPos) <> " & Asc(sText) & " Or .BufData(.BufPos + 1) <> " & Asc(Mid$(sText, 2, 1)) & ") And .BufPos + 1 < .BufSize")
                 End If
+            ElseIf Len(sText) = 0 Then
+                If Not .NodeFlag(lNode, ucsNdfIsNot) Then
+                    If lSuccess = IR_CONTINUE Then
+                        pvCodeGenNode = AddNode(ucsIrtBlock)
+                    Else
+                        pvCodeGenNode = lSuccess
+                    End If
+                Else
+                    If lFailure = IR_CONTINUE Then
+                        pvCodeGenNode = AddNode(ucsIrtBlock)
+                    Else
+                        pvCodeGenNode = lFailure
+                    End If
+                End If
+                GoTo QH
             ElseIf Not .NodeFlag(lNode, ucsNdfIsNot) Then
                 lIrNode = AddNode(ucsIrtExprEmit, "pvMatchString(" & pvToVbString(sText) & ")")
             Else
@@ -616,7 +632,9 @@ EmitStmtIfOnIrNode:
             lIrNode = AddNode(ucsIrtStmtCase, pvToVbCaseRange(pvFromPegString(.NodeText(lNode))), Comment:="[" & .NodeText(lNode) & "]")
             AddChild pvCodeGenNode, lIrNode
             If Not .NodeFlag(lNode, ucsNdfIsNot) Then
-                AddChild lIrNode, AddNode(ucsIrtStmtEmit, ".BufPos = .BufPos + 1")
+                If Not .NodeFlag(lNode, ucsNdfSkipAdvance) Then
+                    AddChild lIrNode, AddNode(ucsIrtStmtEmit, ".BufPos = .BufPos + 1")
+                End If
                 AddChild lIrNode, lSuccess
                 If lFailure <> IR_CONTINUE Then
                     AddChild pvCodeGenNode, AddChild( _
@@ -672,9 +690,11 @@ Private Function pvCodeGenReplaceLabels(ByVal lNode As Long) As Long
             Set cMatch = New Collection
             Set cRev = New Collection
             For Each vElem In oCol
-                lNewNode = AddNode(m_uIr.Nodes(vElem).NodeType)
-                cRev.Add vElem, "#" & lNewNode
-                cMatch.Add lNewNode, "#" & vElem
+                If Not SearchCollection(cMatch, "#" & vElem) Then
+                    lNewNode = AddNode(m_uIr.Nodes(vElem).NodeType)
+                    cRev.Add vElem, "#" & lNewNode
+                    cMatch.Add lNewNode, "#" & vElem
+                End If
             Next
             For Each vElem In cMatch
                 m_uIr.Nodes(vElem) = m_uIr.Nodes(cRev.Item("#" & vElem))
@@ -701,15 +721,20 @@ EH:
     Resume
 End Function
 
-Private Function pvEnumChildNodes(ByVal lNode As Long, oCol As Collection)
+Private Function pvEnumChildNodes(ByVal lNode As Long, Optional oCol As Collection) As Long
     Dim lIdx            As Long
     
-    If Not SearchCollection(oCol, "#" & lNode) Then
-        oCol.Add lNode, "#" & lNode
+    If Not oCol Is Nothing Then
+        If Not SearchCollection(oCol, "#" & lNode) Then
+            oCol.Add lNode, "#" & lNode
+        Else
+            oCol.Add lNode
+        End If
     End If
+    pvEnumChildNodes = 1
     With m_uIr.Nodes(lNode)
         For lIdx = 0 To .Count - 1
-            pvEnumChildNodes .Children(lIdx), oCol
+            pvEnumChildNodes = pvEnumChildNodes + pvEnumChildNodes(.Children(lIdx), oCol)
         Next
     End With
 End Function
@@ -768,7 +793,7 @@ Private Function pvCodeGenFindCtxUse(ByVal lNode As Long) As Boolean
     
     With m_uIr.Nodes(lNode)
         '--- note: euristic for emitted VB6 code that uses context member var
-        If Left$(.Text, 1) = "." Or .NodeType = ucsIrtStmtSavePos Or .NodeType = ucsIrtStmtRestorePos Then
+        If Left$(.Text, 1) = "." Or .NodeType = ucsIrtStmtSavePos Or .NodeType = ucsIrtStmtRestorePos Or .NodeType = ucsIrtStmtCapture Then
             pvCodeGenFindCtxUse = True
             Exit Function
         End If
@@ -798,6 +823,70 @@ Private Function pvCodeGenTrimLastExit(ByVal lNode As Long) As Boolean
             End If
         End If
     End With
+End Function
+
+Private Function pvCodeGenTrimGotoNext(ByVal lNode As Long) As Boolean
+    Dim oCol            As Collection
+    Dim lIdx            As Long
+    Dim cLab            As Collection
+    
+    Set oCol = New Collection
+    pvEnumChildNodes lNode, oCol
+    Set cLab = New Collection
+    For lIdx = 1 To oCol.Count
+        With m_uIr.Nodes(oCol.Item(lIdx))
+            If .NodeType = ucsIrtDeclLabel Then
+                cLab.Add lIdx, .Text
+            End If
+        End With
+    Next
+    If cLab.Count > 0 Then
+        For lIdx = 1 To oCol.Count
+            With m_uIr.Nodes(oCol.Item(lIdx))
+                If .NodeType = ucsIrtStmtGoTo Then
+                    If cLab.Item(.Text) = lIdx + 1 Then
+    '                    Debug.Print "[" & oCol.Item(lIdx) & "] Remove GoTo " & .Text
+                        .NodeType = ucsIrtBlock
+                        .Text = vbNullString
+                    End If
+                End If
+            End With
+        Next
+        For lIdx = 1 To oCol.Count
+            With m_uIr.Nodes(oCol.Item(lIdx))
+                If .NodeType = ucsIrtStmtGoTo Then
+                    If SearchCollection(cLab, .Text) Then
+                        cLab.Remove .Text
+                    End If
+                End If
+            End With
+        Next
+        For lIdx = 1 To cLab.Count
+            With m_uIr.Nodes(oCol.Item(cLab.Item(lIdx)))
+                .NodeType = ucsIrtBlock
+                .Text = vbNullString
+            End With
+        Next
+        For lIdx = 1 To oCol.Count
+            With m_uIr.Nodes(oCol.Item(lIdx))
+                If .NodeType = ucsIrtStmtIf Then
+                    If .Count = 2 Then
+                        If m_uIr.Nodes(.Children(0)).NodeType = ucsIrtExprCall Then
+                            If pvEnumChildNodes(.Children(1)) = 1 Then
+                                If m_uIr.Nodes(.Children(1)).NodeType = ucsIrtBlock Then
+'                                    Debug.Print "[" & oCol.Item(lIdx) & "] Transform StmtIf to StmtCall " & m_uIr.Nodes(.Children(0)).Text
+                                    .NodeType = ucsIrtStmtCall
+                                    .Text = m_uIr.Nodes(.Children(0)).Text
+                                    .Count = 0
+                                    Erase .Children
+                                End If
+                            End If
+                        End If
+                    End If
+                End If
+            End With
+        Next
+    End If
 End Function
 
 Private Function pvCodeGenIsFinalJump(ByVal lNode As Long) As Boolean
