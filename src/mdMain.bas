@@ -374,3 +374,10 @@ Public Function SetFileLen(sFile As String, ByVal lSize As Long) As Boolean
         Call CloseHandle(hFile)
     End If
 End Function
+
+Public Function SearchCollection(oCol As Collection, Index As Variant) As Boolean
+    On Error GoTo QH
+    oCol.Item Index
+    SearchCollection = True
+QH:
+End Function

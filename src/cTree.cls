@@ -500,6 +500,8 @@ End Function
 Public Function OptimizeTree() As Boolean
     Dim vElem           As Variant
     
+    Do While pvUpdateHasActions(NODE_ROOT, False)
+    Loop
     Do While pvOptimizePass1(NODE_ROOT)
     Loop
     Do While pvOptimizePass2(NODE_ROOT, False)
@@ -599,8 +601,10 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
     Dim vElem           As Variant
     Dim lCount          As Long
     Dim lFlags          As Long
+    Dim lRefVar         As Long
     Dim sText           As String
     Dim bChildSavePos   As Boolean
+    Dim bNeedSavePos    As Boolean
     
     With m_uTree.Nodes(lNode)
         bChildSavePos = bParentSavePos Or (.Flags And ucsNdfSavePos) <> 0
@@ -634,7 +638,6 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
                 If (m_uTree.Nodes(vElem).Flags And ucsNdfAlwaysTrue) = 0 Then
                     Select Case m_uTree.Nodes(vElem).NodeType
                     Case ucsNdtPeekFor, ucsNdtPeekNot
-'                        lFlags = lFlags Or ucsNdfMultiStep Or ucsNdfSavePos
                         If (m_uTree.Nodes(vElem).Flags And ucsNdfSkipAdvance) = 0 Then
                             lCount = lCount + 1
                         End If
@@ -673,18 +676,33 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
                 End If
             End If
         Case ucsNdtAlternate
-            If (.Flags And ucsNdfSavePos) = IIf(bParentSavePos, ucsNdfSavePos, 0) Then
+            For Each vElem In .Children
+                If (m_uTree.Nodes(vElem).Flags And ucsNdfHasActions) <> 0 Then
+                    If (m_uTree.Nodes(vElem).Flags And ucsNdfRestorePos) = 0 Then
+                        With m_uTree.Nodes(vElem)
+                            .Flags = .Flags Or ucsNdfRestorePos
+                        End With
+                        pvOptimizePass2 = True
+                    End If
+                End If
+                If (m_uTree.Nodes(vElem).Flags And ucsNdfRestorePos) <> 0 Then
+                    bNeedSavePos = True
+                End If
+            Next
+            If bNeedSavePos Then
+                If (.Flags And ucsNdfSavePos) = 0 Then
+                    .Flags = .Flags Or ucsNdfSavePos
+                    pvOptimizePass2 = True
+                End If
+            ElseIf (.Flags And ucsNdfSavePos) = IIf(bParentSavePos, ucsNdfSavePos, 0) Then
                 For Each vElem In .Children
                     If (m_uTree.Nodes(vElem).Flags And ucsNdfSavePos) <> 0 Then
-                        If bParentSavePos Then
-                            .Flags = .Flags And Not ucsNdfSavePos
-                        Else
-                            .Flags = .Flags Or ucsNdfSavePos
-                        End If
+                    If (m_uTree.Nodes(vElem).Flags And ucsNdfMultiStep) = 0 Then
                         With m_uTree.Nodes(vElem)
                             .Flags = .Flags And Not ucsNdfSavePos
                         End With
                         pvOptimizePass2 = True
+                    End If
                     End If
                 Next
             End If
@@ -707,8 +725,10 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
         Case ucsNdtReference
             If (m_uTree.Nodes(.RefRule).Flags And ucsNdfCanInline) <> 0 Then
                 lFlags = m_uTree.Nodes(lNode).Flags
+                lRefVar = m_uTree.Nodes(lNode).RefVar
                 m_uTree.Nodes(lNode) = m_uTree.Nodes(m_uTree.Nodes(.RefRule).Children(0))
                 m_uTree.Nodes(lNode).Flags = lFlags
+                m_uTree.Nodes(lNode).RefVar = lRefVar
                 pvOptimizePass2 = True
             End If
         Case ucsNdtPeekNot
