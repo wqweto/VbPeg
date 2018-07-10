@@ -13,14 +13,7 @@ Product = l:Value
                 | DIVIDE r:Value        { $l = $l / $r }
                 )*                      { $$ = $l }
 
-Value   = i:NUMBER                      {
-            On Error Resume Next
-            $$ = CDbl($$text) 
-            If Err.Number <> 0 Then
-                $$ = 0
-                .LastError = Err.Description
-            End If 
-}
+Value   = NUMBER                        { $$ = Val($$text) }
         | OPEN i:Sum CLOSE              { $$ = $i }
 
 NUMBER  = < [0-9]+ ('.' [0-9]*)? >    -

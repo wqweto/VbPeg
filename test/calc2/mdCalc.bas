@@ -1,5 +1,5 @@
 Attribute VB_Name = "mdCalc"
-' Auto-generated on 17.3.2018 16:35:28
+' Auto-generated on 23.3.2018 11:05:52
 Option Explicit
 DefObj A-Z
 
@@ -9,6 +9,8 @@ DefObj A-Z
 
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function RtlCompareMemory Lib "ntdll" (Source1 As Any, Source2 As Any, ByVal Length As Long) As Long
+Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+'Private Declare Sub GetMem4 Lib "msvbvm60" (Source As Any, Destination As Any)
 
 '=========================================================================
 ' Constants and member variables
@@ -41,17 +43,20 @@ End Type
 
 Private Type UcsParserType
     Contents            As String
+    BufSA(0 To 5)       As Long
     BufData()           As Integer
-    BufPos              As Long
     BufSize             As Long
+    BufPos              As Long
     ThunkData()         As UcsParserThunkType
+    ThunkSize           As Long
     ThunkPos            As Long
     CaptureBegin        As Long
     CaptureEnd          As Long
     LastError           As String
     UserData            As Variant
-    VarResult           As Variant
-    VarStack()          As Variant
+    VarResult           As Double
+    VarStack()          As Double
+    VarSize             As Long
     VarPos              As Long
 End Type
 
@@ -66,34 +71,41 @@ Property Get VbPegLastError() As String
 End Property
 
 Property Get VbPegParserVersion() As String
-    VbPegParserVersion = "17.3.2018 16:35:28"
+    VbPegParserVersion = "23.3.2018 11:05:52"
 End Property
 
 '=========================================================================
 ' Methods
 '=========================================================================
 
-Public Function VbPegMatch(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As Variant, Optional Result As Variant) As Long
-    If VbPegBeginMatch(sSubject, StartPos, UserData) Then
-        If VbPegParseStmt() Then
-            VbPegMatch = VbPegEndMatch(UserData, Result)
-        End If
-    End If
+Public Function VbPegMatch(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As Variant, Optional Result As Double) As Long
+    VbPegBeginMatch sSubject, StartPos, UserData
+    VbPegParseStmt
+    VbPegMatch = VbPegEndMatch(UserData, Result)
 End Function
 
-Public Function VbPegBeginMatch(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As Variant) As Boolean
+Public Sub VbPegBeginMatch(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As Variant)
     With ctx
         If LenB(sSubject) = 0 Then
             .LastError = "Cannot match empty input"
-            Exit Function
+            Exit Sub
         End If
-        .Contents = sSubject
-        ReDim .BufData(0 To Len(sSubject) + 3) As Integer
-        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))
-        .BufPos = StartPos
+'        .Contents = sSubject
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+'        ReDim .BufData(0 To Len(sSubject) + 3) As Integer
+'        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))
+        .BufSA(0) = 1                      ' cDims
+        .BufSA(1) = 2                      ' cbElements
+        .BufSA(3) = StrPtr(sSubject)       ' pvData
+        .BufSA(4) = Len(sSubject) + 1      ' cElements
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufSA(0)), 4)
         .BufSize = Len(sSubject)
-        .BufData(.BufSize) = -1 '-- EOF anchor
-        ReDim .ThunkData(0 To 4) As UcsParserThunkType
+        .BufPos = StartPos
+'        .BufData(.BufSize) = -1 '-- EOF anchor
+        If .ThunkSize = 0 Then
+            ReDim .ThunkData(0 To 3) As UcsParserThunkType
+            .ThunkSize = 4
+        End If
         .ThunkPos = 0
         .CaptureBegin = 0
         .CaptureEnd = 0
@@ -103,41 +115,69 @@ Public Function VbPegBeginMatch(sSubject As String, Optional ByVal StartPos As L
             .UserData = UserData
         End If
     End With
-    VbPegBeginMatch = True
-End Function
+End Sub
 
-Public Function VbPegEndMatch(Optional UserData As Variant, Optional Result As Variant) As Long
+Public Function VbPegEndMatch(Optional UserData As Variant, Optional Result As Double) As Long
     Dim lIdx            As Long
     Dim uEmpty          As UcsParserType
+    Dim lAction         As Long
+    Dim lCaptureBegin   As Long
+    Dim lCaptureEnd     As Long
     
     With ctx
-        ReDim .VarStack(0 To 1024) As Variant
+        If .VarSize = 0 And .ThunkPos > 0 Then
+            ReDim .VarStack(0 To 1024) As Double
+            .VarSize = 1024
+        End If
         For lIdx = 0 To .ThunkPos - 1
-            Select Case .ThunkData(lIdx).Action
+            lAction = .ThunkData(lIdx).Action
+            Select Case lAction
             Case ucsActVarAlloc
                 .VarPos = .VarPos + .ThunkData(lIdx).CaptureBegin
             Case ucsActVarSet
                 .VarStack(.VarPos - .ThunkData(lIdx).CaptureBegin) = .VarResult
             Case Else
                 With .ThunkData(lIdx)
-                    pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin
+                    pvImplAction lAction, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin
                 End With
+'            Case ucsAct_1_Stmt
+'                 .VarResult = .VarStack(.VarPos - 1)
+'            Case ucsAct_2_Stmt
+'                 .VarResult = .VarStack(.VarPos - 1): .LastError = "Extra characters: " & Mid$(.Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin)
+'            Case ucsAct_3_Sum
+'                 .VarResult = .VarStack(.VarPos - 1)
+'            Case ucsAct_2_Sum
+'                 .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) - .VarStack(.VarPos - 2)
+'            Case ucsAct_1_Sum
+'                 .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) + .VarStack(.VarPos - 2)
+'            Case ucsAct_3_Product
+'                 .VarResult = .VarStack(.VarPos - 1)
+'            Case ucsAct_2_Product
+'                 .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) / .VarStack(.VarPos - 2)
+'            Case ucsAct_1_Product
+'                 .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) * .VarStack(.VarPos - 2)
+'            Case ucsAct_1_Value
+'                 .VarResult = Val(Mid$(.Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin))
+'            Case ucsAct_2_Value
+'                 .VarResult = .VarStack(.VarPos - 1)
             End Select
         Next
-        If IsObject(.VarResult) Then
-            Set Result = .VarResult
-        Else
+'        If IsObject(.VarResult) Then
+'            Set Result = .VarResult
+'        Else
             Result = .VarResult
-        End If
+'        End If
         If IsObject(.UserData) Then
             Set UserData = .UserData
         Else
             UserData = .UserData
         End If
         VbPegEndMatch = .BufPos
+        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
     End With
-    uEmpty.LastError = ctx.LastError
-    ctx = uEmpty
+'    uEmpty.LastError = ctx.LastError
+'    ctx = uEmpty
 End Function
 
 Private Sub pvPushAction(ByVal eAction As UcsParserActionsEnum)
@@ -181,7 +221,10 @@ Public Function VbPegParseStmt() As Boolean
         pvPushThunk ucsActVarAlloc, 1
         p7 = .BufPos
         q7 = .ThunkPos
-        Call Parse_
+'        Call Parse_
+        Do While .BufData(.BufPos) = 9 Or .BufData(.BufPos) = 32
+            .BufPos = .BufPos + 1
+        Loop
         If VbPegParseSum() Then
             pvPushThunk ucsActVarSet, 1
             p22 = .BufPos
@@ -232,14 +275,28 @@ End Function
 
 Private Sub Parse_()
     With ctx
-        Do
-            Select Case .BufData(.BufPos)
-            Case 32, 9                              ' [ \t]
-                .BufPos = .BufPos + 1
-            Case Else
-                Exit Do
-            End Select
+        Do While .BufData(.BufPos) = 9 Or .BufData(.BufPos) = 32
+            .BufPos = .BufPos + 1
         Loop
+'        lBufLA = .BufData(.BufPos)
+'        Do While lBufLA = 9 Or lBufLA = 32
+'            .BufPos = .BufPos + 1
+'            lBufLA = .BufData(.BufPos)
+'        Loop
+'        Do
+'            If .BufData(.BufPos) <> 9 And .BufData(.BufPos) <> 32 Then
+'                Exit Do
+'            End If
+'            .BufPos = .BufPos + 1
+'        Loop
+'        Do
+'            Select Case .BufData(.BufPos)
+'            Case 32, 9                              ' [ \t]
+'                .BufPos = .BufPos + 1
+'            Case Else
+'                Exit Do
+'            End Select
+'        Loop
     End With
 End Sub
 
@@ -361,7 +418,10 @@ Private Function ParsePLUS() As Boolean
     With ctx
         If .BufData(.BufPos) = 43 Then              ' "+"
             .BufPos = .BufPos + 1
-            Call Parse_
+'            Call Parse_
+            Do While .BufData(.BufPos) = 9 Or .BufData(.BufPos) = 32
+                .BufPos = .BufPos + 1
+            Loop
             ParsePLUS = True
         End If
     End With
@@ -371,7 +431,10 @@ Private Function ParseMINUS() As Boolean
     With ctx
         If .BufData(.BufPos) = 45 Then              ' "-"
             .BufPos = .BufPos + 1
-            Call Parse_
+'            Call Parse_
+            Do While .BufData(.BufPos) = 9 Or .BufData(.BufPos) = 32
+                .BufPos = .BufPos + 1
+            Loop
             ParseMINUS = True
         End If
     End With
@@ -386,7 +449,6 @@ Public Function VbPegParseValue() As Boolean
         p71 = .BufPos
         q71 = .ThunkPos
         If ParseNUMBER() Then
-            pvPushThunk ucsActVarSet, 1
             pvPushAction ucsAct_1_Value
             pvPushThunk ucsActVarAlloc, -1
             VbPegParseValue = True
@@ -416,7 +478,10 @@ Private Function ParseTIMES() As Boolean
     With ctx
         If .BufData(.BufPos) = 42 Then              ' "*"
             .BufPos = .BufPos + 1
-            Call Parse_
+'            Call Parse_
+            Do While .BufData(.BufPos) = 9 Or .BufData(.BufPos) = 32
+                .BufPos = .BufPos + 1
+            Loop
             ParseTIMES = True
         End If
     End With
@@ -426,7 +491,10 @@ Private Function ParseDIVIDE() As Boolean
     With ctx
         If .BufData(.BufPos) = 47 Then              ' "/"
             .BufPos = .BufPos + 1
-            Call Parse_
+'            Call Parse_
+            Do While .BufData(.BufPos) = 9 Or .BufData(.BufPos) = 32
+                .BufPos = .BufPos + 1
+            Loop
             ParseDIVIDE = True
         End If
     End With
@@ -460,7 +528,10 @@ Private Function ParseNUMBER() As Boolean
             End If
 L3:
             .CaptureEnd = .BufPos
-            Call Parse_
+'            Call Parse_
+            Do While .BufData(.BufPos) = 9 Or .BufData(.BufPos) = 32
+                .BufPos = .BufPos + 1
+            Loop
             ParseNUMBER = True
         End If
     End With
@@ -470,7 +541,10 @@ Private Function ParseOPEN() As Boolean
     With ctx
         If .BufData(.BufPos) = 40 Then              ' "("
             .BufPos = .BufPos + 1
-            Call Parse_
+'            Call Parse_
+            Do While .BufData(.BufPos) = 9 Or .BufData(.BufPos) = 32
+                .BufPos = .BufPos + 1
+            Loop
             ParseOPEN = True
         End If
     End With
@@ -480,7 +554,10 @@ Private Function ParseCLOSE() As Boolean
     With ctx
         If .BufData(.BufPos) = 41 Then              ' ")"
             .BufPos = .BufPos + 1
-            Call Parse_
+'            Call Parse_
+            Do While .BufData(.BufPos) = 9 Or .BufData(.BufPos) = 32
+                .BufPos = .BufPos + 1
+            Loop
             ParseCLOSE = True
         End If
     End With
@@ -488,34 +565,65 @@ End Function
 
 Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As Long, ByVal lSize As Long)
     With ctx
-        Select Case eAction
-        Case ucsAct_1_Stmt
-             .VarResult = .VarStack(.VarPos - 1)
-        Case ucsAct_2_Stmt
-             .VarResult = .VarStack(.VarPos - 1): .LastError = "Extra characters: " & Mid$(.Contents, lOffset, lSize)
-        Case ucsAct_3_Sum
-             .VarResult = .VarStack(.VarPos - 1)
-        Case ucsAct_2_Sum
-             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) - .VarStack(.VarPos - 2)
-        Case ucsAct_1_Sum
-             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) + .VarStack(.VarPos - 2)
-        Case ucsAct_3_Product
-             .VarResult = .VarStack(.VarPos - 1)
-        Case ucsAct_2_Product
-             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) / .VarStack(.VarPos - 2)
-        Case ucsAct_1_Product
-             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) * .VarStack(.VarPos - 2)
-        Case ucsAct_1_Value
-            
-            On Error Resume Next
-            .VarResult = CDbl(Mid$(.Contents, lOffset, lSize)) 
-            If Err.Number <> 0 Then
-                .VarResult = 0
-                .LastError = Err.Description
-            End If 
-
-        Case ucsAct_2_Value
-             .VarResult = .VarStack(.VarPos - 1)
-        End Select
+'        If eAction < ucsAct_3_Product Then
+            Select Case eAction
+            Case ucsAct_1_Stmt
+                 .VarResult = .VarStack(.VarPos - 1)
+            Case ucsAct_2_Stmt
+                 .VarResult = .VarStack(.VarPos - 1): .LastError = "Extra characters: " & Mid$(.Contents, lOffset, lSize)
+            Case ucsAct_3_Sum
+                 .VarResult = .VarStack(.VarPos - 1)
+            Case ucsAct_2_Sum
+                 .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) - .VarStack(.VarPos - 2)
+            Case ucsAct_1_Sum
+                 .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) + .VarStack(.VarPos - 2)
+'            End Select
+'        Else
+'            Select Case eAction
+            Case ucsAct_3_Product
+                 .VarResult = .VarStack(.VarPos - 1)
+            Case ucsAct_2_Product
+                 .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) / .VarStack(.VarPos - 2)
+            Case ucsAct_1_Product
+                 .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) * .VarStack(.VarPos - 2)
+            Case ucsAct_1_Value
+                 .VarResult = Val(Mid$(.Contents, lOffset, lSize))
+            Case ucsAct_2_Value
+                 .VarResult = .VarStack(.VarPos - 1)
+            End Select
+'        End If
     End With
+'    With ctx
+'        On eAction GoTo ucsAct_2_Stmt, ucsAct_3_Sum, ucsAct_2_Sum, ucsAct_1_Sum, ucsAct_3_Product, ucsAct_2_Product, ucsAct_1_Product, ucsAct_1_Value, ucsAct_2_Value
+'ucsAct_1_Stmt:
+'             .VarResult = .VarStack(.VarPos - 1)
+'             Exit Sub
+'ucsAct_2_Stmt:
+'             .VarResult = .VarStack(.VarPos - 1): .LastError = "Extra characters: " & Mid$(.Contents, lOffset, lSize)
+'             Exit Sub
+'ucsAct_3_Sum:
+'             .VarResult = .VarStack(.VarPos - 1)
+'             Exit Sub
+'ucsAct_2_Sum:
+'             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) - .VarStack(.VarPos - 2)
+'             Exit Sub
+'ucsAct_1_Sum:
+'             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) + .VarStack(.VarPos - 2)
+'             Exit Sub
+'ucsAct_3_Product:
+'             .VarResult = .VarStack(.VarPos - 1)
+'             Exit Sub
+'ucsAct_2_Product:
+'             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) / .VarStack(.VarPos - 2)
+'             Exit Sub
+'ucsAct_1_Product:
+'             .VarStack(.VarPos - 1) = .VarStack(.VarPos - 1) * .VarStack(.VarPos - 2)
+'             Exit Sub
+'ucsAct_1_Value:
+'             .VarResult = Val(Mid$(.Contents, lOffset, lSize))
+'             Exit Sub
+'ucsAct_2_Value:
+'             .VarResult = .VarStack(.VarPos - 1)
+'             Exit Sub
+'    End With
 End Sub

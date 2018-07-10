@@ -9,10 +9,23 @@ Private Declare Function WriteFile Lib "kernel32" (ByVal hFile As Long, lpBuffer
 Private Declare Function CharToOemBuff Lib "user32" Alias "CharToOemBuffA" (ByVal lpszSrc As String, lpszDst As Any, ByVal cchDstLength As Long) As Long
 
 Sub Main()
-    Dim vResult     As Variant
+    Dim sText       As String
+    Dim vResult     As Double
     Dim vError      As Variant
+    Dim lIdx        As Long
+    Dim bResult     As Boolean
+    Dim dblTimer    As Double
     
-    If VbPegMatch(Command$, Result:=vResult) Then
+    sText = Command$
+    dblTimer = Timer
+'    Do While dblTimer = Timer
+'        dblTimer = Timer
+'    Loop
+'    dblTimer = Timer
+    For lIdx = 1 To 100000
+        bResult = VbPegMatch(sText, Result:=vResult)
+    Next
+    If bResult Then
         ConsolePrint "Result: %1" & vbCrLf, vResult
         If LenB(VbPegLastError) <> 0 Then
             ConsolePrint "Error: %1" & vbCrLf, VbPegLastError
@@ -20,6 +33,22 @@ Sub Main()
     Else
         ConsolePrint "Error: %1" & vbCrLf, VbPegLastError
     End If
+    ConsolePrint "Elapsed: %1" & vbCrLf, Format$(Timer - dblTimer, "0.000")
+End Sub
+
+Sub Main1()
+    Dim lIdx        As Long
+    Dim dblTimer    As Double
+    Dim vResult     As Variant
+    
+    dblTimer = Timer
+    For lIdx = 1 To 1000000
+        vResult = CDbl("0.75")
+'        VbPegMatch "1*0.75", Result:=vResult
+'        VbPegMatch "1*5", Result:=vResult
+'        VbPegMatch "1*0.5+20", Result:=vResult
+    Next
+    Debug.Print Timer - dblTimer
 End Sub
 
 Public Function ConsolePrint(ByVal sText As String, ParamArray A() As Variant) As String
