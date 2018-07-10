@@ -9,6 +9,8 @@ Attribute VB_Name = "mdMain"
 Option Explicit
 DefObj A-Z
 
+#Const HasIVbCollection = False
+
 '=========================================================================
 ' API
 '=========================================================================
@@ -39,7 +41,7 @@ Private Declare Function CloseHandle Lib "kernel32" (ByVal hObject As Long) As L
 ' Constants and member variables
 '=========================================================================
 
-Private Const STR_VERSION           As String = "0.3.2"
+Private Const STR_VERSION           As String = "0.3.3"
 
 '=========================================================================
 ' Functions
@@ -375,9 +377,16 @@ Public Function SetFileLen(sFile As String, ByVal lSize As Long) As Boolean
     End If
 End Function
 
-Public Function SearchCollection(oCol As Collection, Index As Variant) As Boolean
-    On Error GoTo QH
-    oCol.Item Index
-    SearchCollection = True
+#If HasIVbCollection Then
+    Public Function SearchCollection(oCol As IVbCollection, Index As Variant) As Boolean
+        SearchCollection = (oCol.Item(Index) >= 0)
+    End Function
+#Else
+    Public Function SearchCollection(oCol As Collection, Index As Variant) As Boolean
+        On Error GoTo QH
+        oCol.Item Index
+        SearchCollection = True
 QH:
-End Function
+    End Function
+#End If
+
