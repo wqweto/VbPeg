@@ -64,6 +64,7 @@ End Enum
 Private Type UcsTreeNodeType
     NodeType            As UcsTreeNodeTypeEnum
     Text                As String
+    Description         As String
     Children()          As Long
     Variables()         As Long
     Id                  As Long
@@ -114,6 +115,21 @@ Property Let RuleExpression(ByVal lRule As Long, ByVal lExpr As Long)
         If .StartRule = 0 Or .Nodes(lRule).Text = "start" Then
             .StartRule = lRule
         End If
+    End With
+End Property
+
+Property Get RuleDescription(ByVal lRule As Long) As String
+    With m_uTree.Nodes(lRule)
+        If .NodeType = ucsNdtRule Then
+            RuleDescription = .Description
+        End If
+    End With
+End Property
+
+Property Let RuleDescription(ByVal lRule As Long, sValue As String)
+    With m_uTree
+        Debug.Assert .Nodes(lRule).NodeType = ucsNdtRule
+        .Nodes(lRule).Description = sValue
     End With
 End Property
 
@@ -264,9 +280,18 @@ QH:
 End Function
 
 Public Function SetVariable(ByVal lNode As Long, ByVal lVariable As Long) As Long
+    Dim lLastChild      As Long
+    
     With m_uTree
-        .Nodes(lNode).RefVar = lVariable
         SetVariable = AppendSequence(MakeSequence(MakePredicate("YY_CLEAR")), lNode)
+        If NodeNumChildren(lNode) > 0 Then
+            lLastChild = NodeChild(lNode, NodeNumChildren(lNode) - 1)
+            If .Nodes(lLastChild).NodeType = ucsNdtPredicate And .Nodes(lLastChild).Text = "YY_END" Then
+                lNode = MakePredicate("YY_SET")
+                SetVariable = AppendSequence(SetVariable, lNode)
+            End If
+        End If
+        .Nodes(lNode).RefVar = lVariable
     End With
 End Function
 
@@ -430,6 +455,7 @@ Private Sub pvOutputNode(ByVal lNode As Long, ByVal lIndent As Long)
         If .NodeType > 0 Then
             m_uTree.OutBuilder.Add Space$(4 * lIndent) & "[" & lNode & "] " & At(m_uTree.OutNodeTypes, .NodeType) & _
                 IIf(LenB(.Text) <> 0, ", Text=" & .Text, vbNullString) & _
+                IIf(LenB(.Description) <> 0, ", Description=" & .Description, vbNullString) & _
                 IIf(.Id <> 0, ", Id=" & .Id, vbNullString) & _
                 IIf(.RefRule <> 0, ", RefRule=[" & .RefRule & "]", vbNullString) & _
                 IIf(.RefVar <> 0, ", RefVar=[" & .RefVar & "]", vbNullString) & _
@@ -597,7 +623,7 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
         Case ucsNdtPredicate
             If (.Flags And ucsNdfAlwaysTrue) = 0 Then
                 Select Case .Text
-                Case "YY_BEGIN", "YY_END", "YY_CLEAR"
+                Case "YY_BEGIN", "YY_END", "YY_CLEAR", "YY_SET"
                     .Flags = .Flags Or ucsNdfAlwaysTrue
                     pvOptimizePass1 = True
                 End Select

@@ -40,7 +40,7 @@ Private Const STR_FOR_PREFIX        As String = "i"
 Private Const STR_CTX_VAR_NAME      As String = "ctx"
 Private Const STR_ACTIONS_ENUM_NAME As String = "UcsParserActionsEnum"
 Private Const STR_ACTIONS_ENUM_FMT  As String = "ucsAct_%1_%2"
-Private Const STR_ACTIONS_ENUM_VARS As String = "ucsActVarAlloc = -1|ucsActVarSet = -2|ucsActVarClear = -3"
+Private Const STR_ACTIONS_ENUM_VARS As String = "ucsActVarAlloc = -1|ucsActVarSet = -2|ucsActResultClear = -3|ucsActResultSet = -4"
 
 Public Enum UcsIrNodeTypeEnum
     ucsIrtBlock = 1
@@ -618,7 +618,11 @@ EmitStmtIfOnIrNode:
                 AddChild pvCodeGenNode, lSuccess
             Case "YY_CLEAR"
                 pvCodeGenNode = AddNode(ucsIrtBlock)
-                AddChild pvCodeGenNode, AddNode(ucsIrtStmtEmit, "pvPushThunk ucsActVarClear")
+                AddChild pvCodeGenNode, AddNode(ucsIrtStmtEmit, "pvPushThunk ucsActResultClear")
+                AddChild pvCodeGenNode, lSuccess
+            Case "YY_SET"
+                pvCodeGenNode = AddNode(ucsIrtBlock)
+                AddChild pvCodeGenNode, AddNode(ucsIrtStmtEmit, "pvPushThunk ucsActResultSet, lCaptureBegin, lCaptureEnd")
                 AddChild pvCodeGenNode, lSuccess
             Case Else
                 sText = pvCodeGenAction(.NodeText(lNode), .NodeRefRule(lNode), IsImmediate:=True)
@@ -1191,14 +1195,19 @@ Public Function EmitCode( _
 "                Else" & vbCrLf & _
 "                    .VarStack(.VarPos - .ThunkData(lIdx).CaptureBegin) = .VarResult" & vbCrLf & _
 "                End If" & vbCrLf & _
-"            Case ucsActVarClear" & vbCrLf & _
+"            Case ucsActResultClear" & vbCrLf & _
 "                .VarResult = Empty" & vbCrLf & _
+"            Case ucsActResultSet" & vbCrLf & _
+"                With .ThunkData(lIdx)" & vbCrLf & _
+"                    ctx.VarResult = Mid$(ctx.Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin)" & vbCrLf & _
+"                End With" & vbCrLf & _
 "            Case Else" & vbCrLf & _
 "                With .ThunkData(lIdx)" & vbCrLf & _
 "                    pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin" & vbCrLf & _
 "                End With" & vbCrLf & _
 "            End Select" & vbCrLf & _
-"        Next" & vbCrLf & _
+"        Next" & vbCrLf
+                pvOutput _
 "        If IsObject(.VarResult) Then" & vbCrLf & _
 "            Set Result = .VarResult" & vbCrLf & _
 "        Else" & vbCrLf & _
