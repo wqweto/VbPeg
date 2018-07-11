@@ -17,51 +17,51 @@
 
 Grammar         <- Spacing Definition+ EndOfFile
 
-Definition      <- Identifier                   {   With .UserData
-                                                        lNode = .BeginRule(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
-                                                        If .RuleExpression(lNode) <> 0 Then
-                                                            ConsoleError "Rule '%1' redefined" & vbCrLf, Mid$(ctx.Contents, lOffset, lSize)
-                                                        End If
-                                                        .Push lNode
-                                                     End With }
-                     (Literal                   { With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With }
+Definition      <- Identifier                                           {   With .UserData
+                                                                                lNode = .BeginRule(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
+                                                                                If .RuleExpression(lNode) <> 0 Then
+                                                                                    ConsoleError "Rule '%1' redefined" & vbCrLf, Mid$(ctx.Contents, lOffset, lSize)
+                                                                                End If
+                                                                                .Push lNode
+                                                                            End With }
+                     (Literal                                           { With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With }
                      )?
-                     Assign Expression SEMI?    { With .UserData: Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
-Expression      <- Sequence (Choice Sequence    { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(.Pop), lNode): End With }
+                     Assign Expression SEMI?                            { With .UserData: Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
+Expression      <- Sequence (Choice Sequence                            { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(.Pop), lNode): End With }
                             )*
-Sequence        <- Prefix (Prefix               { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(.Pop), lNode): End With }
+Sequence        <- Prefix (Prefix                                       { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(.Pop), lNode): End With }
                           )*
-                 /                              { With .UserData: .Push .MakePredicate("1"): End With }
-Prefix          <- AND Action                   { With .UserData: .Push .MakePredicate(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / AND Variable                 { With .UserData: .Push .MakePeekFor(.Pop): End With }
-                 / NOT Variable                 { With .UserData: .Push .MakePeekNot(.Pop): End With }
+                 /                                                      { With .UserData: .Push .MakePredicate("1"): End With }
+Prefix          <- AND Action                                           { With .UserData: .Push .MakePredicate(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / AND Variable                                         { With .UserData: .Push .MakePeekFor(.Pop): End With }
+                 / NOT Variable                                         { With .UserData: .Push .MakePeekNot(.Pop): End With }
                  /     Variable
-Variable        <- Identifier                   { With .UserData: .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                      COLON Suffix              { With .UserData: .Push .SetVariable(.Pop, .Pop): End With }
+Variable        <- Identifier                                           { With .UserData: .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                      COLON Suffix                                      { With .UserData: .Push .SetVariable(.Pop, .Pop): End With }
                  / Suffix
-Suffix          <- Primary (QUESTION            { With .UserData: .Push .MakeQuery(.Pop): End With }
-                             / STAR             { With .UserData: .Push .MakeStar(.Pop): End With }
-                             / PLUS             { With .UserData: .Push .MakePlus(.Pop): End With }
+Suffix          <- Primary (QUESTION                                    { With .UserData: .Push .MakeQuery(.Pop): End With }
+                             / STAR                                     { With .UserData: .Push .MakeStar(.Pop): End With }
+                             / PLUS                                     { With .UserData: .Push .MakePlus(.Pop): End With }
                            )?
-Primary         <- Identifier !(LitNonCapture? Assign) { With .UserData: .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize))): End With }
+Primary         <- Identifier !(LitNonCapture? Assign)                  { With .UserData: .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize))): End With }
                  / OPEN Expression CLOSE
-                 / Literal                      { With .UserData: .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / Class                        { With .UserData: .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / DOT                          { With .UserData: .Push .MakeDot(): End With }
-                 / Action                       { With .UserData: .Push .MakeAction(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / BEGIN                        { With .UserData: .Push .MakePredicate("YY_BEGIN"): End With }
-                 / END                          { With .UserData: .Push .MakePredicate("YY_END"): End With }
+                 / Literal                                              { With .UserData: .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / Class                                                { With .UserData: .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / DOT                                                  { With .UserData: .Push .MakeDot(): End With }
+                 / Action                                               { With .UserData: .Push .MakeAction(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / BEGIN                                                { With .UserData: .Push .MakePredicate("YY_BEGIN"): End With }
+                 / END                                                  { With .UserData: .Push .MakePredicate("YY_END"): End With }
 
 # Lexical syntax
 
-Identifier      <- < IdentStart IdentCont* > Spacing    { }
+Identifier      <- < IdentStart IdentCont* > Spacing                    { }
 IdentStart      <- [a-zA-Z_\-]
 IdentCont       <- IdentStart / [0-9]
-Literal         <- ['] < (!['] Char )* > ['] Spacing    { }
-                 / ["] < (!["] Char )* > ["] Spacing    { }
+Literal         <- ['] < (!['] Char )* > ['] Spacing                    { }
+                 / ["] < (!["] Char )* > ["] Spacing                    { }
 LitNonCapture   <- ['] (!['] Char )* ['] Spacing
                  / ["] (!["] Char )* ["] Spacing
-Class           <- '[' < (!']' Range)* > ']' Spacing    { }
+Class           <- '[' < (!']' Range)* > ']' Spacing                    { }
 Range           <- Char '-' !']' Char / Char
 Char            <- '\\' [abefnrtv'"\[\]\\]
                  / '\\' [0-3][0-7][0-7]
@@ -69,7 +69,7 @@ Char            <- '\\' [abefnrtv'"\[\]\\]
                  / '\\' '-'
                  / !'\\' .
 LEFTARROW       <- '<-' Spacing
-SLASH           <- '/' Spacing
+SLASH           <- '/' !'/' Spacing
 AND             <- '&' Spacing
 NOT             <- '!' Spacing
 QUESTION        <- '?' Spacing
@@ -79,12 +79,12 @@ OPEN            <- '(' Spacing
 CLOSE           <- ')' Spacing
 DOT             <- '.' Spacing
 Spacing         <- (Space / Comment)*
-Comment         <- '#' (!EndOfLine .)* EndOfLine
+Comment         <- ('#' / '//') (!EndOfLine .)* EndOfLine
 Space           <- ' ' / '\t' / EndOfLine
 EndOfLine       <- '\r\n' / '\n' / '\r'
 EndOfFile       <- !.
 
-Action          <- '{' < [^}]* > '}' Spacing            { }
+Action          <- '{' < ([^{}] / Action)* > '}' Spacing                { }
 BEGIN           <- '<' Spacing
 END             <- '>' Spacing
 

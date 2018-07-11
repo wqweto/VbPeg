@@ -297,6 +297,7 @@ End Function
 
 Public Function MakeReference(ByVal lRule As Long, Optional ByVal lVariable As Long) As Long
     Dim sName           As String
+    
     With m_uTree
         Debug.Assert .Nodes(lRule).NodeType = ucsNdtRule
         sName = .Nodes(lRule).Text
