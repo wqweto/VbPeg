@@ -263,9 +263,17 @@ Public Function MakeVariable(sName As String) As Long
 QH:
 End Function
 
+Public Function SetVariable(ByVal lNode As Long, ByVal lVariable As Long) As Long
+    With m_uTree
+        .Nodes(lNode).RefVar = lVariable
+        SetVariable = AppendSequence(MakeSequence(MakePredicate("YY_CLEAR")), lNode)
+    End With
+End Function
+
 Public Function MakeReference(ByVal lRule As Long, Optional ByVal lVariable As Long) As Long
     Dim sName           As String
     With m_uTree
+        Debug.Assert .Nodes(lRule).NodeType = ucsNdtRule
         sName = .Nodes(lRule).Text
         MakeReference = pvNewNode(ucsNdtReference, sName)
         With .Nodes(MakeReference)
@@ -589,7 +597,7 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
         Case ucsNdtPredicate
             If (.Flags And ucsNdfAlwaysTrue) = 0 Then
                 Select Case .Text
-                Case "YY_BEGIN", "YY_END"
+                Case "YY_BEGIN", "YY_END", "YY_CLEAR"
                     .Flags = .Flags Or ucsNdfAlwaysTrue
                     pvOptimizePass1 = True
                 End Select

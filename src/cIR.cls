@@ -40,7 +40,7 @@ Private Const STR_FOR_PREFIX        As String = "i"
 Private Const STR_CTX_VAR_NAME      As String = "ctx"
 Private Const STR_ACTIONS_ENUM_NAME As String = "UcsParserActionsEnum"
 Private Const STR_ACTIONS_ENUM_FMT  As String = "ucsAct_%1_%2"
-Private Const STR_ACTIONS_ENUM_VARS As String = "ucsActVarAlloc = -1|ucsActVarSet = -2"
+Private Const STR_ACTIONS_ENUM_VARS As String = "ucsActVarAlloc = -1|ucsActVarSet = -2|ucsActVarClear = -3"
 
 Public Enum UcsIrNodeTypeEnum
     ucsIrtBlock = 1
@@ -440,12 +440,6 @@ Private Function pvCodeGenNode( _
                 End If
             End If
         Case ucsNdtReference
-'            If .NodeRefVar(lNode) <> 0 Then
-'                lSuccess = AddChild(AddChild( _
-'                    AddNode(ucsIrtBlock), _
-'                        AddNode(ucsIrtStmtEmit, "pvPushThunk ucsActVarSet, " & .NodeId(.NodeRefVar(lNode)))), _
-'                        lSuccess)
-'            End If
             If .NodeFlag(lNode, ucsNdfAlwaysTrue) Or _
                     lSuccess = IR_CONTINUE And lFailure = IR_CONTINUE Then
                 pvCodeGenNode = AddChild(AddChild( _
@@ -467,22 +461,26 @@ Private Function pvCodeGenNode( _
             End If
         Case ucsNdtAction
             '-- always true -> discard lFailure
-            sText = Replace(Replace(STR_ACTIONS_ENUM_FMT, "%1", .NodeId(lNode)), "%2", .NodeText(.NodeRefRule(lNode)))
+            If LenB(Trim$(.NodeText(lNode))) <> 0 Then
+                sText = Replace(Replace(STR_ACTIONS_ENUM_FMT, "%1", .NodeId(lNode)), "%2", .NodeText(.NodeRefRule(lNode)))
+            End If
             pvCodeGenNode = AddChild(AddChild( _
                 AddNode(ucsIrtBlock), _
                     AddNode(ucsIrtStmtPushAction, sText)), _
                     lSuccess)
-            If m_uIr.IrActionsEnum = 0 Then
-                m_uIr.IrActionsEnum = AddNode(ucsIrtDeclEnum, STR_ACTIONS_ENUM_NAME)
+            If LenB(sText) <> 0 Then
+                If m_uIr.IrActionsEnum = 0 Then
+                    m_uIr.IrActionsEnum = AddNode(ucsIrtDeclEnum, STR_ACTIONS_ENUM_NAME)
+                End If
+                AddChild m_uIr.IrActionsEnum, _
+                    AddNode(ucsIrtStmtEmit, sText)
+                If m_uIr.IrActionsSelect = 0 Then
+                    m_uIr.IrActionsSelect = AddNode(ucsIrtStmtSelect, "eAction")
+                End If
+                AddChild m_uIr.IrActionsSelect, AddChild( _
+                    AddNode(ucsIrtStmtCase, sText), _
+                        AddNode(ucsIrtStmtEmit, pvCodeGenAction(.NodeText(lNode), .NodeRefRule(lNode))))
             End If
-            AddChild m_uIr.IrActionsEnum, _
-                AddNode(ucsIrtStmtEmit, sText)
-            If m_uIr.IrActionsSelect = 0 Then
-                m_uIr.IrActionsSelect = AddNode(ucsIrtStmtSelect, "eAction")
-            End If
-            AddChild m_uIr.IrActionsSelect, AddChild( _
-                AddNode(ucsIrtStmtCase, sText), _
-                    AddNode(ucsIrtStmtEmit, pvCodeGenAction(.NodeText(lNode), .NodeRefRule(lNode))))
         Case ucsNdtStar
             '-- always true -> discard lFailure
             lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, AddNode(ucsIrtStmtDoExit))
@@ -617,6 +615,10 @@ EmitStmtIfOnIrNode:
             Case "YY_END"
                 pvCodeGenNode = AddNode(ucsIrtBlock)
                 AddChild pvCodeGenNode, AddNode(ucsIrtStmtCapture, "lCaptureEnd")
+                AddChild pvCodeGenNode, lSuccess
+            Case "YY_CLEAR"
+                pvCodeGenNode = AddNode(ucsIrtBlock)
+                AddChild pvCodeGenNode, AddNode(ucsIrtStmtEmit, "pvPushThunk ucsActVarClear")
                 AddChild pvCodeGenNode, lSuccess
             Case Else
                 sText = pvCodeGenAction(.NodeText(lNode), .NodeRefRule(lNode), IsImmediate:=True)
@@ -1189,6 +1191,8 @@ Public Function EmitCode( _
 "                Else" & vbCrLf & _
 "                    .VarStack(.VarPos - .ThunkData(lIdx).CaptureBegin) = .VarResult" & vbCrLf & _
 "                End If" & vbCrLf & _
+"            Case ucsActVarClear" & vbCrLf & _
+"                .VarResult = Empty" & vbCrLf & _
 "            Case Else" & vbCrLf & _
 "                With .ThunkData(lIdx)" & vbCrLf & _
 "                    pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin" & vbCrLf & _
@@ -1224,7 +1228,7 @@ Public Function EmitCode( _
 "    pvPushThunk eAction, " & STR_CTX_VAR_NAME & ".CaptureBegin, " & STR_CTX_VAR_NAME & ".CaptureEnd" & vbCrLf & _
 "End Sub" & vbCrLf
             pvOutput _
-"Private Sub pvPushThunk(ByVal eAction As UcsParserActionsEnum, ByVal lBegin As Long, Optional ByVal lEnd As Long)" & vbCrLf & _
+"Private Sub pvPushThunk(ByVal eAction As UcsParserActionsEnum, Optional ByVal lBegin As Long, Optional ByVal lEnd As Long)" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        If UBound(.ThunkData) < .ThunkPos Then" & vbCrLf & _
 "            ReDim Preserve .ThunkData(0 To 2 * UBound(.ThunkData)) As UcsParserThunkType" & vbCrLf & _
@@ -1384,7 +1388,9 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
             If m_uIr.OutDictionary.Exists("lCaptureEnd") Then
                 pvOutput ".CaptureEnd = lCaptureEnd"
             End If
-            pvOutput "pvPushAction " & .Text
+            If LenB(.Text) <> 0 Then
+                pvOutput "pvPushAction " & .Text
+            End If
         Case ucsIrtStmtGoTo
             pvOutput "GoTo " & .Text
         Case ucsIrtStmtForLoop

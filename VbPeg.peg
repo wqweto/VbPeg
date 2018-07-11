@@ -31,16 +31,17 @@ Sequence        <- Prefix (Prefix               { With .UserData: lNode = .Pop()
                           )*
                  /                              { With .UserData: .Push .MakePredicate("1"): End With }
 Prefix          <- AND Action                   { With .UserData: .Push .MakePredicate(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / AND Suffix                   { With .UserData: .Push .MakePeekFor(.Pop): End With }
-                 / NOT Suffix                   { With .UserData: .Push .MakePeekNot(.Pop): End With }
-                 /     Suffix
+                 / AND Variable                 { With .UserData: .Push .MakePeekFor(.Pop): End With }
+                 / NOT Variable                 { With .UserData: .Push .MakePeekNot(.Pop): End With }
+                 /     Variable
+Variable        <- Identifier                   { With .UserData: .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                      COLON Suffix              { With .UserData: .Push .SetVariable(.Pop, .Pop): End With }
+                 / Suffix
 Suffix          <- Primary (QUESTION            { With .UserData: .Push .MakeQuery(.Pop): End With }
                              / STAR             { With .UserData: .Push .MakeStar(.Pop): End With }
                              / PLUS             { With .UserData: .Push .MakePlus(.Pop): End With }
                            )?
-Primary         <- Identifier                   { With .UserData: .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                      COLON Identifier !Assign  { With .UserData: .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize)), .Pop): End With }
-                 / Identifier !Assign           { With .UserData: .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize))): End With }
+Primary         <- Identifier !Assign           { With .UserData: .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize))): End With }
                  / OPEN Expression CLOSE
                  / Literal                      { With .UserData: .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)): End With }
                  / Class                        { With .UserData: .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize)): End With }
@@ -51,12 +52,12 @@ Primary         <- Identifier                   { With .UserData: .Push .MakeVar
 
 # Lexical syntax
 
-Identifier      <- < IdentStart IdentCont* > Spacing
+Identifier      <- < IdentStart IdentCont* > Spacing    { }
 IdentStart      <- [a-zA-Z_\-]
 IdentCont       <- IdentStart / [0-9]
-Literal         <- ['] < (!['] Char )* > ['] Spacing
-                 / ["] < (!["] Char )* > ["] Spacing
-Class           <- '[' < (!']' Range)* > ']' Spacing
+Literal         <- ['] < (!['] Char )* > ['] Spacing    { }
+                 / ["] < (!["] Char )* > ["] Spacing    { }
+Class           <- '[' < (!']' Range)* > ']' Spacing    { }
 Range           <- Char '-' !']' Char / Char
 Char            <- '\\' [abefnrtv'"\[\]\\]
                  / '\\' [0-3][0-7][0-7]
@@ -79,7 +80,7 @@ Space           <- ' ' / '\t' / EndOfLine
 EndOfLine       <- '\r\n' / '\n' / '\r'
 EndOfFile       <- !.
 
-Action          <- '{' < [^}]* > '}' Spacing
+Action          <- '{' < [^}]* > '}' Spacing            { }
 BEGIN           <- '<' Spacing
 END             <- '>' Spacing
 
