@@ -54,6 +54,8 @@ Private Sub Main()
     Dim oIR             As cIR
     Dim nFile           As Integer
     Dim sOutput         As String
+    Dim sFile           As String
+    Dim vElem           As Variant
     
     On Error GoTo EH
     Set oParser = New cParser
@@ -83,7 +85,14 @@ Private Sub Main()
     End If
     Set oTree = New cTree
     If oParser.Match(ReadTextFile(oOpt.Item("arg1")), UserData:=oTree) = 0 Then
-        ConsoleError "Error parsing: %1" & vbCrLf, oParser.LastError
+        If Not IsObject(oParser.LastError) Then
+            ConsoleError "Error parsing: %1" & vbCrLf, "unknown"
+        Else
+            sFile = Mid$(oOpt.Item("arg1"), InStrRev(oOpt.Item("arg1"), "\") + 1)
+            For Each vElem In oParser.LastError
+                ConsoleError "%1(%2): %3" & vbCrLf, sFile, At(vElem, 1), At(vElem, 0)
+            Next
+        End If
         Exit Sub
     End If
     If Not oTree.CheckTree() Then
