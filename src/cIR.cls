@@ -240,8 +240,11 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                         lSuccess = IR_CONTINUE
                         lFailure = IR_CONTINUE
                     Else
-                        lSuccess = AddChild(AddChild( _
-                            AddNode(ucsIrtBlock), _
+                        lSuccess = AddChild(AddChild(AddChild( _
+                            AddNode(ucsIrtBlock), AddChild(AddChild( _
+                                AddNode(ucsIrtStmtIf), _
+                                    AddNode(ucsIrtExprEmit, ".BufPos > .LastBufPos")), _
+                                    AddNode(ucsIrtStmtEmit, ".LastError = vbNullString : .LastBufPos = .BufPos"))), _
                                 AddNode(ucsIrtStmtRetVal, "True")), _
                                 AddNode(ucsIrtStmtExit))
                         lFailure = IR_CONTINUE
@@ -471,6 +474,33 @@ Private Function pvCodeGenNode( _
                         AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
                         lSuccess), _
                         lFailure)
+            End If
+        Case ucsNdtError
+            If .NodeFlag(lNode, ucsNdfAlwaysTrue) Or _
+                    lSuccess = IR_CONTINUE And lFailure = IR_CONTINUE Then
+                pvCodeGenNode = AddChild(AddChild( _
+                    AddNode(ucsIrtBlock), _
+                        AddNode(ucsIrtStmtCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
+                        lSuccess)
+            Else
+                lIrNode = AddNode(ucsIrtStmtEmit, ".LastError = " & pvToVbString(.NodeText(lNode)) & " : .LastBufPos = .BufPos")
+                If lFailure = IR_CONTINUE Then
+                    lFailure = lIrNode
+                Else
+                    lFailure = AddChild(AddChild( _
+                        AddNode(ucsIrtBlock), _
+                            lIrNode), _
+                            lFailure)
+                End If
+                If .NodeRefRule(lNode) = 0 Then
+                    pvCodeGenNode = lFailure
+                Else
+                    pvCodeGenNode = AddChild(AddChild(AddChild( _
+                        AddNode(ucsIrtStmtIf), _
+                            AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
+                            lSuccess), _
+                            lFailure)
+                End If
             End If
         Case ucsNdtAction
             '-- always true -> discard lFailure
@@ -1116,7 +1146,8 @@ Public Function EmitCode( _
 "    ThunkPos            As Long" & vbCrLf & _
 "    CaptureBegin        As Long" & vbCrLf & _
 "    CaptureEnd          As Long" & vbCrLf & _
-"    LastError           As Variant" & vbCrLf & _
+"    LastError           As String" & vbCrLf & _
+"    LastBufPos          As Long" & vbCrLf & _
 "    UserData            As " & sUserData
         If .CodeGenVarStack Then
             pvOutput _
@@ -1138,12 +1169,12 @@ Public Function EmitCode( _
 "' Properties" & vbCrLf & _
 "'=========================================================================" & vbCrLf
         pvOutput _
-"Property Get " & .OutModulePrefix & "LastError() As Variant" & vbCrLf & _
-"    If IsObject(" & STR_CTX_VAR_NAME & ".LastError) Then" & vbCrLf & _
-"        Set " & .OutModulePrefix & "LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
-"    Else" & vbCrLf & _
-"        " & .OutModulePrefix & "LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
-"    End If" & vbCrLf & _
+"Property Get " & .OutModulePrefix & "LastError() As String" & vbCrLf & _
+"    " & .OutModulePrefix & "LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"End Property" & vbCrLf
+        pvOutput _
+"Property Get " & .OutModulePrefix & "LastBufPos() As Long" & vbCrLf & _
+"    " & .OutModulePrefix & "LastBufPos = " & STR_CTX_VAR_NAME & ".LastBufPos" & vbCrLf & _
 "End Property" & vbCrLf
         pvOutput _
 "Property Get " & .OutModulePrefix & "ParserVersion() As String" & vbCrLf & _
@@ -1159,6 +1190,8 @@ Public Function EmitCode( _
 "    If " & .OutModulePrefix & "BeginMatch(sSubject, StartPos, UserData) Then" & vbCrLf & _
 "        If " & .OutModulePrefix & .CodeGenStartFunc & "() Then" & vbCrLf & _
 "            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(UserData" & IIf(.CodeGenVarStack, ", Result", vbNullString) & ")" & vbCrLf & _
+"        ElseIf LenB(" & STR_CTX_VAR_NAME & ".LastError) = 0 Then" & vbCrLf & _
+"            " & STR_CTX_VAR_NAME & ".LastError = ""Fail""" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End If" & vbCrLf & _
 "End Function" & vbCrLf
@@ -1166,6 +1199,7 @@ Public Function EmitCode( _
         pvOutput _
 "Public Function " & .OutModulePrefix & "BeginMatch(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & ") As Boolean" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
+"        .LastBufPos = 0" & vbCrLf & _
 "        If LenB(sSubject) = 0 Then" & vbCrLf & _
 "            .LastError = ""Cannot match empty input""" & vbCrLf & _
 "            Exit Function" & vbCrLf & _
@@ -1179,7 +1213,8 @@ Public Function EmitCode( _
 "        ReDim .ThunkData(0 To 4) As UcsParserThunkType" & vbCrLf & _
 "        .ThunkPos = 0" & vbCrLf & _
 "        .CaptureBegin = 0" & vbCrLf & _
-"        .CaptureEnd = 0" & vbCrLf & _
+"        .CaptureEnd = 0"
+        pvOutput _
 "        If IsObject(UserData) Then" & vbCrLf & _
 "            Set .UserData = UserData" & vbCrLf & _
 "        Else" & vbCrLf & _
@@ -1194,11 +1229,8 @@ Public Function EmitCode( _
 "    Dim uEmpty          As UcsParserType" & vbCrLf & _
 "    " & vbCrLf & _
 "    " & .OutModulePrefix & "EndMatch = " & STR_CTX_VAR_NAME & ".BufPos" & vbCrLf & _
-"    If IsObject(" & STR_CTX_VAR_NAME & ".LastError) Then" & vbCrLf & _
-"        Set uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
-"    Else" & vbCrLf & _
-"        uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
-"    End If" & vbCrLf & _
+"    uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"    uEmpty.LastBufPos = " & STR_CTX_VAR_NAME & ".LastBufPos" & vbCrLf & _
 "    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
 "End Function" & vbCrLf
         Else
@@ -1255,11 +1287,8 @@ Public Function EmitCode( _
 "        End If" & vbCrLf & _
 "        " & .OutModulePrefix & "EndMatch = .BufPos + 1" & vbCrLf & _
 "    End With" & vbCrLf & _
-"    If IsObject(" & STR_CTX_VAR_NAME & ".LastError) Then" & vbCrLf & _
-"        Set uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
-"    Else" & vbCrLf & _
-"        uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
-"    End If" & vbCrLf & _
+"    uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"    uEmpty.LastBufPos = " & STR_CTX_VAR_NAME & ".LastBufPos" & vbCrLf & _
 "    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
 "End Function" & vbCrLf
             pvOutput _

@@ -85,14 +85,13 @@ Private Sub Main()
     End If
     Set oTree = New cTree
     If oParser.Match(ReadTextFile(oOpt.Item("arg1")), UserData:=oTree) = 0 Then
-        If Not IsObject(oParser.LastError) Then
-            ConsoleError "Error parsing: %1" & vbCrLf, "unknown"
-        Else
-            sFile = Mid$(oOpt.Item("arg1"), InStrRev(oOpt.Item("arg1"), "\") + 1)
-            For Each vElem In oParser.LastError
-                ConsoleError "%1(%2): %3" & vbCrLf, sFile, At(vElem, 1), At(vElem, 0)
-            Next
+        If LenB(oParser.LastError) Then
+            ConsoleError "Error parsing: %1 at pos %2" & vbCrLf, oParser.LastError, oParser.LastBufPos
         End If
+        sFile = Mid$(oOpt.Item("arg1"), InStrRev(oOpt.Item("arg1"), "\") + 1)
+        For Each vElem In oParser.GetParseErrors()
+            ConsoleError sFile & "(%2): %1" & vbCrLf, At(vElem, 0), At(vElem, 1)
+        Next
         Exit Sub
     End If
     If Not oTree.CheckTree() Then

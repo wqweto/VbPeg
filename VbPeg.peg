@@ -16,8 +16,8 @@
 # Hierarchical syntax
 
 Grammar         <- Spacing (Setting / Definition)+ 
-                    (EndOfFile /                                       &{ AppendError("Expected rule or setting") }
-                    )
+                                                   (EndOfFile /        &{ AppendError("Expected rule or setting") }
+                                                   )
 
 Definition      <- Identifier                                           {   With .UserData
                                                                                 lNode = .BeginRule(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
@@ -27,28 +27,34 @@ Definition      <- Identifier                                           {   With
                                                                                 .Push lNode
                                                                             End With }
                                                                        &{ ClearErrors() And SetUserDataTag($$text) }
-                     (Literal                                           { With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With }
-                     )? Assign 
-                     (Expression                                        { With .UserData: Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
-                      /                                                &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'") }
-                     ) SEMI?
+                              (Literal                                  { With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With }
+                              )?       Assign 
+                                              (Expression               { With .UserData: Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
+                                               /                       &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'") }
+                                              )           SEMI?
 Expression      <- Sequence (Choice Sequence                            { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(.Pop), lNode): End With }
                             )*
-Sequence        <- Prefix (Prefix                                       { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(.Pop), lNode): End With }
+Sequence        <- Error (Error                                         { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(.Pop), lNode): End With }
                           )*
                  /                                                      { With .UserData: .Push .MakePredicate("1"): End With }
+Error           <- Prefix CARET                                        &{ ClearErrors() }
+                                (Identifier                             { With .UserData: .Push .AppendChild(.MakeAlternate(.Pop), .MakeErrorReference(Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                 / Literal                              { With .UserData: .Push .AppendChild(.MakeAlternate(.Pop), .MakeErrorString(Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                 /                                     &{ AppendError("Expected rule or literal for error label") }
+                                )
+                 / Prefix !CARET
 Prefix          <- AND Action                                           { With .UserData: .Push .MakePredicate(Mid$(ctx.Contents, lOffset, lSize)): End With }
                  / AND Variable                                         { With .UserData: .Push .MakePeekFor(.Pop): End With }
                  / NOT Variable                                         { With .UserData: .Push .MakePeekNot(.Pop): End With }
                  /     Variable
 Variable        <- Identifier                                           { With .UserData: .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                      COLON Suffix                                      { With .UserData: .Push .SetVariable(.Pop, .Pop): End With }
+                              COLON Suffix                              { With .UserData: .Push .SetVariable(.Pop, .Pop): End With }
                  / Suffix
 Suffix          <- Primary (QUESTION                                    { With .UserData: .Push .MakeQuery(.Pop): End With }
-                             / STAR                                     { With .UserData: .Push .MakeStar(.Pop): End With }
-                             / PLUS                                     { With .UserData: .Push .MakePlus(.Pop): End With }
+                            / STAR                                      { With .UserData: .Push .MakeStar(.Pop): End With }
+                            / PLUS                                      { With .UserData: .Push .MakePlus(.Pop): End With }
                            )?
-Primary         <- Identifier !(LitNonCapture? Assign)                  { With .UserData: .Push .MakeReference(.FindRule(Mid$(ctx.Contents, lOffset, lSize))): End With }
+Primary         <- Identifier !(LiteralNC? Assign)                      { With .UserData: .Push .MakeReference(Mid$(ctx.Contents, lOffset, lSize)): End With }
                  / OPEN                                                &{ ClearErrors() }
                         (Expression CLOSE
                          /                                             &{ AppendError("Invalid expression") }
@@ -62,10 +68,10 @@ Primary         <- Identifier !(LitNonCapture? Assign)                  { With .
 
 Setting         <- SettingName                                          { With .UserData: .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)): End With }
                                                                        &{ ClearErrors() And SetUserDataTag($$text) }
-                   (SettingValue                                        { With .UserData: .AppendSetting .Pop, Mid$(ctx.Contents, lOffset, lSize): End With }
-                    /                                                  &{ AppendError("Invalid value for setting '" & .UserData.Tag & "'") }
-                   )
-SettingName     <- '@' (Identifier / Literal / EMPTY)                   
+                               (SettingValue                            { With .UserData: .AppendSetting .Pop, Mid$(ctx.Contents, lOffset, lSize): End With }
+                                /                                      &{ AppendError("Invalid value for setting '" & .UserData.Tag & "'") }
+                               )
+SettingName     <- AT (Identifier / Literal / EMPTY)                   
 SettingValue    <- (Identifier / Literal / Action) SEMI?                          
                  
 # Lexical syntax
@@ -75,7 +81,7 @@ IdentStart      <- [a-zA-Z_\-]
 IdentCont       <- IdentStart / [0-9]
 Literal         <- ['] < (!['] Char )* > ['] Spacing                    { }
                  / ["] < (!["] Char )* > ["] Spacing                    { }
-LitNonCapture   <- ['] (!['] Char )* ['] Spacing
+LiteralNC       <- ['] (!['] Char )* ['] Spacing                        # Non-capture version
                  / ["] (!["] Char )* ["] Spacing
 Class           <- '[' < (!']' Range)* > ']' Spacing                    { }
 Range           <- Char '-' !']' Char / Char
@@ -101,8 +107,8 @@ Space           <- ' ' / '\t' / EndOfLine
 EndOfLine       <- '\r\n' / '\n' / '\r'
 EndOfFile       <- !.
 
-Action          <- '{' EndOfLine* < ([^{}] / ActNonCapture)* > '}' Spacing { }
-ActNonCapture   <- '{' ([^{}] / ActNonCapture)* '}' Spacing
+Action          <- '{' EndOfLine* < ([^{}] / ActionNC)* > '}' Spacing   { }
+ActionNC        <- '{' ([^{}] / ActionNC)* '}' Spacing                  # Non-capture version
 BEGIN           <- '<' Spacing
 END             <- '>' Spacing
 
@@ -112,33 +118,43 @@ EQUAL           <- '=' Spacing
 BAR             <- '|' Spacing
 COLON           <- ':' Spacing
 SEMI            <- ';' Spacing
+AT              <- '@' Spacing
+CARET           <- '^' Spacing
+
+@members {
+    Errors              As Collection
+}
 
 @{
 Private Function ClearErrors() As Boolean
     Dim lIdx            As Long
     
-    If IsObject(ctx.LastError) Then
-        For lIdx = ctx.LastError.Count To 1 Step -1
-            If ctx.LastError.Item(lIdx)(1) <= ctx.BufPos Then
-                ctx.LastError.Remove lIdx
+    If Not ctx.Errors Is Nothing Then
+        For lIdx = ctx.Errors.Count To 1 Step -1
+            If ctx.Errors.Item(lIdx)(1) <= ctx.BufPos Then
+                ctx.Errors.Remove lIdx
             End If
         Next
-        If ctx.LastError.Count = 0 Then
-            ctx.LastError = Empty
+        If ctx.Errors.Count = 0 Then
+            Set ctx.Errors = Nothing
         End If
     End If
     ClearErrors = True
 End Function
 
 Private Function AppendError(sText As String) As Boolean
-    If Not IsObject(ctx.LastError) Then
-        Set ctx.LastError = New Collection
+    If ctx.Errors Is Nothing Then
+        Set ctx.Errors = New Collection
     End If
-    ctx.LastError.Add Array(sText, ctx.BufPos)
+    ctx.Errors.Add Array(sText, ctx.BufPos)
 End Function
 
 Private Function SetUserDataTag(sText As String) As Boolean
     ctx.UserData.Tag = sText
     SetUserDataTag = True
+End Function
+
+Public Function GetParseErrors() As Collection
+    Set GetParseErrors = ctx.Errors
 End Function
 }
