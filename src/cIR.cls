@@ -1103,7 +1103,7 @@ Public Function EmitCode( _
 "    ThunkPos            As Long" & vbCrLf & _
 "    CaptureBegin        As Long" & vbCrLf & _
 "    CaptureEnd          As Long" & vbCrLf & _
-"    LastError           As String" & vbCrLf & _
+"    LastError           As Variant" & vbCrLf & _
 "    UserData            As " & sUserData
         If .CodeGenVarStack Then
             pvOutput _
@@ -1120,8 +1120,12 @@ Public Function EmitCode( _
 "' Properties" & vbCrLf & _
 "'=========================================================================" & vbCrLf
         pvOutput _
-"Property Get " & .OutModulePrefix & "LastError() As String" & vbCrLf & _
-"    " & .OutModulePrefix & "LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"Property Get " & .OutModulePrefix & "LastError() As Variant" & vbCrLf & _
+"    If IsObject(" & STR_CTX_VAR_NAME & ".LastError) Then" & vbCrLf & _
+"        Set " & .OutModulePrefix & "LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"    Else" & vbCrLf & _
+"        " & .OutModulePrefix & "LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"    End If" & vbCrLf & _
 "End Property" & vbCrLf
         pvOutput _
 "Property Get " & .OutModulePrefix & "ParserVersion() As String" & vbCrLf & _
@@ -1172,7 +1176,11 @@ Public Function EmitCode( _
 "    Dim uEmpty          As UcsParserType" & vbCrLf & _
 "    " & vbCrLf & _
 "    " & .OutModulePrefix & "EndMatch = " & STR_CTX_VAR_NAME & ".BufPos" & vbCrLf & _
-"    uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"    If IsObject(" & STR_CTX_VAR_NAME & ".LastError) Then" & vbCrLf & _
+"        Set uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"    Else" & vbCrLf & _
+"        uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"    End If" & vbCrLf & _
 "    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
 "End Function" & vbCrLf
         Else
@@ -1229,7 +1237,11 @@ Public Function EmitCode( _
 "        End If" & vbCrLf & _
 "        " & .OutModulePrefix & "EndMatch = .BufPos + 1" & vbCrLf & _
 "    End With" & vbCrLf & _
-"    uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"    If IsObject(" & STR_CTX_VAR_NAME & ".LastError) Then" & vbCrLf & _
+"        Set uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"    Else" & vbCrLf & _
+"        uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
+"    End If" & vbCrLf & _
 "    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
 "End Function" & vbCrLf
             pvOutput _
