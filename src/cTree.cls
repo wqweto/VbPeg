@@ -90,6 +90,7 @@ End Type
 
 Private m_uTree                 As UcsTreeType
 Private m_oSettings             As Object
+Private m_vTag                  As Variant
 
 '=========================================================================
 ' Properties
@@ -203,6 +204,22 @@ Property Let SettingValue(sName As String, sValue As String)
         Set m_oSettings = CreateObject("Scripting.Dictionary")
     End If
     m_oSettings.Item(sName) = sValue
+End Property
+
+Property Get Tag() As Variant
+    If IsObject(m_vTag) Then
+        Set Tag = m_vTag
+    Else
+        Tag = m_vTag
+    End If
+End Property
+
+Property Let Tag(vValue As Variant)
+    m_vTag = vValue
+End Property
+
+Property Set Tag(vValue As Variant)
+    Set m_vTag = vValue
 End Property
 
 '=========================================================================
