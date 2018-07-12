@@ -128,6 +128,10 @@ Property Let IrFlag(ByVal lNode As Long, ByVal eFlag As UcsIrNodeFlagsEnum, ByVa
     End With
 End Property
 
+Property Get SettingValue(sName As String) As String
+    SettingValue = m_uIr.CodeGenTree.SettingValue(sName)
+End Property
+
 '=========================================================================
 ' Methods
 '=========================================================================
@@ -272,10 +276,19 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
             Next
         End With
         If .IrActionsSelect <> 0 Then
-            lIrNode = AddChild( _
-                AddNode(ucsIrtDeclFunc, "pvImplAction(ByVal eAction As " & STR_ACTIONS_ENUM_NAME & ", ByVal lOffset As Long, ByVal lSize As Long)"), AddChild( _
+            lIrNode = AddNode(ucsIrtDeclFunc, "pvImplAction(ByVal eAction As " & STR_ACTIONS_ENUM_NAME & _
+                ", ByVal lOffset As Long, ByVal lSize As Long)")
+            If LenB(SettingValue("prolog")) <> 0 Or LenB(SettingValue("epilog")) <> 0 Then
+                AddChild lIrNode, AddChild(AddChild(AddChild( _
+                    AddNode(ucsIrtBlock), _
+                        AddNode(ucsIrtStmtEmit, LTrim$(pvTrimCrLf(SettingValue("prolog"))))), _
+                        .IrActionsSelect), _
+                        AddNode(ucsIrtStmtEmit, LTrim$(pvTrimCrLf(SettingValue("epilog")))))
+            Else
+                AddChild lIrNode, AddChild( _
                     AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME), _
-                        .IrActionsSelect))
+                        .IrActionsSelect)
+            End If
             IrFlag(lIrNode, ucsIrfVoid) = True
         End If
         If m_uIr.CodeGenVarStack Then
@@ -1111,6 +1124,11 @@ Public Function EmitCode( _
 "    VarStack()          As " & sVarData & vbCrLf & _
 "    VarPos              As Long"
         End If
+        If LenB(SettingValue("members")) <> 0 Then
+            pvOutput _
+"    '-- from @members setting"
+            pvOutput pvTrimCrLf(SettingValue("members"))
+        End If
         pvOutput _
 "End Type" & vbCrLf
         pvOutput _
@@ -1281,6 +1299,12 @@ Public Function EmitCode( _
                 pvOutput vbNullString
             Next
         End With
+        If LenB(SettingValue(vbNullString)) <> 0 Then
+            pvOutput _
+"'= user-defined functions ================================================" & vbCrLf
+            pvOutput pvTrimCrLf(SettingValue(vbNullString))
+        End If
+        pvOutput vbNullString
         sOutput = ConcatCollection(.OutBuilder, vbCrLf)
         '--- success
         EmitCode = True
@@ -1498,3 +1522,12 @@ Private Sub pvOutput(ByVal sText As String, Optional Comment As String)
     m_uIr.OutBuilder.Add sText
 End Sub
 
+Private Function pvTrimCrLf(ByVal sText As String) As String
+    Do While Left$(sText, 2) = vbCrLf
+        sText = Mid$(sText, 3)
+    Loop
+    Do While Right$(sText, 2) = vbCrLf
+        sText = RTrim$(Left$(sText, Len(sText) - 2))
+    Loop
+    pvTrimCrLf = sText
+End Function

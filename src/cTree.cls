@@ -89,6 +89,7 @@ Private Type UcsTreeType
 End Type
 
 Private m_uTree                 As UcsTreeType
+Private m_oSettings             As Object
 
 '=========================================================================
 ' Properties
@@ -187,6 +188,21 @@ End Property
 
 Property Get StartRule() As Long
     StartRule = m_uTree.StartRule
+End Property
+
+Property Get SettingValue(sName As String) As String
+    If Not m_oSettings Is Nothing Then
+        If m_oSettings.Exists(sName) Then
+            SettingValue = m_oSettings.Item(sName)
+        End If
+    End If
+End Property
+
+Property Let SettingValue(sName As String, sValue As String)
+    If m_oSettings Is Nothing Then
+        Set m_oSettings = CreateObject("Scripting.Dictionary")
+    End If
+    m_oSettings.Item(sName) = sValue
 End Property
 
 '=========================================================================
@@ -415,6 +431,13 @@ Public Function MakePlus(ByVal lNode As Long) As Long
         .Nodes(MakePlus).Children(0) = lNode
     End With
 End Function
+
+Public Sub AppendSetting(ByVal lName As Long, sValue As String)
+    Dim sName           As String
+    
+    sName = m_uTree.Nodes(lName).Text
+    SettingValue(sName) = SettingValue(sName) & sValue
+End Sub
 
 Public Function Push(ByVal lNode As Long) As Long
     With m_uTree

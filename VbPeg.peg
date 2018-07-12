@@ -15,7 +15,7 @@
 
 # Hierarchical syntax
 
-Grammar         <- Spacing Definition+ EndOfFile
+Grammar         <- Spacing (Setting | Definition)+ EndOfFile
 
 Definition      <- Identifier                                           {   With .UserData
                                                                                 lNode = .BeginRule(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
@@ -52,6 +52,11 @@ Primary         <- Identifier !(LitNonCapture? Assign)                  { With .
                  / BEGIN                                                { With .UserData: .Push .MakePredicate("YY_BEGIN"): End With }
                  / END                                                  { With .UserData: .Push .MakePredicate("YY_END"): End With }
 
+Setting         <- SettingName                                          { With .UserData: .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)): End With }
+                   SettingValue                                         { With .UserData: .AppendSetting .Pop, Mid$(ctx.Contents, lOffset, lSize): End With }
+SettingName     <- '@' (Identifier / Literal / EMPTY)                   
+SettingValue    <- (Identifier / Literal / Action) SEMI?                          
+                 
 # Lexical syntax
 
 Identifier      <- < IdentStart IdentCont* > Spacing                    { }
@@ -78,13 +83,15 @@ PLUS            <- '+' Spacing
 OPEN            <- '(' Spacing
 CLOSE           <- ')' Spacing
 DOT             <- '.' Spacing
+EMPTY           <- < '' > Spacing                                       { }
 Spacing         <- (Space / Comment)*
 Comment         <- ('#' / '//') (!EndOfLine .)* EndOfLine
 Space           <- ' ' / '\t' / EndOfLine
 EndOfLine       <- '\r\n' / '\n' / '\r'
 EndOfFile       <- !.
 
-Action          <- '{' < ([^{}] / Action)* > '}' Spacing                { }
+Action          <- '{' EndOfLine* < ([^{}] / ActNonCapture)* > '}' Spacing { }
+ActNonCapture   <- '{' ([^{}] / ActNonCapture)* '}' Spacing
 BEGIN           <- '<' Spacing
 END             <- '>' Spacing
 
