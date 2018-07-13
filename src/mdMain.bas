@@ -56,6 +56,7 @@ Private Sub Main()
     Dim sOutput         As String
     Dim sFile           As String
     Dim vElem           As Variant
+    Dim sWarning        As String
     
     On Error GoTo EH
     Set oParser = New cParser
@@ -94,9 +95,11 @@ Private Sub Main()
         Next
         Exit Sub
     End If
-    If Not oTree.CheckTree() Then
+    If Not oTree.CheckTree(sWarning) Then
         ConsoleError "%1" & vbCrLf, oTree.LastError
         Exit Sub
+    ElseIf LenB(sWarning) <> 0 Then
+        ConsoleError "Warning: %1" & vbCrLf, sWarning
     End If
     If Not oTree.OptimizeTree() Then
         ConsoleError "Optimize failed: %1" & vbCrLf, oTree.LastError

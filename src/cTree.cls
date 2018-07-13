@@ -560,9 +560,11 @@ Private Function pvGetNodeFlags(ByVal eFlags As UcsTreeNodeFlagsEnum) As String
     End If
 End Function
 
-Public Function CheckTree() As Boolean
+Public Function CheckTree(sWarning As String) As Boolean
     Dim vElem           As Variant
+    Dim cWarnings       As Collection
     
+    Set cWarnings = New Collection
     With m_uTree.Nodes(NODE_ROOT)
         For Each vElem In .Children
             With m_uTree.Nodes(vElem)
@@ -571,10 +573,57 @@ Public Function CheckTree() As Boolean
                     GoTo QH
                 End If
             End With
+            pvConsumeInput vElem, cWarnings
         Next
     End With
+    sWarning = ConcatCollection(cWarnings, vbCrLf)
     '--- success
     CheckTree = True
+QH:
+End Function
+
+Private Function pvConsumeInput(ByVal lNode As Long, cResult As Collection) As Boolean
+    Dim lIdx            As Long
+    
+    Debug.Assert lNode <> 0
+    With m_uTree.Nodes(lNode)
+        Select Case .NodeType
+        Case ucsNdtRule
+            If (.Flags And ucsNdfReached) <> 0 Then
+                If Not SearchCollection(cResult, "#" & lNode) Then
+                    cResult.Add "Possible left recursion in rule '" & .Text & "'", "#" & lNode
+                End If
+            Else
+                .Flags = .Flags Or ucsNdfReached
+                pvConsumeInput = pvConsumeInput(.Children(0), cResult)
+                .Flags = .Flags And Not ucsNdfReached
+            End If
+        Case ucsNdtDot, ucsNdtClass
+            pvConsumeInput = True
+        Case ucsNdtString
+            pvConsumeInput = LenB(.Text) <> 0
+        Case ucsNdtPlus
+            pvConsumeInput = pvConsumeInput(.Children(0), cResult)
+        Case ucsNdtReference, ucsNdtError
+            If .RefRule <> 0 Then
+                pvConsumeInput = pvConsumeInput(.RefRule, cResult)
+            End If
+        Case ucsNdtAlternate
+            For lIdx = 0 To UBound(.Children)
+                If Not pvConsumeInput(.Children(lIdx), cResult) Then
+                    GoTo QH
+                End If
+            Next
+            pvConsumeInput = True
+        Case ucsNdtSequence
+            For lIdx = 0 To UBound(.Children)
+                If pvConsumeInput(.Children(lIdx), cResult) Then
+                    pvConsumeInput = True
+                    Exit For
+                End If
+            Next
+        End Select
+    End With
 QH:
 End Function
 
