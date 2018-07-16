@@ -41,7 +41,7 @@ Private Declare Function CloseHandle Lib "kernel32" (ByVal hObject As Long) As L
 ' Constants and member variables
 '=========================================================================
 
-Private Const STR_VERSION           As String = "0.3.4"
+Private Const STR_VERSION           As String = "0.3.5"
 
 '=========================================================================
 ' Functions
