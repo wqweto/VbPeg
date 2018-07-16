@@ -522,6 +522,7 @@ Private Sub pvOutputNode(ByVal lNode As Long, ByVal lIndent As Long)
     With m_uTree.Nodes(lNode)
         If .NodeType > 0 Then
             m_uTree.OutBuilder.Add Space$(4 * lIndent) & "[" & lNode & "] " & At(m_uTree.OutNodeTypes, .NodeType) & _
+                IIf(.Offset <> 0, ", Offset=" & .Offset, vbNullString) & _
                 IIf(LenB(.Text) <> 0, ", Text=" & .Text, vbNullString) & _
                 IIf(LenB(.Description) <> 0, ", Description=" & .Description, vbNullString) & _
                 IIf(.Id <> 0, ", Id=" & .Id, vbNullString) & _
@@ -794,12 +795,16 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
             lFlags = .Flags
             For Each vElem In .Children
                 If (m_uTree.Nodes(vElem).Flags And ucsNdfAlwaysTrue) = 0 Then
-                    Select Case m_uTree.Nodes(vElem).NodeType
-                    Case ucsNdtPeekFor, ucsNdtPeekNot
-                        If (m_uTree.Nodes(vElem).Flags And ucsNdfSkipAdvance) = 0 Then
-                            lCount = lCount + 1
-                        End If
-                    End Select
+                    If (m_uTree.Nodes(vElem).Flags And ucsNdfHasActions) <> 0 Then
+                        lCount = lCount + 1
+                    Else
+                        Select Case m_uTree.Nodes(vElem).NodeType
+                        Case ucsNdtPeekFor, ucsNdtPeekNot
+                            If (m_uTree.Nodes(vElem).Flags And ucsNdfSkipAdvance) = 0 Then
+                                lCount = lCount + 1
+                            End If
+                        End Select
+                    End If
                     If lCount > 0 Then
                         If bParentSavePos Then
                             lFlags = lFlags And Not ucsNdfMultiStep And Not ucsNdfSavePos
