@@ -120,8 +120,7 @@ Private Sub Main()
                 oOpt.Item("-module") = GetFilePart(oOpt.Item("-o"))
             End If
             If Not oIR.EmitCode( _
-                    oOpt.Item("-public") Or oOpt.Item("-private"), _
-                    oOpt.Item("-public"), _
+                    Switch(C_Bool(oOpt.Item("-public")), vbTrue, C_Bool(oOpt.Item("-private")), vbFalse, True, vbUseDefault), _
                     CStr(oOpt.Item("-module")), _
                     CStr(oOpt.Item("-userdata")), _
                     sOutput) Then
@@ -401,3 +400,12 @@ QH:
     End Function
 #End If
 
+Public Function Zn(sText As String, Optional IfEmptyString As Variant = Null) As Variant
+    Zn = IIf(LenB(sText) = 0, IfEmptyString, sText)
+End Function
+
+Public Function C_Bool(vValue As Variant) As Boolean
+    On Error GoTo QH
+    C_Bool = CBool(vValue)
+QH:
+End Function

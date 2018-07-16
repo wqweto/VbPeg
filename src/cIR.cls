@@ -1063,27 +1063,25 @@ Private Sub pvOutputIrNode(ByVal lNode As Long)
 End Sub
 
 Public Function EmitCode( _
-            ByVal bClass As String, _
-            ByVal bPublic As Boolean, _
+            ByVal ePublic As VbTriState, _
             sModuleName As String, _
             sUserData As String, _
             sOutput As String) As Boolean
     Dim lIdx            As Long
     Dim sVarData        As String
     
-    If LenB(sModuleName) = 0 Then
-        sModuleName = IIf(bClass, "cParser", "mdParser")
+    If C_Bool(SettingValue("public")) Or C_Bool(SettingValue("private")) Then
+        ePublic = IIf(C_Bool(SettingValue("public")), vbTrue, vbFalse)
     End If
-    If LenB(sUserData) = 0 Then
-        sUserData = "Variant"
-    End If
-    sVarData = "Variant"
+    sModuleName = Zn(Zn(SettingValue("modulename"), sModuleName), IIf(ePublic <> vbUseDefault, "cParser", "mdParser"))
+    sUserData = Zn(Zn(SettingValue("userdatatype"), sUserData), "Variant")
+    sVarData = Zn(SettingValue("vardatatype"), "Variant")
     With m_uIr
         Set .OutBuilder = New Collection
         .OutIndent = 0
         Set .OutDictionary = CreateObject("Scripting.Dictionary")
         .OutDictionary.CompareMode = vbTextCompare
-        If bClass Then
+        If ePublic <> vbUseDefault Then
             pvOutput _
 "VERSION 1.0 CLASS" & vbCrLf & _
 "BEGIN" & vbCrLf & _
@@ -1097,7 +1095,7 @@ Public Function EmitCode( _
 "Attribute VB_GlobalNameSpace = False" & vbCrLf & _
 "Attribute VB_Creatable = True" & vbCrLf & _
 "Attribute VB_PredeclaredId = False" & vbCrLf & _
-"Attribute VB_Exposed = " & bPublic
+"Attribute VB_Exposed = " & (ePublic = vbTrue)
         Else
             .OutModulePrefix = "VbPeg"
             pvOutput _
