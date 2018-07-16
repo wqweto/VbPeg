@@ -60,10 +60,12 @@ Public Enum UcsTreeNodeFlagsEnum
     ucsNdfCanInline = 2 ^ 7
     ucsNdfHasActions = 2 ^ 8
     ucsNdfSkipAdvance = 2 ^ 9
+    ucsNdfIgnoreCase = 2 ^ 10
 End Enum
 
 Private Type UcsTreeNodeType
     NodeType            As UcsTreeNodeTypeEnum
+    Offset              As Long
     Text                As String
     Description         As String
     Children()          As Long
@@ -164,6 +166,16 @@ Property Get NodeFlag(ByVal lNode As Long, ByVal eFlag As UcsTreeNodeFlagsEnum) 
     NodeFlag = (m_uTree.Nodes(lNode).Flags And eFlag) <> 0
 End Property
 
+Private Property Let NodeFlag(ByVal lNode As Long, ByVal eFlag As UcsTreeNodeFlagsEnum, ByVal bValue As Boolean)
+    With m_uTree.Nodes(lNode)
+        If bValue Then
+            .Flags = .Flags Or eFlag
+        Else
+            .Flags = .Flags And Not eFlag
+        End If
+    End With
+End Property
+
 Property Get NodeRestoreFrom(ByVal lNode As Long) As Long
     NodeRestoreFrom = m_uTree.Nodes(lNode).RestoreFrom
 End Property
@@ -229,7 +241,8 @@ End Property
 
 Private Function pvNewNode( _
             ByVal eNodeType As UcsTreeNodeTypeEnum, _
-            Optional sText As String, _
+            ByVal lOffset As Long, _
+            Optional Text As String, _
             Optional ByVal NumChildren As Long, _
             Optional RetVal As Long) As Long
     With m_uTree
@@ -244,7 +257,8 @@ Private Function pvNewNode( _
         End If
         With .Nodes(.Count)
             .NodeType = eNodeType
-            .Text = sText
+            .Offset = lOffset
+            .Text = Text
             If NumChildren > 0 Then
                 ReDim .Children(0 To NumChildren - 1) As Long
             Else
@@ -258,14 +272,14 @@ Private Function pvNewNode( _
     pvNewNode = RetVal
 End Function
 
-Public Function MakeRule(sName As String) As Long
+Public Function MakeRule(ByVal lOffset As Long, sName As String) As Long
     With m_uTree
-        MakeRule = pvNewNode(ucsNdtRule, sName, NumChildren:=1)
+        MakeRule = pvNewNode(ucsNdtRule, lOffset, Text:=sName, NumChildren:=1)
         AppendChild NODE_ROOT, MakeRule
     End With
 End Function
 
-Public Function FindRule(sName As String) As Long
+Public Function FindRule(ByVal lOffset As Long, sName As String) As Long
     Dim vElem           As Variant
     
     With m_uTree
@@ -278,7 +292,7 @@ Public Function FindRule(sName As String) As Long
             Next
         End If
     End With
-    FindRule = MakeRule(sName)
+    FindRule = MakeRule(lOffset, sName)
 End Function
 
 Public Function BeginRule(ByVal lRule As Long) As Long
@@ -290,7 +304,7 @@ Public Function BeginRule(ByVal lRule As Long) As Long
     End With
 End Function
 
-Public Function MakeVariable(sName As String) As Long
+Public Function MakeVariable(ByVal lOffset As Long, sName As String) As Long
     Dim vElem           As Variant
     Dim lIdx            As Long
     
@@ -302,7 +316,7 @@ Public Function MakeVariable(sName As String) As Long
                 GoTo QH
             End If
         Next
-        MakeVariable = pvNewNode(ucsNdtVariable, sName)
+        MakeVariable = pvNewNode(ucsNdtVariable, lOffset, Text:=sName)
         .Nodes(MakeVariable).Id = UBound(.Nodes(.ThisRule).Variables) + 2
         With .Nodes(.ThisRule)
             lIdx = UBound(.Variables) + 1
@@ -313,15 +327,15 @@ Public Function MakeVariable(sName As String) As Long
 QH:
 End Function
 
-Public Function SetVariable(ByVal lNode As Long, ByVal lVariable As Long) As Long
+Public Function SetVariable(ByVal lOffset As Long, ByVal lNode As Long, ByVal lVariable As Long) As Long
     Dim lLastChild      As Long
     
     With m_uTree
-        SetVariable = AppendSequence(MakeSequence(MakePredicate("YY_CLEAR")), lNode)
+        SetVariable = AppendSequence(MakeSequence(lOffset, MakePredicate(lOffset, "YY_CLEAR")), lNode)
         If NodeNumChildren(lNode) > 0 Then
             lLastChild = NodeChild(lNode, NodeNumChildren(lNode) - 1)
             If .Nodes(lLastChild).NodeType = ucsNdtPredicate And .Nodes(lLastChild).Text = "YY_END" Then
-                lNode = MakePredicate("YY_SET")
+                lNode = MakePredicate(lOffset, "YY_SET")
                 SetVariable = AppendSequence(SetVariable, lNode)
             End If
         End If
@@ -329,69 +343,76 @@ Public Function SetVariable(ByVal lNode As Long, ByVal lVariable As Long) As Lon
     End With
 End Function
 
-Public Function MakeReference(sName As String) As Long
-    MakeReference = pvNewRef(ucsNdtReference, sName, FindRule(sName))
+Public Function MakeReference(ByVal lOffset As Long, sName As String) As Long
+    MakeReference = pvNewRef(ucsNdtReference, lOffset, sName, FindRule(lOffset, sName))
 End Function
 
-Public Function MakeErrorReference(sName As String) As Long
-    MakeErrorReference = pvNewRef(ucsNdtError, sName, FindRule(sName))
+Public Function MakeErrorReference(ByVal lOffset As Long, sName As String) As Long
+    MakeErrorReference = pvNewRef(ucsNdtError, lOffset, sName, FindRule(lOffset, sName))
 End Function
 
-Public Function pvNewRef(ByVal eType As UcsTreeNodeTypeEnum, sName As String, ByVal lRule As Long) As Long
+Public Function pvNewRef(ByVal eType As UcsTreeNodeTypeEnum, ByVal lOffset As Long, sName As String, ByVal lRule As Long) As Long
     With m_uTree
-        pvNewRef = pvNewNode(eType, sName)
+        pvNewRef = pvNewNode(eType, lOffset, Text:=sName)
         .Nodes(pvNewRef).RefRule = lRule
         .Nodes(lRule).Flags = .Nodes(lRule).Flags Or ucsNdfUsed
     End With
 End Function
 
-Public Function MakeDot() As Long
-    MakeDot = pvNewNode(ucsNdtDot)
+Public Function MakeDot(ByVal lOffset As Long) As Long
+    MakeDot = pvNewNode(ucsNdtDot, lOffset)
 End Function
 
-Public Function MakeString(sText As String) As Long
-    MakeString = pvNewNode(ucsNdtString, sText)
+Public Function MakeString(ByVal lOffset As Long, sText As String) As Long
+    MakeString = pvNewNode(ucsNdtString, lOffset, Text:=sText)
+    NodeFlag(MakeString, ucsNdfIgnoreCase) = C_Bool(SettingValue("ignorecase"))
 End Function
 
-Public Function MakeErrorString(sText As String) As Long
-    MakeErrorString = pvNewNode(ucsNdtError, sText)
+Public Function MakeErrorString(ByVal lOffset As Long, sText As String) As Long
+    MakeErrorString = pvNewNode(ucsNdtError, lOffset, Text:=sText)
 End Function
 
-Public Function MakeClass(sText As String) As Long
-    MakeClass = pvNewNode(ucsNdtClass, sText)
+Public Function MakeClass(ByVal lOffset As Long, sText As String) As Long
+    MakeClass = pvNewNode(ucsNdtClass, lOffset, Text:=sText)
+    NodeFlag(MakeClass, ucsNdfIgnoreCase) = C_Bool(SettingValue("ignorecase"))
 End Function
 
-Public Function MakeAction(sText As String) As Long
+Public Function SetIgnoreCase(ByVal lNode As Long, ByVal bValue As Boolean) As Long
+    NodeFlag(lNode, ucsNdfIgnoreCase) = bValue
+    SetIgnoreCase = lNode
+End Function
+
+Public Function MakeAction(ByVal lOffset As Long, sText As String) As Long
     With m_uTree
         Debug.Assert .ThisRule <> 0
-        MakeAction = pvNewNode(ucsNdtAction, sText)
+        MakeAction = pvNewNode(ucsNdtAction, lOffset, Text:=sText)
         .ActionsCount = .ActionsCount + 1
         .Nodes(MakeAction).Id = .ActionsCount
         .Nodes(MakeAction).RefRule = .ThisRule
     End With
 End Function
 
-Public Function MakePredicate(sText As String) As Long
-    MakePredicate = pvNewNode(ucsNdtPredicate, sText)
+Public Function MakePredicate(ByVal lOffset As Long, sText As String) As Long
+    MakePredicate = pvNewNode(ucsNdtPredicate, lOffset, Text:=sText)
 End Function
 
-Public Function MakeAlternate(ByVal lNode As Long) As Long
+Public Function MakeAlternate(ByVal lOffset As Long, ByVal lNode As Long) As Long
     With m_uTree
         If .Nodes(lNode).NodeType = ucsNdtAlternate Then
             MakeAlternate = lNode
         Else
-            MakeAlternate = pvNewNode(ucsNdtAlternate, NumChildren:=1)
+            MakeAlternate = pvNewNode(ucsNdtAlternate, lOffset, NumChildren:=1)
             .Nodes(MakeAlternate).Children(0) = lNode
         End If
     End With
 End Function
 
-Public Function MakeSequence(ByVal lNode As Long) As Long
+Public Function MakeSequence(ByVal lOffset As Long, ByVal lNode As Long) As Long
     With m_uTree
         If .Nodes(lNode).NodeType = ucsNdtSequence Then
             MakeSequence = lNode
         Else
-            MakeSequence = pvNewNode(ucsNdtSequence, NumChildren:=1)
+            MakeSequence = pvNewNode(ucsNdtSequence, lOffset, NumChildren:=1)
             .Nodes(MakeSequence).Children(0) = lNode
         End If
     End With
@@ -420,37 +441,37 @@ Public Function AppendChild(ByVal lParent As Long, ByVal lNode As Long) As Long
     AppendChild = lParent
 End Function
 
-Public Function MakePeekNot(ByVal lNode As Long) As Long
+Public Function MakePeekNot(ByVal lOffset As Long, ByVal lNode As Long) As Long
     With m_uTree
-        MakePeekNot = pvNewNode(ucsNdtPeekNot, NumChildren:=1)
+        MakePeekNot = pvNewNode(ucsNdtPeekNot, lOffset, NumChildren:=1)
         .Nodes(MakePeekNot).Children(0) = lNode
     End With
 End Function
 
-Public Function MakePeekFor(ByVal lNode As Long) As Long
+Public Function MakePeekFor(ByVal lOffset As Long, ByVal lNode As Long) As Long
     With m_uTree
-        MakePeekFor = pvNewNode(ucsNdtPeekFor, NumChildren:=1)
+        MakePeekFor = pvNewNode(ucsNdtPeekFor, lOffset, NumChildren:=1)
         .Nodes(MakePeekFor).Children(0) = lNode
     End With
 End Function
 
-Public Function MakeQuery(ByVal lNode As Long) As Long
+Public Function MakeQuery(ByVal lOffset As Long, ByVal lNode As Long) As Long
     With m_uTree
-        MakeQuery = pvNewNode(ucsNdtQuery, NumChildren:=1)
+        MakeQuery = pvNewNode(ucsNdtQuery, lOffset, NumChildren:=1)
         .Nodes(MakeQuery).Children(0) = lNode
     End With
 End Function
 
-Public Function MakeStar(ByVal lNode As Long) As Long
+Public Function MakeStar(ByVal lOffset As Long, ByVal lNode As Long) As Long
     With m_uTree
-        MakeStar = pvNewNode(ucsNdtStar, NumChildren:=1)
+        MakeStar = pvNewNode(ucsNdtStar, lOffset, NumChildren:=1)
         .Nodes(MakeStar).Children(0) = lNode
     End With
 End Function
 
-Public Function MakePlus(ByVal lNode As Long) As Long
+Public Function MakePlus(ByVal lOffset As Long, ByVal lNode As Long) As Long
     With m_uTree
-        MakePlus = pvNewNode(ucsNdtPlus, NumChildren:=1)
+        MakePlus = pvNewNode(ucsNdtPlus, lOffset, NumChildren:=1)
         .Nodes(MakePlus).Children(0) = lNode
     End With
 End Function
@@ -569,7 +590,7 @@ Public Function CheckTree(sWarning As String) As Boolean
         For Each vElem In .Children
             With m_uTree.Nodes(vElem)
                 If .Children(0) = 0 Then
-                    m_uTree.LastError = "Undefined rule '" & .Text & "'"
+                    m_uTree.LastError = "Undefined rule '" & .Text & "' at pos " & .Offset
                     GoTo QH
                 End If
             End With

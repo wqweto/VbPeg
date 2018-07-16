@@ -336,6 +336,7 @@ Private Function pvCodeGenNode( _
     Dim lIdx            As Long
     Dim lIrNode         As Long
     Dim sText           As String
+    Dim bIgnoreCase     As Boolean
     
     On Error GoTo EH
     With m_uIr.CodeGenTree
@@ -590,17 +591,26 @@ Private Function pvCodeGenNode( _
             End If
         Case ucsNdtString
             sText = pvFromPegString(.NodeText(lNode))
+            bIgnoreCase = .NodeFlag(lNode, ucsNdfIgnoreCase) And LCase$(sText) <> UCase$(sText)
             If Len(sText) = 1 Then
                 If Not .NodeFlag(lNode, ucsNdfIsNot) Then
-                    lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) = " & Asc(sText))
+                    If bIgnoreCase Then
+                        lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) = " & AscW(LCase$(sText)) & " Or .BufData(.BufPos) = " & AscW(UCase$(sText)))
+                    Else
+                        lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) = " & AscW(sText))
+                    End If
                 Else
-                    lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) <> " & Asc(sText) & " And .BufPos < .BufSize")
+                    If bIgnoreCase Then
+                        lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) <> " & AscW(LCase$(sText)) & " And .BufData(.BufPos) <> " & AscW(UCase$(sText)) & " And .BufPos < .BufSize")
+                    Else
+                        lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) <> " & AscW(sText) & " And .BufPos < .BufSize")
+                    End If
                 End If
-            ElseIf Len(sText) = 2 Then
+            ElseIf Len(sText) = 2 And Not bIgnoreCase Then
                 If Not .NodeFlag(lNode, ucsNdfIsNot) Then
-                    lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) = " & Asc(sText) & " And .BufData(.BufPos + 1) = " & Asc(Mid$(sText, 2, 1)))
+                    lIrNode = AddNode(ucsIrtExprEmit, ".BufData(.BufPos) = " & AscW(sText) & " And .BufData(.BufPos + 1) = " & AscW(Mid$(sText, 2, 1)))
                 Else
-                    lIrNode = AddNode(ucsIrtExprEmit, "(.BufData(.BufPos) <> " & Asc(sText) & " Or .BufData(.BufPos + 1) <> " & Asc(Mid$(sText, 2, 1)) & ") And .BufPos + 1 < .BufSize")
+                    lIrNode = AddNode(ucsIrtExprEmit, "(.BufData(.BufPos) <> " & AscW(sText) & " Or .BufData(.BufPos + 1) <> " & AscW(Mid$(sText, 2, 1)) & ") And .BufPos + 1 < .BufSize")
                 End If
             ElseIf Len(sText) = 0 Then
                 If Not .NodeFlag(lNode, ucsNdfIsNot) Then
@@ -618,9 +628,9 @@ Private Function pvCodeGenNode( _
                 End If
                 GoTo QH
             ElseIf Not .NodeFlag(lNode, ucsNdfIsNot) Then
-                lIrNode = AddNode(ucsIrtExprEmit, "pvMatchString(" & pvToVbString(sText) & ")")
+                lIrNode = AddNode(ucsIrtExprEmit, IIf(bIgnoreCase, "pvMatchIgnoreCase", "pvMatchString") & "(" & pvToVbString(sText) & ")")
             Else
-                lIrNode = AddNode(ucsIrtExprEmit, "Not pvMatchString(" & pvToVbString(sText) & ")")
+                lIrNode = AddNode(ucsIrtExprEmit, "Not " & IIf(bIgnoreCase, "pvMatchIgnoreCase", "pvMatchString") & "(" & pvToVbString(sText) & ")")
             End If
             If Not .NodeFlag(lNode, ucsNdfSkipAdvance) Then
                 lSuccess = AddChild(AddChild(AddNode(ucsIrtBlock), _
@@ -628,7 +638,8 @@ Private Function pvCodeGenNode( _
                     lSuccess)
             End If
 EmitStmtIfOnIrNode:
-            pvCodeGenNode = AddNode(ucsIrtStmtIf, Comment:=IIf(.NodeType(lNode) = ucsNdtString, """" & .NodeText(lNode) & """", vbNullString))
+            pvCodeGenNode = AddNode(ucsIrtStmtIf, Comment:=IIf(.NodeType(lNode) = ucsNdtString, """" & .NodeText(lNode) & """" & _
+                IIf(.NodeFlag(lNode, ucsNdfIgnoreCase), "i", vbNullString), vbNullString))
             If lSuccess = IR_CONTINUE Then
                 AddChild pvCodeGenNode, AddChild(AddNode(ucsIrtExprNot), lIrNode)
                 AddChild pvCodeGenNode, lFailure
@@ -678,7 +689,8 @@ EmitStmtIfOnIrNode:
             End Select
         Case ucsNdtClass
             pvCodeGenNode = AddNode(ucsIrtStmtSelect, ".BufData(.BufPos)")
-            lIrNode = AddNode(ucsIrtStmtCase, pvToVbCaseRange(pvFromPegString(.NodeText(lNode))), Comment:="[" & .NodeText(lNode) & "]")
+            lIrNode = AddNode(ucsIrtStmtCase, pvToVbCaseRange(pvFromPegString(.NodeText(lNode)), .NodeFlag(lNode, ucsNdfIgnoreCase)), _
+                Comment:="[" & .NodeText(lNode) & "]" & IIf(.NodeFlag(lNode, ucsNdfIgnoreCase), "i", vbNullString))
             AddChild pvCodeGenNode, lIrNode
             If Not .NodeFlag(lNode, ucsNdfIsNot) Then
                 If Not .NodeFlag(lNode, ucsNdfSkipAdvance) Then
@@ -1001,9 +1013,14 @@ Private Function pvToVbString(sText As String) As String
     End If
 End Function
 
-Private Function pvToVbCaseRange(sText As String) As String
+Private Function pvToVbCaseRange(ByVal sText As String, ByVal bIgnoreCase As Boolean) As String
     Dim lIdx            As Long
+    Dim sUpper          As String
     
+    If bIgnoreCase Then
+        sText = LCase$(sText)
+        sUpper = UCase$(sText)
+    End If
     For lIdx = 1 To Len(sText)
         pvToVbCaseRange = IIf(LenB(pvToVbCaseRange) <> 0, pvToVbCaseRange & ", ", vbNullString) & Asc(Mid$(sText, lIdx, 1))
         If Mid$(sText, lIdx + 1, 1) = "-" And Len(sText) > lIdx + 1 Then
@@ -1011,6 +1028,20 @@ Private Function pvToVbCaseRange(sText As String) As String
             lIdx = lIdx + 2
         End If
     Next
+    If bIgnoreCase Then
+        For lIdx = 1 To Len(sText)
+            If Mid$(sText, lIdx + 1, 1) = "-" And Len(sText) > lIdx + 1 Then
+                If Mid$(sText, lIdx, 1) <> Mid$(sUpper, lIdx, 1) Or Mid$(sText, lIdx + 2, 1) <> Mid$(sUpper, lIdx + 2, 1) Then
+                    pvToVbCaseRange = pvToVbCaseRange & ", " & Asc(Mid$(sUpper, lIdx, 1)) & " To " & Asc(Mid$(sUpper, lIdx + 2, 1))
+                End If
+                lIdx = lIdx + 2
+            Else
+                If Mid$(sText, lIdx, 1) <> Mid$(sUpper, lIdx, 1) Then
+                    pvToVbCaseRange = pvToVbCaseRange & ", " & Asc(Mid$(sUpper, lIdx, 1))
+                End If
+            End If
+        Next
+    End If
 End Function
 
 Public Function DumpIrTree() As String
@@ -1110,8 +1141,13 @@ Public Function EmitCode( _
 "' API" & vbCrLf & _
 "'=========================================================================" & vbCrLf
         pvOutput _
+"Private Const LOCALE_USER_DEFAULT           As Long = &H400" & vbCrLf & _
+"Private Const NORM_IGNORECASE               As Long = 1" & vbCrLf & _
+"Private Const CSTR_EQUAL                    As Long = 2" & vbCrLf
+        pvOutput _
 "Private Declare Sub CopyMemory Lib ""kernel32"" Alias ""RtlMoveMemory"" (Destination As Any, Source As Any, ByVal Length As Long)" & vbCrLf & _
-"Private Declare Function RtlCompareMemory Lib ""ntdll"" (Source1 As Any, Source2 As Any, ByVal Length As Long) As Long" & vbCrLf
+"Private Declare Function RtlCompareMemory Lib ""ntdll"" (Source1 As Any, Source2 As Any, ByVal Length As Long) As Long" & vbCrLf & _
+"Private Declare Function CompareStringW Lib ""kernel32"" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long" & vbCrLf
         pvOutput _
 "'=========================================================================" & vbCrLf & _
 "' Constants and member variables" & vbCrLf & _
@@ -1313,6 +1349,14 @@ Public Function EmitCode( _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        If .BufPos + Len(sText) <= .BufSize Then" & vbCrLf & _
 "            pvMatchString = RtlCompareMemory(.BufData(.BufPos), ByVal StrPtr(sText), LenB(sText)) = LenB(sText)" & vbCrLf & _
+"        End If" & vbCrLf & _
+"    End With" & vbCrLf & _
+"End Function" & vbCrLf
+        pvOutput _
+"Private Function pvMatchIgnoreCase(sText As String) As Boolean" & vbCrLf & _
+"    With ctx" & vbCrLf & _
+"        If .BufPos + Len(sText) <= .BufSize Then" & vbCrLf & _
+"            pvMatchIgnoreCase = CompareStringW(LOCALE_USER_DEFAULT, NORM_IGNORECASE, ByVal StrPtr(sText), Len(sText), .BufData(.BufPos), Len(sText)) = CSTR_EQUAL" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End With" & vbCrLf & _
 "End Function" & vbCrLf

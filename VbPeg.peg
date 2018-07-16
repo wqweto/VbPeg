@@ -20,7 +20,7 @@ Grammar         <- Spacing (Setting / Definition)+
                                                    )
 
 Definition      <- Identifier                                           {   With .UserData
-                                                                                lNode = .BeginRule(.FindRule(Mid$(ctx.Contents, lOffset, lSize)))
+                                                                                lNode = .BeginRule(.FindRule(lOffset, Mid$(ctx.Contents, lOffset, lSize)))
                                                                                 If .RuleExpression(lNode) <> 0 Then
                                                                                     ConsoleError "Rule '%1' redefined" & vbCrLf, Mid$(ctx.Contents, lOffset, lSize)
                                                                                 End If
@@ -32,41 +32,45 @@ Definition      <- Identifier                                           {   With
                                               (Expression               { With .UserData: Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
                                                /                       &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'") }
                                               )           SEMI?
-Expression      <- Sequence (Choice Sequence                            { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(.Pop), lNode): End With }
+Expression      <- Sequence (Choice Sequence                            { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With }
                             )*
-Sequence        <- Error (Error                                         { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(.Pop), lNode): End With }
+Sequence        <- Error (Error                                         { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With }
                           )*
-                 /                                                      { With .UserData: .Push .MakePredicate("1"): End With }
+                 /                                                      { With .UserData: .Push .MakePredicate(lOffset, "1"): End With }
 Error           <- Prefix CARET                                        &{ ClearErrors() }
-                                (Identifier                             { With .UserData: .Push .AppendChild(.MakeAlternate(.Pop), .MakeErrorReference(Mid$(ctx.Contents, lOffset, lSize))): End With }
-                                 / Literal                              { With .UserData: .Push .AppendChild(.MakeAlternate(.Pop), .MakeErrorString(Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                (Identifier                             { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                 / Literal                              { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
                                  /                                     &{ AppendError("Expected rule or literal for error label") }
                                 )
                  / Prefix !CARET
-Prefix          <- AND Action                                           { With .UserData: .Push .MakePredicate(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / AND Variable                                         { With .UserData: .Push .MakePeekFor(.Pop): End With }
-                 / NOT Variable                                         { With .UserData: .Push .MakePeekNot(.Pop): End With }
+Prefix          <- AND Action                                           { With .UserData: .Push .MakePredicate(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / AND Variable                                         { With .UserData: .Push .MakePeekFor(lOffset, .Pop): End With }
+                 / NOT Variable                                         { With .UserData: .Push .MakePeekNot(lOffset, .Pop): End With }
                  /     Variable
-Variable        <- Identifier                                           { With .UserData: .Push .MakeVariable(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                              COLON Suffix                              { With .UserData: .Push .SetVariable(.Pop, .Pop): End With }
+Variable        <- Identifier                                           { With .UserData: .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+                              COLON Suffix                              { With .UserData: .Push .SetVariable(lOffset, .Pop, .Pop): End With }
                  / Suffix
-Suffix          <- Primary (QUESTION                                    { With .UserData: .Push .MakeQuery(.Pop): End With }
-                            / STAR                                      { With .UserData: .Push .MakeStar(.Pop): End With }
-                            / PLUS                                      { With .UserData: .Push .MakePlus(.Pop): End With }
+Suffix          <- Primary (QUESTION                                    { With .UserData: .Push .MakeQuery(lOffset, .Pop): End With }
+                            / STAR                                      { With .UserData: .Push .MakeStar(lOffset, .Pop): End With }
+                            / PLUS                                      { With .UserData: .Push .MakePlus(lOffset, .Pop): End With }
                            )?
-Primary         <- Identifier !(LiteralNC? Assign)                      { With .UserData: .Push .MakeReference(Mid$(ctx.Contents, lOffset, lSize)): End With }
+Primary         <- Identifier !(LiteralNC? Assign)                      { With .UserData: .Push .MakeReference(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                  / OPEN                                                &{ ClearErrors() }
                         (Expression CLOSE
                          /                                             &{ AppendError("Invalid expression") }
                         )
-                 / Literal                                              { With .UserData: .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / Class                                                { With .UserData: .Push .MakeClass(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / DOT                                                  { With .UserData: .Push .MakeDot(): End With }
-                 / Action                                               { With .UserData: .Push .MakeAction(Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / BEGIN                                                { With .UserData: .Push .MakePredicate("YY_BEGIN"): End With }
-                 / END                                                  { With .UserData: .Push .MakePredicate("YY_END"): End With }
+                 / LiteralNoSpace                                       { With .UserData: .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+                    (IgnoreCase                                         { With .UserData: .SetIgnoreCase .Top, (Mid$(ctx.Contents, lOffset, lSize) = "i"): End With }
+                    )? Spacing
+                 / ClassNoSpace                                         { With .UserData: .Push .MakeClass(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+                    (IgnoreCase                                         { With .UserData: .SetIgnoreCase .Top, (Mid$(ctx.Contents, lOffset, lSize) = "i"): End With }
+                    )? Spacing
+                 / DOT                                                  { With .UserData: .Push .MakeDot(lOffset): End With }
+                 / Action                                               { With .UserData: .Push .MakeAction(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / BEGIN                                                { With .UserData: .Push .MakePredicate(lOffset, "YY_BEGIN"): End With }
+                 / END                                                  { With .UserData: .Push .MakePredicate(lOffset, "YY_END"): End With }
 
-Setting         <- SettingName                                          { With .UserData: .Push .MakeString(Mid$(ctx.Contents, lOffset, lSize)): End With }
+Setting         <- SettingName                                          { With .UserData: .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                                                                        &{ ClearErrors() And SetUserDataTag($$text) }
                                (SettingValue                            { With .UserData: .AppendSetting .Pop, Mid$(ctx.Contents, lOffset, lSize): End With }
                                 /                                      &{ AppendError("Invalid value for setting '" & .UserData.Tag & "'") }
@@ -79,11 +83,13 @@ SettingValue    <- (Identifier / Literal / Action) SEMI?
 Identifier      <- < IdentStart IdentCont* > Spacing                    { }
 IdentStart      <- [a-zA-Z_\-]
 IdentCont       <- IdentStart / [0-9]
-Literal         <- ['] < (!['] Char )* > ['] Spacing                    { }
-                 / ["] < (!["] Char )* > ["] Spacing                    { }
+Literal         <- LiteralNoSpace Spacing
+LiteralNoSpace  <- ['] < (!['] Char )* > [']                            { }
+                 / ["] < (!["] Char )* > ["]                            { }
 LiteralNC       <- ['] (!['] Char )* ['] Spacing                        # Non-capture version
                  / ["] (!["] Char )* ["] Spacing
-Class           <- '[' < (!']' Range)* > ']' Spacing                    { }
+IgnoreCase      <- < [si] >                                             { }
+ClassNoSpace    <- '[' < (!']' Range)* > ']'                            { }
 Range           <- Char '-' !']' Char / Char
 Char            <- '\\' [abefnrtv'"\[\]\\]
                  / '\\' [0-3][0-7][0-7]
