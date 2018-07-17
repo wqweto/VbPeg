@@ -15,11 +15,11 @@
 
 # Hierarchical syntax
 
-Grammar         <- Spacing (Setting / Definition)+ 
-                                                   (EndOfFile /        &{ AppendError("Expected rule or setting") }
-                                                   )
+Grammar         <- Spacing (Setting / Rule)+ 
+                                             (EndOfFile /              &{ AppendError("Expected rule or setting") }
+                                             )
 
-Definition      <- Identifier                                           {   With .UserData
+Rule            <- Identifier                                           {   With .UserData
                                                                                 lNode = .BeginRule(.FindRule(lOffset, Mid$(ctx.Contents, lOffset, lSize)))
                                                                                 If .RuleExpression(lNode) <> 0 Then
                                                                                     ConsoleError "Rule '%1' redefined" & vbCrLf, Mid$(ctx.Contents, lOffset, lSize)
@@ -29,32 +29,33 @@ Definition      <- Identifier                                           {   With
                                                                        &{ ClearErrors() And SetUserDataTag($$text) }
                               (Literal                                  { With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With }
                               )?       Assign 
-                                              (Expression               { With .UserData: Dim lNode As Long: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
+                                              (Expression               { With .UserData: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
                                                /                       &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'") }
                                               )           SEMI?
-Expression      <- Sequence (Choice Sequence                            { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With }
-                            )*
-Sequence        <- Error (Error                                         { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With }
-                          )*
+Expression      <- ChoiceExpr
+ChoiceExpr      <- SequenceExpr (Choice SequenceExpr                    { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With }
+                                )*
+SequenceExpr    <- ErrorExpr (ErrorExpr                                 { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With }
+                             )*
                  /                                                      { With .UserData: .Push .MakePredicate(lOffset, "1"): End With }
-Error           <- Prefix CARET                                        &{ ClearErrors() }
-                                (Identifier                             { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
-                                 / Literal                              { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
-                                 /                                     &{ AppendError("Expected rule or literal for error label") }
-                                )
-                 / Prefix !CARET
-Prefix          <- AND Action                                           { With .UserData: .Push .MakePredicate(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / AND Variable                                         { With .UserData: .Push .MakePeekFor(lOffset, .Pop): End With }
-                 / NOT Variable                                         { With .UserData: .Push .MakePeekNot(lOffset, .Pop): End With }
-                 /     Variable
-Variable        <- Identifier                                           { With .UserData: .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
-                              COLON Suffix                              { With .UserData: .Push .SetVariable(lOffset, .Pop, .Pop): End With }
-                 / Suffix
-Suffix          <- Primary (QUESTION                                    { With .UserData: .Push .MakeQuery(lOffset, .Pop): End With }
-                            / STAR                                      { With .UserData: .Push .MakeStar(lOffset, .Pop): End With }
-                            / PLUS                                      { With .UserData: .Push .MakePlus(lOffset, .Pop): End With }
-                           )?
-Primary         <- Identifier !(LiteralNC? Assign)                      { With .UserData: .Push .MakeReference(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+ErrorExpr       <- VariableExpr CARET                                  &{ ClearErrors() }
+                                      (Identifier                       { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                       / Literal                        { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                       /                               &{ AppendError("Expected rule or literal for error label") }
+                                      )
+                 / VariableExpr !CARET
+VariableExpr    <- Identifier                                           { With .UserData: .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+                              COLON PrefixExpr                          { With .UserData: .Push .SetVariable(lOffset, .Pop, .Pop): End With }
+                 / PrefixExpr
+PrefixExpr      <- AND Action                                           { With .UserData: .Push .MakePredicate(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / AND SuffixExpr                                       { With .UserData: .Push .MakePeekFor(lOffset, .Pop): End With }
+                 / NOT SuffixExpr                                       { With .UserData: .Push .MakePeekNot(lOffset, .Pop): End With }
+                 /     SuffixExpr
+SuffixExpr      <- PrimaryExpr (QUESTION                                { With .UserData: .Push .MakeQuery(lOffset, .Pop): End With }
+                                / STAR                                  { With .UserData: .Push .MakeStar(lOffset, .Pop): End With }
+                                / PLUS                                  { With .UserData: .Push .MakePlus(lOffset, .Pop): End With }
+                               )?
+PrimaryExpr     <- Identifier !(LiteralNC? Assign)                      { With .UserData: .Push .MakeReference(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                  / OPEN                                                &{ ClearErrors() }
                         (Expression CLOSE
                          /                                             &{ AppendError("Invalid expression") }
@@ -78,7 +79,7 @@ Setting         <- SettingName                                          { With .
 SettingName     <- AT (Identifier / Literal / EMPTY)                   
 SettingValue    <- (Identifier / Literal / Action) SEMI?                          
                  
-# Lexical syntax
+# Lexical rules
 
 Identifier      <- < IdentStart IdentCont* > Spacing                    { }
 IdentStart      <- [a-zA-Z_\-]
@@ -129,6 +130,15 @@ CARET           <- '^' Spacing
 
 @members {
     Errors              As Collection
+}
+
+@prolog {
+    Dim lNode           As Long
+    
+    With ctx
+}
+@epilog {
+    End With
 }
 
 @{

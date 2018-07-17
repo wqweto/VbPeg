@@ -118,7 +118,7 @@ Property Let RuleExpression(ByVal lRule As Long, ByVal lExpr As Long)
         .RulesCount = .RulesCount + 1
         .Nodes(lRule).Children(0) = lExpr
         .Nodes(lRule).Id = .RulesCount
-        If .StartRule = 0 Or .Nodes(lRule).Text = "start" Then
+        If .StartRule = 0 Or .Nodes(lRule).Text = SettingValue("start") Then
             .StartRule = lRule
         End If
     End With
