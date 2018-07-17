@@ -13,7 +13,7 @@
 #     January 14--16, 2004, Venice, Italy.
 #
 
-# Hierarchical syntax
+# Syntax rules
 
 Grammar         <- Spacing (Setting / Rule)+ 
                                              (EndOfFile /              &{ AppendError("Expected rule or setting") }
@@ -38,12 +38,11 @@ ChoiceExpr      <- SequenceExpr (Choice SequenceExpr                    { With .
 SequenceExpr    <- ErrorExpr (ErrorExpr                                 { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With }
                              )*
                  /                                                      { With .UserData: .Push .MakePredicate(lOffset, "1"): End With }
-ErrorExpr       <- VariableExpr CARET                                  &{ ClearErrors() }
-                                      (Identifier                       { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
-                                       / Literal                        { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
-                                       /                               &{ AppendError("Expected rule or literal for error label") }
-                                      )
-                 / VariableExpr !CARET
+ErrorExpr       <- VariableExpr (CARET                                  &{ ClearErrors() }
+                                       (Identifier                       { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                        / Literal                        { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                        /                               &{ AppendError("Expected rule or literal for error label") }
+                                       ))?
 VariableExpr    <- Identifier                                           { With .UserData: .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                               COLON PrefixExpr                          { With .UserData: .Push .SetVariable(lOffset, .Pop, .Pop): End With }
                  / PrefixExpr
@@ -92,9 +91,11 @@ LiteralNC       <- ['] (!['] Char )* ['] Spacing                        # Non-ca
 IgnoreCase      <- < [si] >                                             { }
 ClassNoSpace    <- '[' < (!']' Range)* > ']'                            { }
 Range           <- Char '-' !']' Char / Char
-Char            <- '\\' [abefnrtv'"\[\]\\]
+Char "char"     <- '\\' [abefnrtv'"\[\]\\]
                  / '\\' [0-3][0-7][0-7]
                  / '\\' [0-7][0-7]?
+                 / '\\x' [0-9a-fA-F] [0-9a-fA-F]
+                 / '\\u' [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]
                  / '\\' '-'
                  / !'\\' .
 LEFTARROW       <- '<-' Spacing

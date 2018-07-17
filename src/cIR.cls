@@ -262,6 +262,13 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                                 AddNode(ucsIrtStmtEmit, "pvPushThunk ucsActVarAlloc, -" & .NodeNumVariables(vElem))), _
                                 lSuccess)
                     End If
+                    If LenB(.RuleDescription(vElem)) <> 0 Then
+                        Debug.Assert lFailure = IR_CONTINUE
+                        lFailure = AddChild(AddChild( _
+                            AddNode(ucsIrtStmtIf), _
+                                AddNode(ucsIrtExprEmit, "LenB(.LastError) = 0")), _
+                                AddNode(ucsIrtStmtEmit, ".LastError = ""Extected " & .RuleDescription(vElem) & """"))
+                    End If
                     lIrNode = pvCodeGenNode(.NodeChild(vElem, 0), lSuccess, lFailure)
                     If lIrNode = 0 Then
                         GoTo QH
@@ -695,8 +702,9 @@ EmitStmtIfOnIrNode:
                 GoTo EmitStmtIfOnIrNode
             End Select
         Case ucsNdtClass
+            sText = pvFromPegString(.NodeText(lNode))
             pvCodeGenNode = AddNode(ucsIrtStmtSelect, ".BufData(.BufPos)")
-            lIrNode = AddNode(ucsIrtStmtCase, pvToVbCaseRange(pvFromPegString(.NodeText(lNode)), .NodeFlag(lNode, ucsNdfIgnoreCase)), _
+            lIrNode = AddNode(ucsIrtStmtCase, pvToVbCaseRange(sText, .NodeFlag(lNode, ucsNdfIgnoreCase)), _
                 Comment:="[" & .NodeText(lNode) & "]" & IIf(.NodeFlag(lNode, ucsNdfIgnoreCase), "i", vbNullString))
             AddChild pvCodeGenNode, lIrNode
             If Not .NodeFlag(lNode, ucsNdfIsNot) Then
@@ -913,7 +921,6 @@ Private Function pvCodeGenTrimGotoNext(ByVal lNode As Long) As Boolean
             With m_uIr.Nodes(oCol.Item(lIdx))
                 If .NodeType = ucsIrtStmtGoTo Then
                     If cLab.Item(.Text) = lIdx + 1 Then
-    '                    Debug.Print "[" & oCol.Item(lIdx) & "] Remove GoTo " & .Text
                         .NodeType = ucsIrtBlock
                         .Text = vbNullString
                     End If
@@ -942,7 +949,6 @@ Private Function pvCodeGenTrimGotoNext(ByVal lNode As Long) As Boolean
                         If m_uIr.Nodes(.Children(0)).NodeType = ucsIrtExprCall Then
                             If pvEnumChildNodes(.Children(1)) = 1 Then
                                 If m_uIr.Nodes(.Children(1)).NodeType = ucsIrtBlock Then
-'                                    Debug.Print "[" & oCol.Item(lIdx) & "] Transform StmtIf to StmtCall " & m_uIr.Nodes(.Children(0)).Text
                                     .NodeType = ucsIrtStmtCall
                                     .Text = m_uIr.Nodes(.Children(0)).Text
                                     .Count = 0
@@ -972,6 +978,7 @@ End Function
 
 Private Function pvFromPegString(sText As String) As String
     Dim lIdx            As Long
+    Dim lJdx            As Long
     
     For lIdx = 1 To Len(sText)
         If Mid$(sText, lIdx, 1) = "\" And Len(sText) > lIdx Then
@@ -994,6 +1001,20 @@ Private Function pvFromPegString(sText As String) As String
                 pvFromPegString = pvFromPegString & vbVerticalTab
             Case "'", """", "[", "]", "\"
                 pvFromPegString = pvFromPegString & Mid$(sText, lIdx + 1, 1)
+            Case "0" To "9"
+                For lJdx = lIdx + 1 To Len(sText)
+                    If lJdx > lIdx + 3 Or Asc(Mid$(sText, lJdx, 1)) < 48 Or Asc(Mid$(sText, lJdx, 1)) > 57 Then
+                        Exit For
+                    End If
+                Next
+                pvFromPegString = pvFromPegString & Chr$("&O" & Mid$(sText, lIdx + 1, lJdx - lIdx - 1))
+                lIdx = lJdx - 2
+            Case "x"
+                pvFromPegString = pvFromPegString & Chr$("&H" & Mid$(sText, lIdx + 2, 2))
+                lIdx = lIdx + 2
+            Case "u"
+                pvFromPegString = pvFromPegString & ChrW$("&H" & Mid$(sText, lIdx + 2, 4))
+                lIdx = lIdx + 4
             Case Else
                 pvFromPegString = pvFromPegString & "\"
                 lIdx = lIdx - 1
