@@ -28,16 +28,16 @@ Rule            <- Identifier                                           {   With
                                                                             End With }
                                                                        &{ ClearErrors() And SetUserDataTag($$text) }
                               (Literal                                  { With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With }
-                              )?       Assign 
-                                              (Expression               { With .UserData: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
-                                               /                       &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'") }
-                                              )           SEMI?
+                              )?       AssignLiteral 
+                                                     (Expression       { With .UserData: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
+                                                      /                &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'") }
+                                                     )           SEMI?
 Expression      <- ChoiceExpr
-ChoiceExpr      <- SequenceExpr (Choice SequenceExpr                    { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With }
+ChoiceExpr      <- SequenceExpr (ChoiceLiteral SequenceExpr             { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With }
                                 )*
 SequenceExpr    <- ErrorExpr (ErrorExpr                                 { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With }
                              )*
-                 /                                                      { With .UserData: .Push .MakePredicate(lOffset, "1"): End With }
+                 /                                                      { With .UserData: .Push .MakePredicate(lOffset, "True"): End With }
 ErrorExpr       <- VariableExpr (CARET                                  &{ ClearErrors() }
                                        (Identifier                       { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
                                         / Literal                        { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
@@ -46,7 +46,7 @@ ErrorExpr       <- VariableExpr (CARET                                  &{ Clear
 VariableExpr    <- Identifier                                           { With .UserData: .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                               COLON PrefixExpr                          { With .UserData: .Push .SetVariable(lOffset, .Pop, .Pop): End With }
                  / PrefixExpr
-PrefixExpr      <- AND Action                                           { With .UserData: .Push .MakePredicate(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+PrefixExpr      <- AND CodeBlock                                        { With .UserData: .Push .MakePredicate(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                  / AND SuffixExpr                                       { With .UserData: .Push .MakePeekFor(lOffset, .Pop): End With }
                  / NOT SuffixExpr                                       { With .UserData: .Push .MakePeekNot(lOffset, .Pop): End With }
                  /     SuffixExpr
@@ -54,7 +54,7 @@ SuffixExpr      <- PrimaryExpr (QUESTION                                { With .
                                 / STAR                                  { With .UserData: .Push .MakeStar(lOffset, .Pop): End With }
                                 / PLUS                                  { With .UserData: .Push .MakePlus(lOffset, .Pop): End With }
                                )?
-PrimaryExpr     <- Identifier !(LiteralNC? Assign)                      { With .UserData: .Push .MakeReference(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+PrimaryExpr     <- Identifier !(LiteralNC? AssignLiteral)               { With .UserData: .Push .MakeReference(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                  / OPEN                                                &{ ClearErrors() }
                         (Expression CLOSE
                          /                                             &{ AppendError("Invalid expression") }
@@ -66,7 +66,7 @@ PrimaryExpr     <- Identifier !(LiteralNC? Assign)                      { With .
                     (IgnoreCase                                         { With .UserData: .SetIgnoreCase .Top, (Mid$(ctx.Contents, lOffset, lSize) = "i"): End With }
                     )? Spacing
                  / DOT                                                  { With .UserData: .Push .MakeDot(lOffset): End With }
-                 / Action                                               { With .UserData: .Push .MakeAction(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+                 / CodeBlock                                            { With .UserData: .Push .MakeAction(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                  / BEGIN                                                { With .UserData: .Push .MakePredicate(lOffset, "YY_BEGIN"): End With }
                  / END                                                  { With .UserData: .Push .MakePredicate(lOffset, "YY_END"): End With }
 
@@ -76,7 +76,7 @@ Setting         <- SettingName                                          { With .
                                 /                                      &{ AppendError("Invalid value for setting '" & .UserData.Tag & "'") }
                                )
 SettingName     <- AT (Identifier / Literal / EMPTY)                   
-SettingValue    <- (Identifier / Literal / Action) SEMI?                          
+SettingValue    <- (Identifier / Literal / CodeBlock) SEMI?                          
                  
 # Lexical rules
 
@@ -115,13 +115,13 @@ Space           <- ' ' / '\t' / EndOfLine
 EndOfLine       <- '\r\n' / '\n' / '\r'
 EndOfFile       <- !.
 
-Action          <- '{' EndOfLine* < ([^{}] / ActionNC)* > '}' Spacing   { }
-ActionNC        <- '{' ([^{}] / ActionNC)* '}' Spacing                  # Non-capture version
+CodeBlock       <- '{' EndOfLine* < ([^{}] / CodeNC)* > '}' Spacing     { }
+CodeNC          <- '{' ([^{}] / CodeNC)* '}' Spacing                    # Non-capture version
 BEGIN           <- '<' Spacing
 END             <- '>' Spacing
 
-Assign          <- LEFTARROW / EQUAL
-Choice          <- SLASH / BAR
+AssignLiteral   <- LEFTARROW / EQUAL
+ChoiceLiteral   <- SLASH / BAR
 EQUAL           <- '=' Spacing
 BAR             <- '|' Spacing
 COLON           <- ':' Spacing
