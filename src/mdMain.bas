@@ -54,7 +54,6 @@ Private Sub Main()
     Dim oIR             As cIR
     Dim nFile           As Integer
     Dim sOutput         As String
-    Dim sFile           As String
     Dim vElem           As Variant
     Dim sWarning        As String
     
@@ -85,13 +84,12 @@ Private Sub Main()
         Exit Sub
     End If
     Set oTree = New cTree
-    If oParser.Match(ReadTextFile(oOpt.Item("arg1")), UserData:=oTree) = 0 Then
+    If oParser.Match(oTree.ReadFile(oOpt.Item("arg1")), UserData:=oTree) = 0 Then
         If LenB(oParser.LastError) Then
-            ConsoleError "Error parsing: %1 at pos %2" & vbCrLf, oParser.LastError, oParser.LastBufPos
+            ConsoleError "%2: %1" & vbCrLf, oParser.LastError, Join(oTree.CalcLine(oParser.LastBufPos), ":")
         End If
-        sFile = Mid$(oOpt.Item("arg1"), InStrRev(oOpt.Item("arg1"), "\") + 1)
         For Each vElem In oParser.GetParseErrors()
-            ConsoleError sFile & "(%2): %1" & vbCrLf, At(vElem, 0), At(vElem, 1)
+            ConsoleError "%2: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":")
         Next
         Exit Sub
     End If

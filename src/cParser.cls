@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 17.7.2018 14:32:56
+' Auto-generated on 17.7.2018 18:26:18
 Option Explicit
 DefObj A-Z
 
@@ -102,7 +102,7 @@ Property Get LastBufPos() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "17.7.2018 14:32:56"
+    ParserVersion = "17.7.2018 18:26:18"
 End Property
 
 '=========================================================================
@@ -326,7 +326,7 @@ Public Function ParseRule() As Boolean
                     .ThunkPos = q23
                 End If
 L6:
-                If ParseAssign() Then
+                If ParseAssignLiteral() Then
                     Call ParseChoiceExpr
                     pvPushAction ucsAct_3_Rule
                     Call ParseSEMI
@@ -407,13 +407,13 @@ Public Function ParseLiteral() As Boolean
     End With
 End Function
 
-Public Function ParseAssign() As Boolean
+Public Function ParseAssignLiteral() As Boolean
     If ParseLEFTARROW() Then
-        ParseAssign = True
+        ParseAssignLiteral = True
         Exit Function
     End If
     If ParseEQUAL() Then
-        ParseAssign = True
+        ParseAssignLiteral = True
     End If
 End Function
 
@@ -433,7 +433,7 @@ End Function
 Public Sub ParseChoiceExpr()
     Call ParseSequenceExpr
     Do
-        If Not ParseChoice() Then
+        If Not ParseChoiceLiteral() Then
             Exit Do
         End If
         Call ParseSequenceExpr
@@ -471,13 +471,13 @@ L8:
     End With
 End Sub
 
-Public Function ParseChoice() As Boolean
+Public Function ParseChoiceLiteral() As Boolean
     If ParseSLASH() Then
-        ParseChoice = True
+        ParseChoiceLiteral = True
         Exit Function
     End If
     If ParseBAR() Then
-        ParseChoice = True
+        ParseChoiceLiteral = True
     End If
 End Function
 
@@ -611,7 +611,7 @@ Public Function ParsePrefixExpr() As Boolean
         p93 = .BufPos
         q93 = .ThunkPos
         If ParseAND() Then
-            If ParseAction() Then
+            If ParseCodeBlock() Then
                 pvPushAction ucsAct_1_PrefixExpr
                 ParsePrefixExpr = True
                 Exit Function
@@ -667,7 +667,7 @@ Private Function ParseAND() As Boolean
     End With
 End Function
 
-Public Function ParseAction() As Boolean
+Public Function ParseCodeBlock() As Boolean
     Dim p383 As Long
     Dim q383 As Long
     Dim lCaptureBegin As Long
@@ -687,7 +687,7 @@ Public Function ParseAction() As Boolean
             Do
                 Select Case .BufData(.BufPos)
                 Case 123, 125                       ' [{}]
-                    If ParseActionNC() Then
+                    If ParseCodeNC() Then
                         GoTo L10
                     Else
                         Exit Do
@@ -697,7 +697,7 @@ Public Function ParseAction() As Boolean
                         .BufPos = .BufPos + 1
                         GoTo L10
                     Else
-                        If ParseActionNC() Then
+                        If ParseCodeNC() Then
                             GoTo L10
                         Else
                             Exit Do
@@ -715,7 +715,7 @@ L10:
                 If .BufPos > .LastBufPos Then
                     .LastError = vbNullString : .LastBufPos = .BufPos
                 End If
-                ParseAction = True
+                ParseCodeBlock = True
                 Exit Function
             Else
                 .BufPos = p383
@@ -794,7 +794,7 @@ Public Function ParsePrimaryExpr() As Boolean
             p122 = .BufPos
             q122 = .ThunkPos
             Call ParseLiteralNC
-            If ParseAssign() Then
+            If ParseAssignLiteral() Then
                 .BufPos = p124
                 .ThunkPos = q124
                 GoTo L12
@@ -884,7 +884,7 @@ L15:
         End If
         p162 = .BufPos
         q162 = .ThunkPos
-        If ParseAction() Then
+        If ParseCodeBlock() Then
             pvPushAction ucsAct_7_PrimaryExpr
             ParsePrimaryExpr = True
             Exit Function
@@ -1239,7 +1239,7 @@ Public Function ParseSettingValue() As Boolean
             .BufPos = p192
             .ThunkPos = q192
         End If
-        If ParseAction() Then
+        If ParseCodeBlock() Then
             Call ParseSEMI
             ParseSettingValue = True
             Exit Function
@@ -1417,8 +1417,8 @@ Public Function ParseChar() As Boolean
                 Exit Function
             End If
         End If
-        If LenB(.LastError) = 0 Then
-            .LastError = "Extected char"
+        If LenB(.LastError) = 0 Or .BufPos > .LastBufPos Then
+            .LastError = "Expected char" : .LastBufPos = .BufPos
         End If
     End With
 End Function
@@ -1604,7 +1604,7 @@ Public Function ParseEndOfLine() As Boolean
     End With
 End Function
 
-Public Function ParseActionNC() As Boolean
+Public Function ParseCodeNC() As Boolean
     Dim p399 As Long
 
     With ctx
@@ -1614,7 +1614,7 @@ Public Function ParseActionNC() As Boolean
             Do
                 Select Case .BufData(.BufPos)
                 Case 123, 125                       ' [{}]
-                    If ParseActionNC() Then
+                    If ParseCodeNC() Then
                         GoTo L23
                     Else
                         Exit Do
@@ -1624,7 +1624,7 @@ Public Function ParseActionNC() As Boolean
                         .BufPos = .BufPos + 1
                         GoTo L23
                     Else
-                        If ParseActionNC() Then
+                        If ParseCodeNC() Then
                             GoTo L23
                         Else
                             Exit Do
@@ -1639,7 +1639,7 @@ L23:
                 If .BufPos > .LastBufPos Then
                     .LastError = vbNullString : .LastBufPos = .BufPos
                 End If
-                ParseActionNC = True
+                ParseCodeNC = True
                 Exit Function
             Else
                 .BufPos = p399
@@ -1698,7 +1698,7 @@ Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As
     Case ucsAct_1_ChoiceExpr
          With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With
     Case ucsAct_2_SequenceExpr
-         With .UserData: .Push .MakePredicate(lOffset, "1"): End With
+         With .UserData: .Push .MakePredicate(lOffset, "True"): End With
     Case ucsAct_1_SequenceExpr
          With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With
     Case ucsAct_1_ErrorExpr

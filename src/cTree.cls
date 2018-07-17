@@ -95,6 +95,8 @@ End Type
 Private m_uTree                 As UcsTreeType
 Private m_oSettings             As Object
 Private m_vTag                  As Variant
+Private m_sFileName             As String
+Private m_laOffsets()           As Long
 
 '=========================================================================
 ' Properties
@@ -595,7 +597,7 @@ Public Function CheckTree(sWarning As String) As Boolean
         For Each vElem In .Children
             With m_uTree.Nodes(vElem)
                 If .Children(0) = 0 Then
-                    m_uTree.LastError = "Undefined rule '" & .Text & "' at pos " & .Offset
+                    m_uTree.LastError = Join(CalcLine(.Offset), ":") & ": Undefined rule '" & .Text & "'"
                     GoTo QH
                 End If
             End With
@@ -1049,4 +1051,44 @@ Private Function pvFindAdvance(ByVal lNode As Long) As Boolean
             End If
         Next
     End With
+End Function
+
+Public Function ReadFile(sFile As String) As String
+    m_sFileName = Mid$(sFile, InStrRev(sFile, "\") + 1)
+    ReadFile = ReadTextFile(sFile)
+    pvBuildLineInfo ReadFile
+End Function
+
+Private Sub pvBuildLineInfo(sSubject As String)
+    Dim lIdx            As Long
+    
+    With CreateObject("VBScript.RegExp")
+        .Global = True
+        .Pattern = "\r?\n"
+        With .Execute(sSubject)
+            ReDim m_laOffsets(0 To .Count) As Long
+            For lIdx = 0 To .Count - 1
+                With .Item(lIdx)
+                    m_laOffsets(lIdx + 1) = .FirstIndex + .Length
+                End With
+            Next
+        End With
+    End With
+End Sub
+
+Public Function CalcLine(ByVal lOffset As Long) As Variant
+    Dim lLower          As Long
+    Dim lUpper          As Long
+    Dim lMiddle         As Long
+    
+    lUpper = UBound(m_laOffsets)
+    Do While lLower < lUpper
+        lMiddle = (lLower + lUpper + 1) \ 2
+        If m_laOffsets(lMiddle) < lOffset Then
+            lLower = lMiddle
+        Else
+            lUpper = lMiddle - 1
+        End If
+    Loop
+    CalcLine = Array(m_sFileName, lUpper + 1, lOffset - m_laOffsets(lUpper))
 End Function
