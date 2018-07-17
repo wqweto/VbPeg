@@ -406,6 +406,8 @@ End Function
 
 Public Function C_Bool(vValue As Variant) As Boolean
     On Error GoTo QH
-    C_Bool = CBool(vValue)
+    If LenB(vValue) <> 0 Then
+        C_Bool = CBool(vValue)
+    End If
 QH:
 End Function

@@ -61,6 +61,7 @@ Public Enum UcsTreeNodeFlagsEnum
     ucsNdfHasActions = 2 ^ 8
     ucsNdfSkipAdvance = 2 ^ 9
     ucsNdfIgnoreCase = 2 ^ 10
+    ucsNdfHasAdvance = 2 ^ 11
 End Enum
 
 Private Type UcsTreeNodeType
@@ -507,7 +508,7 @@ Public Function Top() As Long
     End With
 End Function
 
-Public Function DumpParseTree(Optional StartNode As Long) As String
+Public Function DumpParseTree(Optional ByVal StartNode As Long) As String
     With m_uTree
         Set .OutBuilder = New Collection
         .OutNodeTypes = Split(STR_TYPES, "|")
@@ -579,6 +580,9 @@ Private Function pvGetNodeFlags(ByVal eFlags As UcsTreeNodeFlagsEnum) As String
     End If
     If (eFlags And ucsNdfSkipAdvance) <> 0 Then
         pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "SkipAdvance"
+    End If
+    If (eFlags And ucsNdfHasAdvance) <> 0 Then
+        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "HasAdvance"
     End If
 End Function
 
@@ -673,6 +677,15 @@ Public Function OptimizeTree() As Boolean
     pvUpdateRestoreFrom NODE_ROOT, 0
     Do While pvUpdateHasActions(NODE_ROOT, False)
     Loop
+    With m_uTree.Nodes(NODE_ROOT)
+        For Each vElem In .Children
+            If pvFindAdvance(vElem) Then
+                With m_uTree.Nodes(vElem)
+                    .Flags = .Flags Or ucsNdfHasAdvance
+                End With
+            End If
+        Next
+    End With
     '--- success
     OptimizeTree = True
 End Function
@@ -1017,5 +1030,23 @@ Private Function pvUpdateHasActions(ByVal lNode As Long, bHasActions As Boolean)
                 End If
             End If
         End If
+    End With
+End Function
+
+Private Function pvFindAdvance(ByVal lNode As Long) As Boolean
+    Dim vElem           As Variant
+    
+    With m_uTree.Nodes(lNode)
+        Select Case .NodeType
+        Case ucsNdtString, ucsNdtClass
+            pvFindAdvance = True
+            Exit Function
+        End Select
+        For Each vElem In .Children
+            If pvFindAdvance(vElem) Then
+                pvFindAdvance = True
+                Exit Function
+            End If
+        Next
     End With
 End Function

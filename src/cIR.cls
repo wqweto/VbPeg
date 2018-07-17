@@ -27,7 +27,7 @@ DefObj A-Z
 ' Constants and member variables
 '=========================================================================
 
-Private Const STR_NODE_TYPES        As String = "|Block|DeclFunc|DeclEnum|DeclLabel|StmtCall|StmtRetVal|StmtExit|StmtDoLoop|StmtDoExit|StmtIf|StmtSelect|StmtCase|StmtSavePos|StmtRestorePos|StmtEmit|StmtWith|StmtCapture|StmtPushAction|StmtGoTo|StmtForLoop|StmtForExit|ExprCall|ExprNot|ExprEmit"
+Private Const STR_NODE_TYPES        As String = "|Block|DeclFunc|DeclEnum|DeclLabel|StmtCall|StmtRetVal|StmtExit|StmtDoLoop|StmtDoExit|StmtIf|StmtSelect|StmtCase|StmtSavePos|StmtRestorePos|StmtIncrPos|StmtEmit|StmtWith|StmtCapture|StmtPushAction|StmtGoTo|StmtForLoop|StmtForExit|ExprCall|ExprNot|ExprEmit"
 Private Const NODE_ROOT             As Long = 0
 Private Const IR_CONTINUE           As Long = 0
 Private Const IR_DECL               As Long = 1
@@ -57,6 +57,7 @@ Public Enum UcsIrNodeTypeEnum
     ucsIrtStmtCase
     ucsIrtStmtSavePos
     ucsIrtStmtRestorePos
+    ucsIrtStmtIncrPos
     ucsIrtStmtEmit
     ucsIrtStmtWith
     ucsIrtStmtCapture
@@ -240,11 +241,17 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                         lSuccess = IR_CONTINUE
                         lFailure = IR_CONTINUE
                     Else
-                        lSuccess = AddChild(AddChild(AddChild( _
-                            AddNode(ucsIrtBlock), AddChild(AddChild( _
+                        If .NodeFlag(vElem, ucsNdfHasAdvance) Then
+                            lIrNode = AddChild(AddChild( _
                                 AddNode(ucsIrtStmtIf), _
                                     AddNode(ucsIrtExprEmit, ".BufPos > .LastBufPos")), _
-                                    AddNode(ucsIrtStmtEmit, ".LastError = vbNullString : .LastBufPos = .BufPos"))), _
+                                    AddNode(ucsIrtStmtEmit, ".LastError = vbNullString : .LastBufPos = .BufPos"))
+                        Else
+                            lIrNode = IR_CONTINUE
+                        End If
+                        lSuccess = AddChild(AddChild(AddChild( _
+                            AddNode(ucsIrtBlock), _
+                                lIrNode), _
                                 AddNode(ucsIrtStmtRetVal, "True")), _
                                 AddNode(ucsIrtStmtExit))
                         lFailure = IR_CONTINUE
@@ -634,7 +641,7 @@ Private Function pvCodeGenNode( _
             End If
             If Not .NodeFlag(lNode, ucsNdfSkipAdvance) Then
                 lSuccess = AddChild(AddChild(AddNode(ucsIrtBlock), _
-                    AddNode(ucsIrtStmtEmit, ".BufPos = .BufPos + " & Len(sText))), _
+                    AddNode(ucsIrtStmtIncrPos, Len(sText))), _
                     lSuccess)
             End If
 EmitStmtIfOnIrNode:
@@ -656,7 +663,7 @@ EmitStmtIfOnIrNode:
             End If
             If Not .NodeFlag(lNode, ucsNdfSkipAdvance) Then
                 lSuccess = AddChild(AddChild(AddNode(ucsIrtBlock), _
-                    AddNode(ucsIrtStmtEmit, ".BufPos = .BufPos + 1")), _
+                    AddNode(ucsIrtStmtIncrPos, 1)), _
                     lSuccess)
             End If
             GoTo EmitStmtIfOnIrNode
@@ -694,7 +701,7 @@ EmitStmtIfOnIrNode:
             AddChild pvCodeGenNode, lIrNode
             If Not .NodeFlag(lNode, ucsNdfIsNot) Then
                 If Not .NodeFlag(lNode, ucsNdfSkipAdvance) Then
-                    AddChild lIrNode, AddNode(ucsIrtStmtEmit, ".BufPos = .BufPos + 1")
+                    AddChild lIrNode, AddNode(ucsIrtStmtIncrPos, 1)
                 End If
                 AddChild lIrNode, lSuccess
                 If lFailure <> IR_CONTINUE Then
@@ -709,7 +716,7 @@ EmitStmtIfOnIrNode:
                         AddNode(ucsIrtStmtIf), _
                             AddNode(ucsIrtExprEmit, ".BufPos < .BufSize")), AddChild(AddChild( _
                             AddNode(ucsIrtBlock), _
-                                AddNode(ucsIrtStmtEmit, ".BufPos = .BufPos + 1")), _
+                                AddNode(ucsIrtStmtIncrPos, 1)), _
                                 lSuccess)), _
                             lFailure))
             End If
@@ -1488,6 +1495,12 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
                 pvOutput ".BufPos = " & .Text
             Else
                 pvOutput ".ThunkPos = " & .Text
+            End If
+        Case ucsIrtStmtIncrPos
+            If Left$(.Text, 1) = "-" Then
+                pvOutput ".BufPos = .BufPos - " & Abs(.Text)
+            Else
+                pvOutput ".BufPos = .BufPos + " & .Text
             End If
         Case ucsIrtStmtEmit
             pvOutput .Text
