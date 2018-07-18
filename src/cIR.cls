@@ -241,7 +241,7 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                         lSuccess = AddChild(AddChild( _
                             AddNode(ucsIrtStmtIf), _
                                 AddNode(ucsIrtExprEmit, ".BufPos > .LastBufPos")), _
-                                AddNode(ucsIrtStmtEmit, ".LastError = vbNullString : .LastBufPos = .BufPos"))
+                                AddNode(ucsIrtStmtEmit, ".LastError = vbNullString: .LastBufPos = .BufPos"))
                     Else
                         lSuccess = IR_CONTINUE
                     End If
@@ -698,13 +698,21 @@ EmitStmtIfOnIrNode:
                 AddChild pvCodeGenNode, AddNode(ucsIrtStmtEmit, "pvPushThunk ucsActResultSet, lCaptureBegin, lCaptureEnd")
                 AddChild pvCodeGenNode, lSuccess
             Case Else
-                sText = pvCodeGenAction(.NodeText(lNode), .NodeRefRule(lNode), IsImmediate:=True)
-                If Not .NodeFlag(lNode, ucsNdfIsNot) Then
-                    lIrNode = AddNode(ucsIrtExprEmit, sText)
+                sText = Trim$(pvCodeGenAction(.NodeText(lNode), .NodeRefRule(lNode), IsImmediate:=True))
+                If LenB(sText) = 0 Then
+                    pvCodeGenNode = lSuccess
+                ElseIf .NodeFlag(lNode, ucsNdfAlwaysTrue) Then
+                    pvCodeGenNode = AddNode(ucsIrtBlock)
+                    AddChild pvCodeGenNode, AddNode(ucsIrtStmtEmit, "Call " & sText)
+                    AddChild pvCodeGenNode, lSuccess
                 Else
-                    lIrNode = AddNode(ucsIrtExprEmit, "Not (" & sText & ")")
+                    If Not .NodeFlag(lNode, ucsNdfIsNot) Then
+                        lIrNode = AddNode(ucsIrtExprEmit, sText)
+                    Else
+                        lIrNode = AddNode(ucsIrtExprEmit, "Not (" & sText & ")")
+                    End If
+                    GoTo EmitStmtIfOnIrNode
                 End If
-                GoTo EmitStmtIfOnIrNode
             End Select
         Case ucsNdtClass
             sText = pvFromPegString(.NodeText(lNode))
@@ -874,7 +882,7 @@ Private Function pvCodeGenFindCtxUse(ByVal lNode As Long) As Boolean
     
     With m_uIr.Nodes(lNode)
         '--- note: euristic for emitted VB6 code that uses context member var
-        If Left$(.Text, 1) = "." Or .NodeType = ucsIrtStmtSavePos Or .NodeType = ucsIrtStmtRestorePos Or .NodeType = ucsIrtStmtCapture Then
+        If Left$(.Text, 1) = "." Or .NodeType = ucsIrtStmtSavePos Or .NodeType = ucsIrtStmtRestorePos Or .NodeType = ucsIrtStmtCapture Or .NodeType = ucsIrtStmtPushAction Then
             pvCodeGenFindCtxUse = True
             Exit Function
         End If

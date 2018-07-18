@@ -310,6 +310,20 @@ Public Function BeginRule(ByVal lRule As Long) As Long
 End Function
 
 Public Sub SetExpression(ByVal lRule As Long, ByVal lNode As Long)
+    Dim sTrace          As String
+    
+    If LenB(SettingValue("trace")) Then
+        With m_uTree.Nodes(lRule)
+            sTrace = SettingValue("trace") & "(.BufPos + 1, """ & .Text & """, %1)"
+            lNode = AppendChild( _
+                MakeAlternate(.Offset, AppendSequence(AppendSequence( _
+                    MakeSequence(.Offset, _
+                        MakePredicate(.Offset, Replace(sTrace, "%1", 1), AlwaysTrue:=True)), _
+                        lNode), _
+                        MakePredicate(.Offset, Replace(sTrace, "%1", 2), AlwaysTrue:=True))), _
+                    MakePredicate(.Offset, Replace(sTrace, "%1", 3) & " And False"))
+        End With
+    End If
     RuleExpression(lRule) = lNode
 End Sub
 
@@ -340,11 +354,11 @@ Public Function SetVariable(ByVal lOffset As Long, ByVal lNode As Long, ByVal lV
     Dim lLastChild      As Long
     
     With m_uTree
-        SetVariable = AppendSequence(MakeSequence(lOffset, MakePredicate(lOffset, "YY_CLEAR")), lNode)
+        SetVariable = AppendSequence(MakeSequence(lOffset, MakePredicate(lOffset, "YY_CLEAR", AlwaysTrue:=True)), lNode)
         If NodeNumChildren(lNode) > 0 Then
             lLastChild = NodeChild(lNode, NodeNumChildren(lNode) - 1)
             If .Nodes(lLastChild).NodeType = ucsNdtPredicate And .Nodes(lLastChild).Text = "YY_END" Then
-                lNode = MakePredicate(lOffset, "YY_SET")
+                lNode = MakePredicate(lOffset, "YY_SET", AlwaysTrue:=True)
                 SetVariable = AppendSequence(SetVariable, lNode)
             End If
         End If
@@ -401,8 +415,13 @@ Public Function MakeAction(ByVal lOffset As Long, sText As String) As Long
     End With
 End Function
 
-Public Function MakePredicate(ByVal lOffset As Long, sText As String) As Long
+Public Function MakePredicate(ByVal lOffset As Long, sText As String, Optional ByVal AlwaysTrue As Boolean) As Long
     MakePredicate = pvNewNode(ucsNdtPredicate, lOffset, Text:=sText)
+    If AlwaysTrue Then
+        With m_uTree.Nodes(MakePredicate)
+            .Flags = .Flags Or ucsNdfAlwaysTrue
+        End With
+    End If
 End Function
 
 Public Function MakeAlternate(ByVal lOffset As Long, ByVal lNode As Long) As Long
@@ -749,14 +768,6 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
                     .Flags = .Flags Or ucsNdfAlwaysTrue
                     pvOptimizePass1 = True
                 End If
-            End If
-        Case ucsNdtPredicate
-            If (.Flags And ucsNdfAlwaysTrue) = 0 Then
-                Select Case .Text
-                Case "YY_BEGIN", "YY_END", "YY_CLEAR", "YY_SET"
-                    .Flags = .Flags Or ucsNdfAlwaysTrue
-                    pvOptimizePass1 = True
-                End Select
             End If
         End Select
     End With

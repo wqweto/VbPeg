@@ -29,7 +29,7 @@ Rule            <- Identifier                                           {   With
                                                                        &{ ClearErrors(ctx.BufPos + 1) And SetUserDataTag($$text) }
                               (Literal                                  { With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With }
                               )?       AssignLiteral 
-                                                     (Expression       { With .UserData: lNode = .Pop: .SetExpression .Pop, lNode: End With }
+                                                     (Expression        { With .UserData: lNode = .Pop: .SetExpression .Pop, lNode: End With }
                                                       /                &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'", ctx.BufPos + 1) }
                                                      )           SEMI?
 Expression      <- ChoiceExpr
@@ -37,11 +37,11 @@ ChoiceExpr      <- SequenceExpr (ChoiceLiteral SequenceExpr             { With .
                                 )*
 SequenceExpr    <- ErrorExpr (ErrorExpr                                 { With .UserData: lNode = .Pop: .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With }
                              )*
-                 /                                                      { With .UserData: .Push .MakePredicate(lOffset, "True"): End With }
-ErrorExpr       <- VariableExpr (CARET                                  &{ ClearErrors(ctx.BufPos + 1) }
-                                       (Identifier                       { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
-                                        / Literal                        { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
-                                        /                               &{ AppendError("Expected rule or literal for error label", ctx.BufPos + 1) }
+                 /                                                      { With .UserData: .Push .MakePredicate(lOffset, "", AlwaysTrue:=True): End With }
+ErrorExpr       <- VariableExpr (CARET                                 &{ ClearErrors(ctx.BufPos + 1) }
+                                       (Identifier                      { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                        / Literal                       { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                        /                              &{ AppendError("Expected rule or literal for error label", ctx.BufPos + 1) }
                                        ))?
 VariableExpr    <- Identifier                                           { With .UserData: .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                               COLON PrefixExpr                          { With .UserData: .Push .SetVariable(lOffset, .Pop, .Pop): End With }
@@ -67,8 +67,8 @@ PrimaryExpr     <- Identifier !(LiteralNC? AssignLiteral)               { With .
                     )? Spacing
                  / DOT                                                  { With .UserData: .Push .MakeDot(lOffset): End With }
                  / CodeBlock                                            { With .UserData: .Push .MakeAction(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / BEGIN                                                { With .UserData: .Push .MakePredicate(lOffset, "YY_BEGIN"): End With }
-                 / END                                                  { With .UserData: .Push .MakePredicate(lOffset, "YY_END"): End With }
+                 / BEGIN                                                { With .UserData: .Push .MakePredicate(lOffset, "YY_BEGIN", AlwaysTrue:=True): End With }
+                 / END                                                  { With .UserData: .Push .MakePredicate(lOffset, "YY_END", AlwaysTrue:=True): End With }
 
 Setting         <- SettingName                                          { With .UserData: .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                                                                        &{ ClearErrors(ctx.BufPos + 1) And SetUserDataTag($$text) }
