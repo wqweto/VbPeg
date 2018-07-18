@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 17.7.2018 18:26:18
+' Auto-generated on 18.7.2018 13:23:14
 Option Explicit
 DefObj A-Z
 
@@ -19,13 +19,7 @@ DefObj A-Z
 ' API
 '=========================================================================
 
-Private Const LOCALE_USER_DEFAULT           As Long = &H400
-Private Const NORM_IGNORECASE               As Long = 1
-Private Const CSTR_EQUAL                    As Long = 2
-
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
-Private Declare Function RtlCompareMemory Lib "ntdll" (Source1 As Any, Source2 As Any, ByVal Length As Long) As Long
-Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
 
 '=========================================================================
 ' Constants and member variables
@@ -83,6 +77,7 @@ Private Type UcsParserType
     LastError           As String
     LastBufPos          As Long
     UserData            As cTree
+    VarResult           As Variant
     '-- from @members setting
     Errors              As Collection
 End Type
@@ -97,12 +92,12 @@ Property Get LastError() As String
     LastError = ctx.LastError
 End Property
 
-Property Get LastBufPos() As Long
-    LastBufPos = ctx.LastBufPos
+Property Get LastOffset() As Long
+    LastOffset = ctx.LastBufPos + 1
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "17.7.2018 18:26:18"
+    ParserVersion = "18.7.2018 13:23:14"
 End Property
 
 '=========================================================================
@@ -112,7 +107,7 @@ End Property
 Public Function Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As cTree) As Long
     If BeginMatch(sSubject, StartPos, UserData) Then
         If ParseGrammar() Then
-            Match = EndMatch(UserData)
+            Match = EndMatch()
         ElseIf LenB(ctx.LastError) = 0 Then
             ctx.LastError = "Fail"
         End If
@@ -145,9 +140,8 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
     BeginMatch = True
 End Function
 
-Public Function EndMatch(Optional UserData As cTree) As Long
+Public Function EndMatch() As Long
     Dim lIdx            As Long
-    Dim uEmpty          As UcsParserType
     
     With ctx
         For lIdx = 0 To .ThunkPos - 1
@@ -155,16 +149,16 @@ Public Function EndMatch(Optional UserData As cTree) As Long
                 pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin
             End With
         Next
-        If IsObject(.UserData) Then
-            Set UserData = .UserData
-        Else
-            UserData = .UserData
-        End If
         EndMatch = .BufPos + 1
+        .Contents = vbNullString
+        Erase .BufData
+        .BufPos = 0
+        .BufSize = 0
+        Erase .ThunkData
+        .ThunkPos = 0
+        .CaptureBegin = 0
+        .CaptureEnd = 0
     End With
-    uEmpty.LastError = ctx.LastError
-    uEmpty.LastBufPos = ctx.LastBufPos
-    ctx = uEmpty
 End Function
 
 Private Sub pvPushAction(ByVal eAction As UcsParserActionsEnum)
@@ -184,22 +178,6 @@ Private Sub pvPushThunk(ByVal eAction As UcsParserActionsEnum, Optional ByVal lB
         .ThunkPos = .ThunkPos + 1
     End With
 End Sub
-
-Private Function pvMatchString(sText As String) As Boolean
-    With ctx
-        If .BufPos + Len(sText) <= .BufSize Then
-            pvMatchString = RtlCompareMemory(.BufData(.BufPos), ByVal StrPtr(sText), LenB(sText)) = LenB(sText)
-        End If
-    End With
-End Function
-
-Private Function pvMatchIgnoreCase(sText As String) As Boolean
-    With ctx
-        If .BufPos + Len(sText) <= .BufSize Then
-            pvMatchIgnoreCase = CompareStringW(LOCALE_USER_DEFAULT, NORM_IGNORECASE, ByVal StrPtr(sText), Len(sText), .BufData(.BufPos), Len(sText)) = CSTR_EQUAL
-        End If
-    End With
-End Function
 
 '= generated functions ===================================================
 
@@ -237,7 +215,7 @@ L1:
                 ParseGrammar = True
                 Exit Function
             End If
-            If  AppendError("Expected rule or setting")  Then
+            If  AppendError("Expected rule or setting", ctx.BufPos + 1)  Then
                 ParseGrammar = True
                 Exit Function
             End If
@@ -276,7 +254,7 @@ Public Function ParseSetting() As Boolean
         q174 = .ThunkPos
         If ParseSettingName() Then
             pvPushAction ucsAct_1_Setting
-            If  ClearErrors() And SetUserDataTag(Mid$(.Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin))  Then
+            If  ClearErrors(ctx.BufPos + 1) And SetUserDataTag(Mid$(.Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin))  Then
                 p179 = .BufPos
                 q179 = .ThunkPos
                 If ParseSettingValue() Then
@@ -287,7 +265,7 @@ Public Function ParseSetting() As Boolean
                     .BufPos = p179
                     .ThunkPos = q179
                 End If
-                If  AppendError("Invalid value for setting '" & .UserData.Tag & "'")  Then
+                If  AppendError("Invalid value for setting '" & .UserData.Tag & "'", ctx.BufPos + 1)  Then
                     ParseSetting = True
                     Exit Function
                 End If
@@ -315,7 +293,7 @@ Public Function ParseRule() As Boolean
         q18 = .ThunkPos
         If ParseIdentifier() Then
             pvPushAction ucsAct_1_Rule
-            If  ClearErrors() And SetUserDataTag(Mid$(.Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin))  Then
+            If  ClearErrors(ctx.BufPos + 1) And SetUserDataTag(Mid$(.Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin))  Then
                 p23 = .BufPos
                 q23 = .ThunkPos
                 If ParseLiteral() Then
@@ -332,7 +310,7 @@ L6:
                     Call ParseSEMI
                     ParseRule = True
                     Exit Function
-                    If  AppendError("Invalid definition for rule '" & .UserData.Tag & "'")  Then
+                    If  AppendError("Invalid definition for rule '" & .UserData.Tag & "'", ctx.BufPos + 1)  Then
                         Call ParseSEMI
                         ParseRule = True
                         Exit Function
@@ -498,7 +476,7 @@ Public Function ParseErrorExpr() As Boolean
             p61 = .BufPos
             q61 = .ThunkPos
             If ParseCARET() Then
-                If  ClearErrors()  Then
+                If  ClearErrors(ctx.BufPos + 1)  Then
                     p64 = .BufPos
                     q64 = .ThunkPos
                     If ParseIdentifier() Then
@@ -517,7 +495,7 @@ Public Function ParseErrorExpr() As Boolean
                         .BufPos = p67
                         .ThunkPos = q67
                     End If
-                    If  AppendError("Expected rule or literal for error label")  Then
+                    If  AppendError("Expected rule or literal for error label", ctx.BufPos + 1)  Then
                         GoTo L9
                     End If
                     .BufPos = p61
@@ -813,7 +791,7 @@ L12:
         p129 = .BufPos
         q129 = .ThunkPos
         If ParseOPEN() Then
-            If  ClearErrors()  Then
+            If  ClearErrors(ctx.BufPos + 1)  Then
                 p133 = .BufPos
                 q133 = .ThunkPos
                 Call ParseChoiceExpr
@@ -824,7 +802,7 @@ L12:
                     .BufPos = p133
                     .ThunkPos = q133
                 End If
-                If  AppendError("Invalid expression")  Then
+                If  AppendError("Invalid expression", ctx.BufPos + 1)  Then
                     ParsePrimaryExpr = True
                     Exit Function
                 End If
@@ -1273,6 +1251,9 @@ Private Sub ParseEMPTY()
         Call ParseSpacing
         .CaptureBegin = lCaptureBegin
         .CaptureEnd = lCaptureEnd
+        If .BufPos > .LastBufPos Then
+            .LastError = vbNullString : .LastBufPos = .BufPos
+        End If
     End With
 End Sub
 
@@ -1680,27 +1661,27 @@ Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As
     With ctx
     Select Case eAction
     Case ucsAct_2_Setting
-         With .UserData: .AppendSetting .Pop, Mid$(ctx.Contents, lOffset, lSize): End With
+         With .UserData: .SetSettingValue .Pop, Mid$(ctx.Contents, lOffset, lSize): End With
     Case ucsAct_1_Setting
          With .UserData: .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With
     Case ucsAct_3_Rule
-         With .UserData: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With
+         With .UserData: lNode = .Pop: .SetExpression .Pop, lNode: End With
     Case ucsAct_2_Rule
          With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With
     Case ucsAct_1_Rule
            With .UserData
                                                                                 lNode = .BeginRule(.FindRule(lOffset, Mid$(ctx.Contents, lOffset, lSize)))
                                                                                 If .RuleExpression(lNode) <> 0 Then
-                                                                                    ConsoleError "Rule '%1' redefined" & vbCrLf, Mid$(ctx.Contents, lOffset, lSize)
+                                                                                    AppendError "Rule '" & Mid$(ctx.Contents, lOffset, lSize) & "' redefined", lOffset
                                                                                 End If
                                                                                 .Push lNode
                                                                             End With
     Case ucsAct_1_ChoiceExpr
-         With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With
+         With .UserData: lNode = .Pop: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With
     Case ucsAct_2_SequenceExpr
          With .UserData: .Push .MakePredicate(lOffset, "True"): End With
     Case ucsAct_1_SequenceExpr
-         With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With
+         With .UserData: lNode = .Pop: .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With
     Case ucsAct_1_ErrorExpr
          With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With
     Case ucsAct_2_ErrorExpr
@@ -1745,12 +1726,12 @@ End Sub
 
 '= user-defined functions ================================================
 
-Private Function ClearErrors() As Boolean
+Private Function ClearErrors(ByVal lOffset As Long) As Boolean
     Dim lIdx            As Long
     
     If Not ctx.Errors Is Nothing Then
         For lIdx = ctx.Errors.Count To 1 Step -1
-            If ctx.Errors.Item(lIdx)(1) <= ctx.BufPos Then
+            If ctx.Errors.Item(lIdx)(1) <= lOffset Then
                 ctx.Errors.Remove lIdx
             End If
         Next
@@ -1761,11 +1742,11 @@ Private Function ClearErrors() As Boolean
     ClearErrors = True
 End Function
 
-Private Function AppendError(sText As String) As Boolean
+Private Function AppendError(sText As String, ByVal lOffset As Long) As Boolean
     If ctx.Errors Is Nothing Then
         Set ctx.Errors = New Collection
     End If
-    ctx.Errors.Add Array(sText, ctx.BufPos)
+    ctx.Errors.Add Array(sText, lOffset)
 End Function
 
 Private Function SetUserDataTag(sText As String) As Boolean

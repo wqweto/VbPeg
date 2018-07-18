@@ -16,32 +16,32 @@
 # Syntax rules
 
 Grammar         <- Spacing (Setting / Rule)+ 
-                                             (EndOfFile /              &{ AppendError("Expected rule or setting") }
+                                             (EndOfFile /              &{ AppendError("Expected rule or setting", ctx.BufPos + 1) }
                                              )
 
 Rule            <- Identifier                                           {   With .UserData
                                                                                 lNode = .BeginRule(.FindRule(lOffset, Mid$(ctx.Contents, lOffset, lSize)))
                                                                                 If .RuleExpression(lNode) <> 0 Then
-                                                                                    ConsoleError "Rule '%1' redefined" & vbCrLf, Mid$(ctx.Contents, lOffset, lSize)
+                                                                                    AppendError "Rule '" & Mid$(ctx.Contents, lOffset, lSize) & "' redefined", lOffset
                                                                                 End If
                                                                                 .Push lNode
                                                                             End With }
-                                                                       &{ ClearErrors() And SetUserDataTag($$text) }
+                                                                       &{ ClearErrors(ctx.BufPos + 1) And SetUserDataTag($$text) }
                               (Literal                                  { With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With }
                               )?       AssignLiteral 
-                                                     (Expression       { With .UserData: lNode = .Pop(): .RuleExpression(.Pop()) = lNode: End With }
-                                                      /                &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'") }
+                                                     (Expression       { With .UserData: lNode = .Pop: .SetExpression .Pop, lNode: End With }
+                                                      /                &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'", ctx.BufPos + 1) }
                                                      )           SEMI?
 Expression      <- ChoiceExpr
-ChoiceExpr      <- SequenceExpr (ChoiceLiteral SequenceExpr             { With .UserData: lNode = .Pop(): .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With }
+ChoiceExpr      <- SequenceExpr (ChoiceLiteral SequenceExpr             { With .UserData: lNode = .Pop: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With }
                                 )*
-SequenceExpr    <- ErrorExpr (ErrorExpr                                 { With .UserData: lNode = .Pop(): .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With }
+SequenceExpr    <- ErrorExpr (ErrorExpr                                 { With .UserData: lNode = .Pop: .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With }
                              )*
                  /                                                      { With .UserData: .Push .MakePredicate(lOffset, "True"): End With }
-ErrorExpr       <- VariableExpr (CARET                                  &{ ClearErrors() }
+ErrorExpr       <- VariableExpr (CARET                                  &{ ClearErrors(ctx.BufPos + 1) }
                                        (Identifier                       { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
                                         / Literal                        { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
-                                        /                               &{ AppendError("Expected rule or literal for error label") }
+                                        /                               &{ AppendError("Expected rule or literal for error label", ctx.BufPos + 1) }
                                        ))?
 VariableExpr    <- Identifier                                           { With .UserData: .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                               COLON PrefixExpr                          { With .UserData: .Push .SetVariable(lOffset, .Pop, .Pop): End With }
@@ -55,9 +55,9 @@ SuffixExpr      <- PrimaryExpr (QUESTION                                { With .
                                 / PLUS                                  { With .UserData: .Push .MakePlus(lOffset, .Pop): End With }
                                )?
 PrimaryExpr     <- Identifier !(LiteralNC? AssignLiteral)               { With .UserData: .Push .MakeReference(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / OPEN                                                &{ ClearErrors() }
+                 / OPEN                                                &{ ClearErrors(ctx.BufPos + 1) }
                         (Expression CLOSE
-                         /                                             &{ AppendError("Invalid expression") }
+                         /                                             &{ AppendError("Invalid expression", ctx.BufPos + 1) }
                         )
                  / LiteralNoSpace                                       { With .UserData: .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
                     (IgnoreCase                                         { With .UserData: .SetIgnoreCase .Top, (Mid$(ctx.Contents, lOffset, lSize) = "i"): End With }
@@ -71,9 +71,9 @@ PrimaryExpr     <- Identifier !(LiteralNC? AssignLiteral)               { With .
                  / END                                                  { With .UserData: .Push .MakePredicate(lOffset, "YY_END"): End With }
 
 Setting         <- SettingName                                          { With .UserData: .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
-                                                                       &{ ClearErrors() And SetUserDataTag($$text) }
-                               (SettingValue                            { With .UserData: .AppendSetting .Pop, Mid$(ctx.Contents, lOffset, lSize): End With }
-                                /                                      &{ AppendError("Invalid value for setting '" & .UserData.Tag & "'") }
+                                                                       &{ ClearErrors(ctx.BufPos + 1) And SetUserDataTag($$text) }
+                               (SettingValue                            { With .UserData: .SetSettingValue .Pop, Mid$(ctx.Contents, lOffset, lSize): End With }
+                                /                                      &{ AppendError("Invalid value for setting '" & .UserData.Tag & "'", ctx.BufPos + 1) }
                                )
 SettingName     <- AT (Identifier / Literal / EMPTY)                   
 SettingValue    <- (Identifier / Literal / CodeBlock) SEMI?                          
@@ -143,12 +143,12 @@ CARET           <- '^' Spacing
 }
 
 @{
-Private Function ClearErrors() As Boolean
+Private Function ClearErrors(ByVal lOffset As Long) As Boolean
     Dim lIdx            As Long
     
     If Not ctx.Errors Is Nothing Then
         For lIdx = ctx.Errors.Count To 1 Step -1
-            If ctx.Errors.Item(lIdx)(1) <= ctx.BufPos Then
+            If ctx.Errors.Item(lIdx)(1) <= lOffset Then
                 ctx.Errors.Remove lIdx
             End If
         Next
@@ -159,11 +159,11 @@ Private Function ClearErrors() As Boolean
     ClearErrors = True
 End Function
 
-Private Function AppendError(sText As String) As Boolean
+Private Function AppendError(sText As String, ByVal lOffset As Long) As Boolean
     If ctx.Errors Is Nothing Then
         Set ctx.Errors = New Collection
     End If
-    ctx.Errors.Add Array(sText, ctx.BufPos)
+    ctx.Errors.Add Array(sText, lOffset)
 End Function
 
 Private Function SetUserDataTag(sText As String) As Boolean

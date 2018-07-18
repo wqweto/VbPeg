@@ -55,7 +55,8 @@ Private Sub Main()
     Dim nFile           As Integer
     Dim sOutput         As String
     Dim vElem           As Variant
-    Dim sWarning        As String
+    Dim cWarnings       As Collection
+    Dim lOffset         As Long
     
     On Error GoTo EH
     Set oParser = New cParser
@@ -84,24 +85,33 @@ Private Sub Main()
         Exit Sub
     End If
     Set oTree = New cTree
-    If oParser.Match(oTree.ReadFile(oOpt.Item("arg1")), UserData:=oTree) = 0 Then
-        If LenB(oParser.LastError) Then
-            ConsoleError "%2: %1" & vbCrLf, oParser.LastError, Join(oTree.CalcLine(oParser.LastBufPos), ":")
-        End If
+    lOffset = oParser.Match(oTree.ReadFile(oOpt.Item("arg1")), UserData:=oTree)
+    If LenB(oParser.LastError) Then
+        ConsoleError "%2: %3: %1" & vbCrLf, oParser.LastError, Join(oTree.CalcLine(oParser.LastOffset + 1), ":"), IIf(lOffset = 0, "error", "warning")
+    End If
+    If Not oParser.GetParseErrors() Is Nothing Then
         For Each vElem In oParser.GetParseErrors()
-            ConsoleError "%2: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":")
+            ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
         Next
+    End If
+    If lOffset = 0 Then
         Exit Sub
     End If
-    If Not oTree.CheckTree(sWarning) Then
+    If Not oTree.CheckTree(cWarnings) Then
         ConsoleError "%1" & vbCrLf, oTree.LastError
         Exit Sub
-    ElseIf LenB(sWarning) <> 0 Then
-        ConsoleError "Warning: %1" & vbCrLf, sWarning
+    ElseIf Not cWarnings Is Nothing Then
+        For Each vElem In cWarnings
+            ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
+        Next
     End If
-    If Not oTree.OptimizeTree() Then
+    If Not oTree.OptimizeTree(cWarnings) Then
         ConsoleError "Optimize failed: %1" & vbCrLf, oTree.LastError
         Exit Sub
+    ElseIf Not cWarnings Is Nothing Then
+        For Each vElem In cWarnings
+            ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
+        Next
     End If
     If oOpt.Item("-tree") Then
         sOutput = oTree.DumpParseTree

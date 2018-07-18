@@ -92,6 +92,7 @@ Private Type UcsIrType
     CodeGenId           As Long
     CodeGenStartFunc    As String
     CodeGenVarStack     As Boolean
+    CodeGenMatchString  As Boolean
     IrActionsEnum       As Long
     IrActionsSelect     As Long
     OutModulePrefix     As String
@@ -236,22 +237,21 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                             AddChild lBody, AddNode(ucsIrtStmtSavePos, STR_THUNKPOS_PREFIX & vElem)
                         End If
                     End If
+                    If .NodeFlag(vElem, ucsNdfHasAdvance) Then
+                        lSuccess = AddChild(AddChild( _
+                            AddNode(ucsIrtStmtIf), _
+                                AddNode(ucsIrtExprEmit, ".BufPos > .LastBufPos")), _
+                                AddNode(ucsIrtStmtEmit, ".LastError = vbNullString : .LastBufPos = .BufPos"))
+                    Else
+                        lSuccess = IR_CONTINUE
+                    End If
                     If .NodeFlag(vElem, ucsNdfAlwaysTrue) Then
                         IrFlag(lBody, ucsIrfVoid) = True
-                        lSuccess = IR_CONTINUE
                         lFailure = IR_CONTINUE
                     Else
-                        If .NodeFlag(vElem, ucsNdfHasAdvance) Then
-                            lIrNode = AddChild(AddChild( _
-                                AddNode(ucsIrtStmtIf), _
-                                    AddNode(ucsIrtExprEmit, ".BufPos > .LastBufPos")), _
-                                    AddNode(ucsIrtStmtEmit, ".LastError = vbNullString : .LastBufPos = .BufPos"))
-                        Else
-                            lIrNode = IR_CONTINUE
-                        End If
                         lSuccess = AddChild(AddChild(AddChild( _
                             AddNode(ucsIrtBlock), _
-                                lIrNode), _
+                                lSuccess), _
                                 AddNode(ucsIrtStmtRetVal, "True")), _
                                 AddNode(ucsIrtStmtExit))
                         lFailure = IR_CONTINUE
@@ -605,7 +605,9 @@ Private Function pvCodeGenNode( _
             End If
         Case ucsNdtString
             sText = pvFromPegString(.NodeText(lNode))
-            bIgnoreCase = .NodeFlag(lNode, ucsNdfIgnoreCase) And LCase$(sText) <> UCase$(sText)
+            If .NodeFlag(lNode, ucsNdfIgnoreCase) Then
+                bIgnoreCase = LCase$(sText) <> UCase$(sText)
+            End If
             If Len(sText) = 1 Then
                 If Not .NodeFlag(lNode, ucsNdfIsNot) Then
                     If bIgnoreCase Then
@@ -641,10 +643,13 @@ Private Function pvCodeGenNode( _
                     End If
                 End If
                 GoTo QH
-            ElseIf Not .NodeFlag(lNode, ucsNdfIsNot) Then
-                lIrNode = AddNode(ucsIrtExprEmit, IIf(bIgnoreCase, "pvMatchIgnoreCase", "pvMatchString") & "(" & pvToVbString(sText) & ")")
             Else
-                lIrNode = AddNode(ucsIrtExprEmit, "Not " & IIf(bIgnoreCase, "pvMatchIgnoreCase", "pvMatchString") & "(" & pvToVbString(sText) & ")")
+                If Not .NodeFlag(lNode, ucsNdfIsNot) Then
+                    lIrNode = AddNode(ucsIrtExprEmit, "pvMatchString(" & pvToVbString(sText) & IIf(bIgnoreCase, ", NORM_IGNORECASE)", ")"))
+                Else
+                    lIrNode = AddNode(ucsIrtExprEmit, "Not pvMatchString(" & pvToVbString(sText) & IIf(bIgnoreCase, ", NORM_IGNORECASE)", ")"))
+                End If
+                m_uIr.CodeGenMatchString = True
             End If
             If Not .NodeFlag(lNode, ucsNdfSkipAdvance) Then
                 lSuccess = AddChild(AddChild(AddNode(ucsIrtBlock), _
@@ -1168,14 +1173,16 @@ Public Function EmitCode( _
 "'=========================================================================" & vbCrLf & _
 "' API" & vbCrLf & _
 "'=========================================================================" & vbCrLf
-        pvOutput _
+        If .CodeGenMatchString Then
+            pvOutput _
 "Private Const LOCALE_USER_DEFAULT           As Long = &H400" & vbCrLf & _
 "Private Const NORM_IGNORECASE               As Long = 1" & vbCrLf & _
 "Private Const CSTR_EQUAL                    As Long = 2" & vbCrLf
+            pvOutput _
+"Private Declare Function CompareStringW Lib ""kernel32"" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long"
+        End If
         pvOutput _
-"Private Declare Sub CopyMemory Lib ""kernel32"" Alias ""RtlMoveMemory"" (Destination As Any, Source As Any, ByVal Length As Long)" & vbCrLf & _
-"Private Declare Function RtlCompareMemory Lib ""ntdll"" (Source1 As Any, Source2 As Any, ByVal Length As Long) As Long" & vbCrLf & _
-"Private Declare Function CompareStringW Lib ""kernel32"" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long" & vbCrLf
+"Private Declare Sub CopyMemory Lib ""kernel32"" Alias ""RtlMoveMemory"" (Destination As Any, Source As Any, ByVal Length As Long)" & vbCrLf
         pvOutput _
 "'=========================================================================" & vbCrLf & _
 "' Constants and member variables" & vbCrLf & _
@@ -1210,10 +1217,10 @@ Public Function EmitCode( _
 "    CaptureEnd          As Long" & vbCrLf & _
 "    LastError           As String" & vbCrLf & _
 "    LastBufPos          As Long" & vbCrLf & _
-"    UserData            As " & sUserData
+"    UserData            As " & sUserData & vbCrLf & _
+"    VarResult           As " & sVarData
         If .CodeGenVarStack Then
             pvOutput _
-"    VarResult           As " & sVarData & vbCrLf & _
 "    VarStack()          As " & sVarData & vbCrLf & _
 "    VarPos              As Long"
         End If
@@ -1235,8 +1242,8 @@ Public Function EmitCode( _
 "    " & .OutModulePrefix & "LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
 "End Property" & vbCrLf
         pvOutput _
-"Property Get " & .OutModulePrefix & "LastBufPos() As Long" & vbCrLf & _
-"    " & .OutModulePrefix & "LastBufPos = " & STR_CTX_VAR_NAME & ".LastBufPos" & vbCrLf & _
+"Property Get " & .OutModulePrefix & "LastOffset() As Long" & vbCrLf & _
+"    " & .OutModulePrefix & "LastOffset = " & STR_CTX_VAR_NAME & ".LastBufPos + 1" & vbCrLf & _
 "End Property" & vbCrLf
         pvOutput _
 "Property Get " & .OutModulePrefix & "ParserVersion() As String" & vbCrLf & _
@@ -1251,7 +1258,7 @@ Public Function EmitCode( _
 "Public Function " & .OutModulePrefix & "Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & IIf(.CodeGenVarStack, ", Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
 "    If " & .OutModulePrefix & "BeginMatch(sSubject, StartPos, UserData) Then" & vbCrLf & _
 "        If " & .OutModulePrefix & .CodeGenStartFunc & "() Then" & vbCrLf & _
-"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(UserData" & IIf(.CodeGenVarStack, ", Result", vbNullString) & ")" & vbCrLf & _
+"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(" & IIf(.CodeGenVarStack, "UserData, Result", vbNullString) & ")" & vbCrLf & _
 "        ElseIf LenB(" & STR_CTX_VAR_NAME & ".LastError) = 0 Then" & vbCrLf & _
 "            " & STR_CTX_VAR_NAME & ".LastError = ""Fail""" & vbCrLf & _
 "        End If" & vbCrLf & _
@@ -1287,19 +1294,23 @@ Public Function EmitCode( _
 "End Function" & vbCrLf
         If .IrActionsEnum = 0 Then
             pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch(Optional UserData As " & sUserData & ") As Long" & vbCrLf & _
-"    Dim uEmpty          As UcsParserType" & vbCrLf & _
-"    " & vbCrLf & _
-"    " & .OutModulePrefix & "EndMatch = " & STR_CTX_VAR_NAME & ".BufPos" & vbCrLf & _
-"    uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
-"    uEmpty.LastBufPos = " & STR_CTX_VAR_NAME & ".LastBufPos" & vbCrLf & _
-"    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "EndMatch() As Long" & vbCrLf & _
+"    With " & STR_CTX_VAR_NAME & vbCrLf & _
+"        " & .OutModulePrefix & "EndMatch = .BufPos + 1" & vbCrLf & _
+"        .Contents = vbNullString" & vbCrLf & _
+"        Erase .BufData" & vbCrLf & _
+"        .BufPos = 0" & vbCrLf & _
+"        .BufSize = 0" & vbCrLf & _
+"        Erase .ThunkData" & vbCrLf & _
+"        .ThunkPos = 0" & vbCrLf & _
+"        .CaptureBegin = 0" & vbCrLf & _
+"        .CaptureEnd = 0" & vbCrLf & _
+"    End With" & vbCrLf & _
 "End Function" & vbCrLf
         Else
             pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch(Optional UserData As " & sUserData & IIf(.CodeGenVarStack, ", Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
+"Public Function " & .OutModulePrefix & "EndMatch(" & IIf(.CodeGenVarStack, "Optional UserData As " & sUserData & ", Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
 "    Dim lIdx            As Long" & vbCrLf & _
-"    Dim uEmpty          As UcsParserType" & vbCrLf & _
 "    " & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME
             If .CodeGenVarStack Then
@@ -1326,12 +1337,17 @@ Public Function EmitCode( _
 "                    pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin" & vbCrLf & _
 "                End With" & vbCrLf & _
 "            End Select" & vbCrLf & _
-"        Next" & vbCrLf
+"        Next"
                 pvOutput _
 "        If IsObject(.VarResult) Then" & vbCrLf & _
 "            Set Result = .VarResult" & vbCrLf & _
 "        Else" & vbCrLf & _
 "            Result = .VarResult" & vbCrLf & _
+"        End If" & vbCrLf & _
+"        If IsObject(.UserData) Then" & vbCrLf & _
+"            Set UserData = .UserData" & vbCrLf & _
+"        Else" & vbCrLf & _
+"            UserData = .UserData" & vbCrLf & _
 "        End If"
             Else
                 pvOutput _
@@ -1342,16 +1358,16 @@ Public Function EmitCode( _
 "        Next"
             End If
             pvOutput _
-"        If IsObject(.UserData) Then" & vbCrLf & _
-"            Set UserData = .UserData" & vbCrLf & _
-"        Else" & vbCrLf & _
-"            UserData = .UserData" & vbCrLf & _
-"        End If" & vbCrLf & _
 "        " & .OutModulePrefix & "EndMatch = .BufPos + 1" & vbCrLf & _
+"        .Contents = vbNullString" & vbCrLf & _
+"        Erase .BufData" & vbCrLf & _
+"        .BufPos = 0" & vbCrLf & _
+"        .BufSize = 0" & vbCrLf & _
+"        Erase .ThunkData" & vbCrLf & _
+"        .ThunkPos = 0" & vbCrLf & _
+"        .CaptureBegin = 0" & vbCrLf & _
+"        .CaptureEnd = 0" & vbCrLf & _
 "    End With" & vbCrLf & _
-"    uEmpty.LastError = " & STR_CTX_VAR_NAME & ".LastError" & vbCrLf & _
-"    uEmpty.LastBufPos = " & STR_CTX_VAR_NAME & ".LastBufPos" & vbCrLf & _
-"    " & STR_CTX_VAR_NAME & " = uEmpty" & vbCrLf & _
 "End Function" & vbCrLf
             pvOutput _
 "Private Sub pvPushAction(ByVal eAction As UcsParserActionsEnum)" & vbCrLf & _
@@ -1372,22 +1388,16 @@ Public Function EmitCode( _
 "    End With" & vbCrLf & _
 "End Sub" & vbCrLf
         End If
-        pvOutput _
-"Private Function pvMatchString(sText As String) As Boolean" & vbCrLf & _
-"    With " & STR_CTX_VAR_NAME & vbCrLf & _
-"        If .BufPos + Len(sText) <= .BufSize Then" & vbCrLf & _
-"            pvMatchString = RtlCompareMemory(.BufData(.BufPos), ByVal StrPtr(sText), LenB(sText)) = LenB(sText)" & vbCrLf & _
-"        End If" & vbCrLf & _
-"    End With" & vbCrLf & _
-"End Function" & vbCrLf
-        pvOutput _
-"Private Function pvMatchIgnoreCase(sText As String) As Boolean" & vbCrLf & _
+        If .CodeGenMatchString Then
+            pvOutput _
+"Private Function pvMatchString(sText As String, Optional ByVal CmpFlags As Boolean) As Boolean" & vbCrLf & _
 "    With ctx" & vbCrLf & _
 "        If .BufPos + Len(sText) <= .BufSize Then" & vbCrLf & _
-"            pvMatchIgnoreCase = CompareStringW(LOCALE_USER_DEFAULT, NORM_IGNORECASE, ByVal StrPtr(sText), Len(sText), .BufData(.BufPos), Len(sText)) = CSTR_EQUAL" & vbCrLf & _
+"            pvMatchString = CompareStringW(LOCALE_USER_DEFAULT, CmpFlags, ByVal StrPtr(sText), Len(sText), .BufData(.BufPos), Len(sText)) = CSTR_EQUAL" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End With" & vbCrLf & _
 "End Function" & vbCrLf
+        End If
         pvOutput _
 "'= generated functions ===================================================" & vbCrLf
         With .Nodes(IR_ROOT)

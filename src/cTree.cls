@@ -28,6 +28,7 @@ DefObj A-Z
 '=========================================================================
 
 Private Const STR_TYPES             As String = "|Rule|Variable|Reference|Error|Dot|String|Class|Action|Predicate|Alternate|Sequence|PeekFor|PeekNot|Query|Star|Plus"
+Private Const STR_FLAGS             As String = "Used|Reached|AlwaysTrue|MultiStep|SavePos|RestorePos|IsNot|CanInline|HasActions|SkipAdvance|IgnoreCase|HasAdvance"
 Private Const NODE_ROOT             As Long = 0
 
 Public Enum UcsTreeNodeTypeEnum
@@ -89,6 +90,7 @@ Private Type UcsTreeType
     StackIndex          As Long
     OutBuilder          As Collection
     OutNodeTypes        As Variant
+    OutNodeFlags        As Variant
     LastError           As String
 End Type
 
@@ -307,6 +309,10 @@ Public Function BeginRule(ByVal lRule As Long) As Long
     End With
 End Function
 
+Public Sub SetExpression(ByVal lRule As Long, ByVal lNode As Long)
+    RuleExpression(lRule) = lNode
+End Sub
+
 Public Function MakeVariable(ByVal lOffset As Long, sName As String) As Long
     Dim vElem           As Variant
     Dim lIdx            As Long
@@ -479,11 +485,15 @@ Public Function MakePlus(ByVal lOffset As Long, ByVal lNode As Long) As Long
     End With
 End Function
 
-Public Sub AppendSetting(ByVal lName As Long, sValue As String)
+Public Sub SetSettingValue(ByVal lName As Long, sValue As String)
     Dim sName           As String
     
     sName = m_uTree.Nodes(lName).Text
-    SettingValue(sName) = SettingValue(sName) & sValue
+    If LenB(sName) = 0 Then
+        SettingValue(sName) = SettingValue(sName) & sValue
+    Else
+        SettingValue(sName) = sValue
+    End If
 End Sub
 
 Public Function Push(ByVal lNode As Long) As Long
@@ -514,6 +524,7 @@ Public Function DumpParseTree(Optional ByVal StartNode As Long) As String
     With m_uTree
         Set .OutBuilder = New Collection
         .OutNodeTypes = Split(STR_TYPES, "|")
+        .OutNodeFlags = Split(STR_FLAGS, "|")
         pvOutputNode StartNode, StartNode = NODE_ROOT
         DumpParseTree = ConcatCollection(.OutBuilder, vbCrLf)
     End With
@@ -553,58 +564,36 @@ Private Sub pvOutputNode(ByVal lNode As Long, ByVal lIndent As Long)
 End Sub
 
 Private Function pvGetNodeFlags(ByVal eFlags As UcsTreeNodeFlagsEnum) As String
-    If (eFlags And ucsNdfUsed) <> 0 Then
-        pvGetNodeFlags = "Used"
-    End If
-    If (eFlags And ucsNdfReached) <> 0 Then
-        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "Reached"
-    End If
-    If (eFlags And ucsNdfAlwaysTrue) <> 0 Then
-        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "AlwaysTrue"
-    End If
-    If (eFlags And ucsNdfMultiStep) <> 0 Then
-        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "MultiStep"
-    End If
-    If (eFlags And ucsNdfSavePos) <> 0 Then
-        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "SavePos"
-    End If
-    If (eFlags And ucsNdfRestorePos) <> 0 Then
-        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "RestorePos"
-    End If
-    If (eFlags And ucsNdfIsNot) <> 0 Then
-        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "IsNot"
-    End If
-    If (eFlags And ucsNdfCanInline) <> 0 Then
-        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "CanInline"
-    End If
-    If (eFlags And ucsNdfHasActions) <> 0 Then
-        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "HasActions"
-    End If
-    If (eFlags And ucsNdfSkipAdvance) <> 0 Then
-        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "SkipAdvance"
-    End If
-    If (eFlags And ucsNdfHasAdvance) <> 0 Then
-        pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & "HasAdvance"
-    End If
+    Dim vElem           As Variant
+    Dim lIdx            As Long
+    
+    For Each vElem In m_uTree.OutNodeFlags
+        If (eFlags And (2 ^ lIdx)) <> 0 Then
+            pvGetNodeFlags = IIf(LenB(pvGetNodeFlags) <> 0, pvGetNodeFlags & "+", vbNullString) & vElem
+        End If
+        lIdx = lIdx + 1
+    Next
 End Function
 
-Public Function CheckTree(sWarning As String) As Boolean
+Public Function CheckTree(cWarnings As Collection) As Boolean
     Dim vElem           As Variant
-    Dim cWarnings       As Collection
+    Dim cResult         As Collection
     
-    Set cWarnings = New Collection
+    Set cResult = New Collection
     With m_uTree.Nodes(NODE_ROOT)
         For Each vElem In .Children
             With m_uTree.Nodes(vElem)
                 If .Children(0) = 0 Then
-                    m_uTree.LastError = Join(CalcLine(.Offset), ":") & ": Undefined rule '" & .Text & "'"
+                    m_uTree.LastError = Join(CalcLine(.Offset), ":") & ": error: Undefined rule '" & .Text & "'"
                     GoTo QH
                 End If
             End With
-            pvConsumeInput vElem, cWarnings
+            pvConsumeInput vElem, cResult
         Next
     End With
-    sWarning = ConcatCollection(cWarnings, vbCrLf)
+    If cResult.Count > 0 Then
+        Set cWarnings = cResult
+    End If
     '--- success
     CheckTree = True
 QH:
@@ -619,7 +608,7 @@ Private Function pvConsumeInput(ByVal lNode As Long, cResult As Collection) As B
         Case ucsNdtRule
             If (.Flags And ucsNdfReached) <> 0 Then
                 If Not SearchCollection(cResult, "#" & lNode) Then
-                    cResult.Add "Possible left recursion in rule '" & .Text & "'", "#" & lNode
+                    cResult.Add Array("Possible left recursion in rule '" & .Text & "'", .Offset), "#" & lNode
                 End If
             Else
                 .Flags = .Flags Or ucsNdfReached
@@ -655,8 +644,9 @@ Private Function pvConsumeInput(ByVal lNode As Long, cResult As Collection) As B
 QH:
 End Function
 
-Public Function OptimizeTree() As Boolean
+Public Function OptimizeTree(cWarnings As Collection) As Boolean
     Dim vElem           As Variant
+    Dim cResult         As Collection
     
     Do While pvUpdateHasActions(NODE_ROOT, False)
     Loop
@@ -679,15 +669,22 @@ Public Function OptimizeTree() As Boolean
     pvUpdateRestoreFrom NODE_ROOT, 0
     Do While pvUpdateHasActions(NODE_ROOT, False)
     Loop
+    Set cResult = New Collection
     With m_uTree.Nodes(NODE_ROOT)
         For Each vElem In .Children
-            If pvFindAdvance(vElem) Then
-                With m_uTree.Nodes(vElem)
+            With m_uTree.Nodes(vElem)
+                If pvFindAdvance(vElem) Then
                     .Flags = .Flags Or ucsNdfHasAdvance
-                End With
-            End If
+                End If
+                If (.Flags And ucsNdfUsed) = 0 And (.Flags And ucsNdfCanInline) = 0 Then
+                    cResult.Add Array("Unused rule '" & .Text & "'", .Offset)
+                End If
+            End With
         Next
     End With
+    If cResult.Count > 0 Then
+        Set cWarnings = cResult
+    End If
     '--- success
     OptimizeTree = True
 End Function
@@ -908,8 +905,10 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
                 lFlags = m_uTree.Nodes(lNode).Flags
                 lRefVar = m_uTree.Nodes(lNode).RefVar
                 m_uTree.Nodes(lNode) = m_uTree.Nodes(m_uTree.Nodes(.RefRule).Children(0))
-                m_uTree.Nodes(lNode).Flags = lFlags
-                m_uTree.Nodes(lNode).RefVar = lRefVar
+                With m_uTree.Nodes(lNode)
+                    .Flags = (.Flags And (ucsNdfIgnoreCase Or ucsNdfIsNot)) Or lFlags
+                    .RefVar = lRefVar
+                End With
                 pvOptimizePass2 = True
             End If
         Case ucsNdtPeekNot
