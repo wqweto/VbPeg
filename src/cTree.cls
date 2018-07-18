@@ -27,7 +27,7 @@ DefObj A-Z
 ' Constants and member variables
 '=========================================================================
 
-Private Const STR_TYPES             As String = "|Rule|Variable|Reference|Error|Dot|String|Class|Action|Predicate|Alternate|Sequence|PeekFor|PeekNot|Query|Star|Plus"
+Private Const STR_TYPES             As String = "|Rule|Variable|Reference|Error|Dot|String|Class|Action|Predicate|Choice|Sequence|PeekFor|PeekNot|Query|Star|Plus"
 Private Const STR_FLAGS             As String = "Used|Reached|AlwaysTrue|MultiStep|SavePos|RestorePos|IsNot|CanInline|HasActions|SkipAdvance|IgnoreCase|HasAdvance"
 Private Const NODE_ROOT             As Long = 0
 Private Const STR_CTX_VAR_NAME      As String = "ctx"
@@ -42,7 +42,7 @@ Public Enum UcsTreeNodeTypeEnum
     ucsNdtClass
     ucsNdtAction
     ucsNdtPredicate
-    ucsNdtAlternate
+    ucsNdtChoice
     ucsNdtSequence
     ucsNdtPeekFor
     ucsNdtPeekNot
@@ -320,7 +320,7 @@ Public Sub SetExpression(ByVal lRule As Long, ByVal lNode As Long)
             sTrace = SettingValue("trace") & "(" & STR_CTX_VAR_NAME & ".BufPos + 1, """ & .Text & """, %1, " & STR_CTX_VAR_NAME & ".UserData)"
         End With
         lNode = AppendChild( _
-            MakeAlternate(lOffset, AppendSequence(AppendSequence( _
+            MakeChoice(lOffset, AppendSequence(AppendSequence( _
                 MakeSequence(lOffset, _
                     MakePredicate(lOffset, Replace(sTrace, "%1", 1), AlwaysTrue:=True)), _
                     lNode), _
@@ -427,13 +427,13 @@ Public Function MakePredicate(ByVal lOffset As Long, sText As String, Optional B
     End If
 End Function
 
-Public Function MakeAlternate(ByVal lOffset As Long, ByVal lNode As Long) As Long
+Public Function MakeChoice(ByVal lOffset As Long, ByVal lNode As Long) As Long
     With m_uTree
-        If .Nodes(lNode).NodeType = ucsNdtAlternate Then
-            MakeAlternate = lNode
+        If .Nodes(lNode).NodeType = ucsNdtChoice Then
+            MakeChoice = lNode
         Else
-            MakeAlternate = pvNewNode(ucsNdtAlternate, lOffset, NumChildren:=1)
-            .Nodes(MakeAlternate).Children(0) = lNode
+            MakeChoice = pvNewNode(ucsNdtChoice, lOffset, NumChildren:=1)
+            .Nodes(MakeChoice).Children(0) = lNode
         End If
     End With
 End Function
@@ -647,7 +647,7 @@ Private Function pvConsumeInput(ByVal lNode As Long, cResult As Collection) As B
             If .RefRule <> 0 Then
                 pvConsumeInput = pvConsumeInput(.RefRule, cResult)
             End If
-        Case ucsNdtAlternate
+        Case ucsNdtChoice
             For lIdx = 0 To UBound(.Children)
                 If Not pvConsumeInput(.Children(lIdx), cResult) Then
                     GoTo QH
@@ -757,7 +757,7 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
                     End If
                 End If
             End If
-        Case ucsNdtAlternate
+        Case ucsNdtChoice
             If (.Flags And ucsNdfAlwaysTrue) = 0 Then
                 For Each vElem In .Children
                     If (m_uTree.Nodes(vElem).Flags And ucsNdfAlwaysTrue) <> 0 Then
@@ -786,7 +786,7 @@ End Function
 '--- manages Save/RestorePos flags
 '--- inlines References to rules marked CanInline
 '--- in Sequence nodes merges sequential String nodes
-'--- in Alternate nodes merges sequential Class nodes
+'--- in Choice nodes merges sequential Class nodes
 '--- transforms PeekNot -> Not PeekFor nodes
 '--- transforms single char Class -> single char String
 Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Boolean) As Boolean
@@ -871,7 +871,7 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
                     End If
                 End If
             End If
-        Case ucsNdtAlternate
+        Case ucsNdtChoice
             For Each vElem In .Children
                 If (m_uTree.Nodes(vElem).Flags And ucsNdfHasActions) <> 0 Then
                     If (m_uTree.Nodes(vElem).Flags And ucsNdfRestorePos) = 0 Then

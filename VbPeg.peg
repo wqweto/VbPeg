@@ -35,14 +35,14 @@ Rule            <- Identifier                                           {   With
                                                       /                &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'", ctx.BufPos + 1) }
                                                      )           SEMI?
 Expression      <- ChoiceExpr
-ChoiceExpr      <- SequenceExpr (ChoiceLiteral SequenceExpr             { With .UserData: lNode = .Pop: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With }
+ChoiceExpr      <- SequenceExpr (ChoiceLiteral SequenceExpr             { With .UserData: lNode = .Pop: .Push .AppendChild(.MakeChoice(lOffset, .Pop), lNode): End With }
                                 )*
 SequenceExpr    <- ErrorExpr (ErrorExpr                                 { With .UserData: lNode = .Pop: .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With }
                              )*
                  /                                                      { With .UserData: .Push .MakePredicate(lOffset, "", AlwaysTrue:=True): End With }
 ErrorExpr       <- VariableExpr (CARET                                 &{ ClearErrors(ctx.BufPos + 1) }
-                                       (Identifier                      { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
-                                        / Literal                       { With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                       (Identifier                      { With .UserData: .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                        / Literal                       { With .UserData: .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
                                         /                              &{ AppendError("Expected rule or literal for error label", ctx.BufPos + 1) }
                                        ))?
 VariableExpr    <- Identifier                                           { With .UserData: .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }

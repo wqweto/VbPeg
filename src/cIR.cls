@@ -419,7 +419,7 @@ Private Function pvCodeGenNode( _
                     AddChild pvCodeGenNode, AddNode(ucsIrtDeclLabel, sText)
                 End If
             End If
-        Case ucsNdtAlternate
+        Case ucsNdtChoice
             pvCodeGenNode = AddNode(ucsIrtBlock)
             If .NodeFlag(lNode, ucsNdfSavePos) Then
                 AddChild pvCodeGenNode, AddNode(ucsIrtStmtSavePos, STR_BUFPOS_PREFIX & lNode)

@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 18.7.2018 17:07:54
+' Auto-generated on 18.7.2018 17:33:20
 Option Explicit
 DefObj A-Z
 
@@ -97,7 +97,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "18.7.2018 17:07:54"
+    ParserVersion = "18.7.2018 17:33:20"
 End Property
 
 '=========================================================================
@@ -2092,15 +2092,15 @@ Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As
                                                                                 .Push lNode
                                                                             End With
     Case ucsAct_1_ChoiceExpr
-         With .UserData: lNode = .Pop: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), lNode): End With
+         With .UserData: lNode = .Pop: .Push .AppendChild(.MakeChoice(lOffset, .Pop), lNode): End With
     Case ucsAct_1_SequenceExpr
          With .UserData: lNode = .Pop: .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With
     Case ucsAct_2_SequenceExpr
          With .UserData: .Push .MakePredicate(lOffset, "", AlwaysTrue:=True): End With
     Case ucsAct_1_ErrorExpr
-         With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With
+         With .UserData: .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With
     Case ucsAct_2_ErrorExpr
-         With .UserData: .Push .AppendChild(.MakeAlternate(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With
+         With .UserData: .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With
     Case ucsAct_2_VariableExpr
          With .UserData: .Push .SetVariable(lOffset, .Pop, .Pop): End With
     Case ucsAct_1_VariableExpr
