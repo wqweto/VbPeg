@@ -829,24 +829,28 @@ Private Function pvEnumChildNodes(ByVal lNode As Long, Optional oCol As Collecti
 End Function
 
 Private Function pvCodeGenAction(sText As String, ByVal lRule As Long, Optional ByVal IsImmediate As Boolean) As String
+    Dim sCtxVar         As String
+    Dim oVars           As Object
     Dim lIdx            As Long
     Dim cOutput         As Collection
     Dim oMatch          As Object
     Dim lPos            As Long
-    Dim oVars           As Object
     
+    If LenB(SettingValue("prolog")) <> 0 Then
+        sCtxVar = STR_CTX_VAR_NAME
+    End If
     Set oVars = CreateObject("Scripting.Dictionary")
     oVars.CompareMode = vbTextCompare
-    oVars.Item("$$") = ".VarResult"
+    oVars.Item("$$") = sCtxVar & ".VarResult"
     If IsImmediate Then
         oVars.Item("$$text") = "Mid$(.Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin)"
     Else
-        oVars.Item("$$text") = "Mid$(.Contents, lOffset, lSize)"
+        oVars.Item("$$text") = "Mid$(" & sCtxVar & ".Contents, lOffset, lSize)"
     End If
     With m_uIr.CodeGenTree
         For lIdx = 0 To .NodeNumVariables(lRule) - 1
             lPos = .NodeVariable(lRule, lIdx)
-            oVars.Item("$" & .NodeText(lPos)) = ".VarStack(.VarPos - " & .NodeId(lPos) & ")"
+            oVars.Item("$" & .NodeText(lPos)) = sCtxVar & ".VarStack(" & sCtxVar & ".VarPos - " & .NodeId(lPos) & ")"
         Next
     End With
     lPos = 1

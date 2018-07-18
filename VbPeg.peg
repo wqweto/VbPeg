@@ -21,60 +21,58 @@ Grammar         <- Spacing (Setting / Rule)+
                                              (EndOfFile /              &{ AppendError("Expected rule or setting", ctx.BufPos + 1) }
                                              )
 
-Rule            <- Identifier                                           {   With .UserData
-                                                                                lNode = .BeginRule(.FindRule(lOffset, Mid$(ctx.Contents, lOffset, lSize)))
-                                                                                If .RuleExpression(lNode) <> 0 Then
-                                                                                    AppendError "Rule '" & Mid$(ctx.Contents, lOffset, lSize) & "' redefined", lOffset
-                                                                                End If
-                                                                                .Push lNode
-                                                                            End With }
+Rule            <- Identifier                                           {   lNode = .BeginRule(.FindRule(lOffset, $$text))
+                                                                            If .RuleExpression(lNode) <> 0 Then
+                                                                                AppendError "Rule '" & $$text & "' redefined", lOffset
+                                                                            End If
+                                                                            .Push lNode }
                                                                        &{ ClearErrors(ctx.BufPos + 1) And SetUserDataTag($$text) }
-                              (Literal                                  { With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With }
+                              (Literal                                  { .RuleDescription(.Top) = $$text }
                               )?       AssignLiteral 
-                                                     (Expression        { With .UserData: lNode = .Pop: .SetExpression .Pop, lNode: End With }
+                                                     (Expression        { lNode = .Pop: .SetExpression .Pop, lNode }
                                                       /                &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'", ctx.BufPos + 1) }
                                                      )           SEMI?
 Expression      <- ChoiceExpr
-ChoiceExpr      <- SequenceExpr (ChoiceLiteral SequenceExpr             { With .UserData: lNode = .Pop: .Push .AppendChild(.MakeChoice(lOffset, .Pop), lNode): End With }
+ChoiceExpr      <- SequenceExpr (ChoiceLiteral SequenceExpr             { lNode = .Pop: .Push .AppendChild(.MakeChoice(lOffset, .Pop), lNode) }
                                 )*
-SequenceExpr    <- ErrorExpr (ErrorExpr                                 { With .UserData: lNode = .Pop: .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With }
+SequenceExpr    <- ErrorExpr (ErrorExpr                                 { lNode = .Pop: .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode) }
                              )*
-                 /                                                      { With .UserData: .Push .MakePredicate(lOffset, "", AlwaysTrue:=True): End With }
+                 /                                                      { .Push .MakePredicate(lOffset, "", AlwaysTrue:=True) }
 ErrorExpr       <- VariableExpr (CARET                                 &{ ClearErrors(ctx.BufPos + 1) }
-                                       (Identifier                      { With .UserData: .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
-                                        / Literal                       { With .UserData: .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With }
+                                       (Identifier                      { .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorReference(lOffset, $$text)) }
+                                        / Literal                       { .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorString(lOffset, $$text)) }
                                         /                              &{ AppendError("Expected rule or literal for error label", ctx.BufPos + 1) }
                                        ))?
-VariableExpr    <- Identifier                                           { With .UserData: .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
-                              COLON PrefixExpr                          { With .UserData: .Push .SetVariable(lOffset, .Pop, .Pop): End With }
+VariableExpr    <- Identifier                                           { .Push .MakeVariable(lOffset, $$text) }
+                              COLON PrefixExpr                          { .Push .SetVariable(lOffset, .Pop, .Pop) }
                  / PrefixExpr
-PrefixExpr      <- AND CodeBlock                                        { With .UserData: .Push .MakePredicate(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / AND SuffixExpr                                       { With .UserData: .Push .MakePeekFor(lOffset, .Pop): End With }
-                 / NOT SuffixExpr                                       { With .UserData: .Push .MakePeekNot(lOffset, .Pop): End With }
+PrefixExpr      <- AND CodeBlock                                        { .Push .MakePredicate(lOffset, $$text) }
+                 / AND SuffixExpr                                       { .Push .MakePeekFor(lOffset, .Pop) }
+                 / NOT SuffixExpr                                       { .Push .MakePeekNot(lOffset, .Pop) }
                  /     SuffixExpr
-SuffixExpr      <- PrimaryExpr (QUESTION                                { With .UserData: .Push .MakeQuery(lOffset, .Pop): End With }
-                                / STAR                                  { With .UserData: .Push .MakeStar(lOffset, .Pop): End With }
-                                / PLUS                                  { With .UserData: .Push .MakePlus(lOffset, .Pop): End With }
+SuffixExpr      <- PrimaryExpr (QUESTION                                { .Push .MakeQuery(lOffset, .Pop) }
+                                / STAR                                  { .Push .MakeStar(lOffset, .Pop) }
+                                / PLUS                                  { .Push .MakePlus(lOffset, .Pop) }
                                )?
-PrimaryExpr     <- Identifier !(LiteralNC? AssignLiteral)               { With .UserData: .Push .MakeReference(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+PrimaryExpr     <- Identifier !(LiteralNC? AssignLiteral)               { .Push .MakeReference(lOffset, $$text) }
                  / OPEN                                                &{ ClearErrors(ctx.BufPos + 1) }
                         (Expression CLOSE
                          /                                             &{ AppendError("Invalid expression", ctx.BufPos + 1) }
                         )
-                 / LiteralNoSpace                                       { With .UserData: .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
-                    (IgnoreCase                                         { With .UserData: .SetIgnoreCase .Top, (Mid$(ctx.Contents, lOffset, lSize) = "i"): End With }
+                 / LiteralNoSpace                                       { .Push .MakeString(lOffset, $$text) }
+                    (IgnoreCase                                         { .SetIgnoreCase .Top, ($$text = "i") }
                     )? Spacing
-                 / ClassNoSpace                                         { With .UserData: .Push .MakeClass(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
-                    (IgnoreCase                                         { With .UserData: .SetIgnoreCase .Top, (Mid$(ctx.Contents, lOffset, lSize) = "i"): End With }
+                 / ClassNoSpace                                         { .Push .MakeClass(lOffset, $$text) }
+                    (IgnoreCase                                         { .SetIgnoreCase .Top, ($$text = "i") }
                     )? Spacing
-                 / DOT                                                  { With .UserData: .Push .MakeDot(lOffset): End With }
-                 / CodeBlock                                            { With .UserData: .Push .MakeAction(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
-                 / BEGIN                                                { With .UserData: .Push .MakePredicate(lOffset, "YY_BEGIN", AlwaysTrue:=True): End With }
-                 / END                                                  { With .UserData: .Push .MakePredicate(lOffset, "YY_END", AlwaysTrue:=True): End With }
+                 / DOT                                                  { .Push .MakeDot(lOffset) }
+                 / CodeBlock                                            { .Push .MakeAction(lOffset, $$text) }
+                 / BEGIN                                                { .Push .MakePredicate(lOffset, "YY_BEGIN", AlwaysTrue:=True) }
+                 / END                                                  { .Push .MakePredicate(lOffset, "YY_END", AlwaysTrue:=True) }
 
-Setting         <- SettingName                                          { With .UserData: .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With }
+Setting         <- SettingName                                          { .Push .MakeString(lOffset, $$text) }
                                                                        &{ ClearErrors(ctx.BufPos + 1) And SetUserDataTag($$text) }
-                               (SettingValue                            { With .UserData: .SetSettingValue .Pop, Mid$(ctx.Contents, lOffset, lSize): End With }
+                               (SettingValue                            { .SetSettingValue .Pop, $$text }
                                 /                                      &{ AppendError("Invalid value for setting '" & .UserData.Tag & "'", ctx.BufPos + 1) }
                                )
 SettingName     <- AT (Identifier / Literal / EMPTY)                   
@@ -138,7 +136,7 @@ CARET           <- '^' Spacing
 @prolog {
     Dim lNode           As Long
     
-    With ctx
+    With ctx.UserData
 }
 
 @epilog {

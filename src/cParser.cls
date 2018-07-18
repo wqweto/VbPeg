@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 18.7.2018 17:33:20
+' Auto-generated on 18.7.2018 17:46:20
 Option Explicit
 DefObj A-Z
 
@@ -97,7 +97,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "18.7.2018 17:33:20"
+    ParserVersion = "18.7.2018 17:46:20"
 End Property
 
 '=========================================================================
@@ -2073,68 +2073,66 @@ End Function
 Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As Long, ByVal lSize As Long)
     Dim lNode           As Long
     
-    With ctx
+    With ctx.UserData
     Select Case eAction
     Case ucsAct_2_Setting
-         With .UserData: .SetSettingValue .Pop, Mid$(ctx.Contents, lOffset, lSize): End With
+         .SetSettingValue .Pop, Mid$(ctx.Contents, lOffset, lSize)
     Case ucsAct_1_Setting
-         With .UserData: .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With
+         .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize))
     Case ucsAct_3_Rule
-         With .UserData: lNode = .Pop: .SetExpression .Pop, lNode: End With
+         lNode = .Pop: .SetExpression .Pop, lNode
     Case ucsAct_2_Rule
-         With .UserData: .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize): End With
+         .RuleDescription(.Top) = Mid$(ctx.Contents, lOffset, lSize)
     Case ucsAct_1_Rule
-           With .UserData
-                                                                                lNode = .BeginRule(.FindRule(lOffset, Mid$(ctx.Contents, lOffset, lSize)))
-                                                                                If .RuleExpression(lNode) <> 0 Then
-                                                                                    AppendError "Rule '" & Mid$(ctx.Contents, lOffset, lSize) & "' redefined", lOffset
-                                                                                End If
-                                                                                .Push lNode
-                                                                            End With
+           lNode = .BeginRule(.FindRule(lOffset, Mid$(ctx.Contents, lOffset, lSize)))
+                                                                            If .RuleExpression(lNode) <> 0 Then
+                                                                                AppendError "Rule '" & Mid$(ctx.Contents, lOffset, lSize) & "' redefined", lOffset
+                                                                            End If
+                                                                            .Push lNode
     Case ucsAct_1_ChoiceExpr
-         With .UserData: lNode = .Pop: .Push .AppendChild(.MakeChoice(lOffset, .Pop), lNode): End With
+         lNode = .Pop: .Push .AppendChild(.MakeChoice(lOffset, .Pop), lNode)
     Case ucsAct_1_SequenceExpr
-         With .UserData: lNode = .Pop: .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode): End With
+         lNode = .Pop: .Push .AppendSequence(.MakeSequence(lOffset, .Pop), lNode)
     Case ucsAct_2_SequenceExpr
-         With .UserData: .Push .MakePredicate(lOffset, "", AlwaysTrue:=True): End With
+         .Push .MakePredicate(lOffset, "", AlwaysTrue:=True)
     Case ucsAct_1_ErrorExpr
-         With .UserData: .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With
+         .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorReference(lOffset, Mid$(ctx.Contents, lOffset, lSize)))
     Case ucsAct_2_ErrorExpr
-         With .UserData: .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize))): End With
+         .Push .AppendChild(.MakeChoice(lOffset, .Pop), .MakeErrorString(lOffset, Mid$(ctx.Contents, lOffset, lSize)))
     Case ucsAct_2_VariableExpr
-         With .UserData: .Push .SetVariable(lOffset, .Pop, .Pop): End With
+         .Push .SetVariable(lOffset, .Pop, .Pop)
     Case ucsAct_1_VariableExpr
-         With .UserData: .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With
+         .Push .MakeVariable(lOffset, Mid$(ctx.Contents, lOffset, lSize))
     Case ucsAct_1_PrefixExpr
-         With .UserData: .Push .MakePredicate(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With
+         .Push .MakePredicate(lOffset, Mid$(ctx.Contents, lOffset, lSize))
     Case ucsAct_2_PrefixExpr
-         With .UserData: .Push .MakePeekFor(lOffset, .Pop): End With
+         .Push .MakePeekFor(lOffset, .Pop)
     Case ucsAct_3_PrefixExpr
-         With .UserData: .Push .MakePeekNot(lOffset, .Pop): End With
+         .Push .MakePeekNot(lOffset, .Pop)
     Case ucsAct_1_SuffixExpr
-         With .UserData: .Push .MakeQuery(lOffset, .Pop): End With
+         .Push .MakeQuery(lOffset, .Pop)
     Case ucsAct_2_SuffixExpr
-         With .UserData: .Push .MakeStar(lOffset, .Pop): End With
+         .Push .MakeStar(lOffset, .Pop)
     Case ucsAct_3_SuffixExpr
-         With .UserData: .Push .MakePlus(lOffset, .Pop): End With
+         .Push .MakePlus(lOffset, .Pop)
     Case ucsAct_1_PrimaryExpr
-         With .UserData: .Push .MakeReference(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With
+         .Push .MakeReference(lOffset, Mid$(ctx.Contents, lOffset, lSize))
     Case ucsAct_3_PrimaryExpr
-         With .UserData: .SetIgnoreCase .Top, (Mid$(ctx.Contents, lOffset, lSize) = "i"): End With
+         .SetIgnoreCase .Top, (Mid$(ctx.Contents, lOffset, lSize) = "i")
     Case ucsAct_2_PrimaryExpr
-         With .UserData: .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With
+         .Push .MakeString(lOffset, Mid$(ctx.Contents, lOffset, lSize))
     Case ucsAct_5_PrimaryExpr
-         With .UserData: .SetIgnoreCase .Top, (Mid$(ctx.Contents, lOffset, lSize) = "i"): End With
+         .SetIgnoreCase .Top, (Mid$(ctx.Contents, lOffset, lSize) = "i")
     Case ucsAct_4_PrimaryExpr
-         With .UserData: .Push .MakeClass(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With
+         .Push .MakeClass(lOffset, Mid$(ctx.Contents, lOffset, lSize))
     Case ucsAct_6_PrimaryExpr
-         With .UserData: .Push .MakeDot(lOffset): End With
+         .Push .MakeDot(lOffset)
     Case ucsAct_7_PrimaryExpr
-         With .UserData: .Push .MakeAction(lOffset, Mid$(ctx.Contents, lOffset, lSize)): End With
+         .Push .MakeAction(lOffset, Mid$(ctx.Contents, lOffset, lSize))
     Case ucsAct_8_PrimaryExpr
-         With .UserData: .Push .MakePredicate(lOffset, "YY_BEGIN", AlwaysTrue:=True): End With
+         .Push .MakePredicate(lOffset, "YY_BEGIN", AlwaysTrue:=True)
     Case ucsAct_9_PrimaryExpr
-         With .UserData: .Push .MakePredicate(lOffset, "YY_END", AlwaysTrue:=True): End With
+         .Push .MakePredicate(lOffset, "YY_END", AlwaysTrue:=True)
     End Select
     End With
 End Sub
