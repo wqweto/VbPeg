@@ -30,6 +30,7 @@ DefObj A-Z
 Private Const STR_TYPES             As String = "|Rule|Variable|Reference|Error|Dot|String|Class|Action|Predicate|Alternate|Sequence|PeekFor|PeekNot|Query|Star|Plus"
 Private Const STR_FLAGS             As String = "Used|Reached|AlwaysTrue|MultiStep|SavePos|RestorePos|IsNot|CanInline|HasActions|SkipAdvance|IgnoreCase|HasAdvance"
 Private Const NODE_ROOT             As Long = 0
+Private Const STR_CTX_VAR_NAME      As String = "ctx"
 
 Public Enum UcsTreeNodeTypeEnum
     ucsNdtRule = 1
@@ -310,19 +311,21 @@ Public Function BeginRule(ByVal lRule As Long) As Long
 End Function
 
 Public Sub SetExpression(ByVal lRule As Long, ByVal lNode As Long)
+    Dim lOffset         As Long
     Dim sTrace          As String
     
     If LenB(SettingValue("trace")) Then
         With m_uTree.Nodes(lRule)
-            sTrace = SettingValue("trace") & "(.BufPos + 1, """ & .Text & """, %1)"
-            lNode = AppendChild( _
-                MakeAlternate(.Offset, AppendSequence(AppendSequence( _
-                    MakeSequence(.Offset, _
-                        MakePredicate(.Offset, Replace(sTrace, "%1", 1), AlwaysTrue:=True)), _
-                        lNode), _
-                        MakePredicate(.Offset, Replace(sTrace, "%1", 2), AlwaysTrue:=True))), _
-                    MakePredicate(.Offset, Replace(sTrace, "%1", 3) & " And False"))
+            lOffset = .Offset
+            sTrace = SettingValue("trace") & "(" & STR_CTX_VAR_NAME & ".BufPos + 1, """ & .Text & """, %1, " & STR_CTX_VAR_NAME & ".UserData)"
         End With
+        lNode = AppendChild( _
+            MakeAlternate(lOffset, AppendSequence(AppendSequence( _
+                MakeSequence(lOffset, _
+                    MakePredicate(lOffset, Replace(sTrace, "%1", 1), AlwaysTrue:=True)), _
+                    lNode), _
+                    MakePredicate(lOffset, Replace(sTrace, "%1", 2), AlwaysTrue:=True))), _
+                MakePredicate(lOffset, Replace(sTrace, "%1", 3) & " And False"))
     End If
     RuleExpression(lRule) = lNode
 End Sub
@@ -712,14 +715,16 @@ End Function
 Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
     Dim vElem           As Variant
     Dim lFlags          As Long
+    Dim lIdx            As Long
+    Dim bTrim           As Boolean
     
+    For Each vElem In m_uTree.Nodes(lNode).Children
+        Debug.Assert vElem > NODE_ROOT
+        If pvOptimizePass1(vElem) Then
+            pvOptimizePass1 = True
+        End If
+    Next
     With m_uTree.Nodes(lNode)
-        For Each vElem In .Children
-            Debug.Assert vElem > NODE_ROOT
-            If pvOptimizePass1(vElem) Then
-                pvOptimizePass1 = True
-            End If
-        Next
         Select Case .NodeType
         Case ucsNdtStar, ucsNdtQuery, ucsNdtAction
             If (.Flags And ucsNdfAlwaysTrue) = 0 Then
@@ -757,9 +762,11 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
                 For Each vElem In .Children
                     If (m_uTree.Nodes(vElem).Flags And ucsNdfAlwaysTrue) <> 0 Then
                         .Flags = .Flags Or ucsNdfAlwaysTrue
+                        bTrim = lIdx < UBound(.Children)
                         pvOptimizePass1 = True
                         Exit For
                     End If
+                    lIdx = lIdx + 1
                 Next
             End If
         Case ucsNdtReference, ucsNdtError
@@ -771,6 +778,9 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
             End If
         End Select
     End With
+    If bTrim Then
+        ReDim Preserve m_uTree.Nodes(lNode).Children(0 To lIdx) As Long
+    End If
 End Function
 
 '--- manages Save/RestorePos flags

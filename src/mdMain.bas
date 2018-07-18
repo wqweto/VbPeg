@@ -43,14 +43,15 @@ Private Declare Function CloseHandle Lib "kernel32" (ByVal hObject As Long) As L
 
 Private Const STR_VERSION           As String = "0.3.5"
 
+Private m_oParser               As cParser
+Private m_oOpt                  As Object
+
 '=========================================================================
 ' Functions
 '=========================================================================
 
 Private Sub Main()
-    Dim oOpt            As Object
     Dim oTree           As cTree
-    Dim oParser         As cParser
     Dim oIR             As cIR
     Dim nFile           As Integer
     Dim sOutput         As String
@@ -59,18 +60,18 @@ Private Sub Main()
     Dim lOffset         As Long
     
     On Error GoTo EH
-    Set oParser = New cParser
-    Set oOpt = GetOpt(SplitArgs(Command$), "o:module:userdata")
-    If Not oOpt.Item("-nologo") And Not oOpt.Item("-q") Then
-        ConsoleError "VbPeg " & STR_VERSION & " (c) 2018 by wqweto@gmail.com (" & oParser.ParserVersion & ")" & vbCrLf & vbCrLf
+    Set m_oParser = New cParser
+    Set m_oOpt = GetOpt(SplitArgs(Command$), "o:module:userdata")
+    If Not m_oOpt.Item("-nologo") And Not m_oOpt.Item("-q") Then
+        ConsoleError "VbPeg " & STR_VERSION & " (c) 2018 by wqweto@gmail.com (" & m_oParser.ParserVersion & ")" & vbCrLf & vbCrLf
     End If
-    If LenB(oOpt.Item("error")) <> 0 Then
-        ConsoleError "Error in command line: " & oOpt.Item("error") & vbCrLf & vbCrLf
-        If Not (oOpt.Item("-h") Or oOpt.Item("-?") Or oOpt.Item("arg1") = "?") Then
+    If LenB(m_oOpt.Item("error")) <> 0 Then
+        ConsoleError "Error in command line: " & m_oOpt.Item("error") & vbCrLf & vbCrLf
+        If Not (m_oOpt.Item("-h") Or m_oOpt.Item("-?") Or m_oOpt.Item("arg1") = "?") Then
             Exit Sub
         End If
     End If
-    If oOpt.Item("numarg") = 0 Or oOpt.Item("-h") Or oOpt.Item("-?") Or oOpt.Item("arg1") = "?" Then
+    If m_oOpt.Item("numarg") = 0 Or m_oOpt.Item("-h") Or m_oOpt.Item("-?") Or m_oOpt.Item("arg1") = "?" Then
         ConsoleError "Usage: %1.exe [options] <in_file.peg>" & vbCrLf & vbCrLf, App.EXEName
         ConsoleError "Options:" & vbCrLf & _
             "  -o OUTFILE      write result to OUTFILE [default: stdout]" & vbCrLf & _
@@ -85,12 +86,12 @@ Private Sub Main()
         Exit Sub
     End If
     Set oTree = New cTree
-    lOffset = oParser.Match(oTree.ReadFile(oOpt.Item("arg1")), UserData:=oTree)
-    If LenB(oParser.LastError) Then
-        ConsoleError "%2: %3: %1" & vbCrLf, oParser.LastError, Join(oTree.CalcLine(oParser.LastOffset + 1), ":"), IIf(lOffset = 0, "error", "warning")
+    lOffset = m_oParser.Match(oTree.ReadFile(m_oOpt.Item("arg1")), UserData:=oTree)
+    If LenB(m_oParser.LastError) Then
+        ConsoleError "%2: %3: %1" & vbCrLf, m_oParser.LastError, Join(oTree.CalcLine(m_oParser.LastOffset + 1), ":"), IIf(lOffset = 0, "error", "warning")
     End If
-    If Not oParser.GetParseErrors() Is Nothing Then
-        For Each vElem In oParser.GetParseErrors()
+    If Not m_oParser.GetParseErrors() Is Nothing Then
+        For Each vElem In m_oParser.GetParseErrors()
             ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
         Next
     End If
@@ -113,24 +114,24 @@ Private Sub Main()
             ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
         Next
     End If
-    If oOpt.Item("-tree") Then
+    If m_oOpt.Item("-tree") Then
         sOutput = oTree.DumpParseTree
     Else
         Set oIR = New cIR
-        If Not oIR.CodeGen(oTree, oOpt.Item("-allrules")) Then
+        If Not oIR.CodeGen(oTree, m_oOpt.Item("-allrules")) Then
             ConsoleError "Failed codegen: %1" & vbCrLf, oIR.LastError
             Exit Sub
         End If
-        If oOpt.Item("-ir") Then
+        If m_oOpt.Item("-ir") Then
             sOutput = oIR.DumpIrTree
         Else
-            If LenB(oOpt.Item("-module")) = 0 Then
-                oOpt.Item("-module") = GetFilePart(oOpt.Item("-o"))
+            If LenB(m_oOpt.Item("-module")) = 0 Then
+                m_oOpt.Item("-module") = GetFilePart(m_oOpt.Item("-o"))
             End If
             If Not oIR.EmitCode( _
-                    Switch(C_Bool(oOpt.Item("-public")), vbTrue, C_Bool(oOpt.Item("-private")), vbFalse, True, vbUseDefault), _
-                    CStr(oOpt.Item("-module")), _
-                    CStr(oOpt.Item("-userdata")), _
+                    Switch(C_Bool(m_oOpt.Item("-public")), vbTrue, C_Bool(m_oOpt.Item("-private")), vbFalse, True, vbUseDefault), _
+                    CStr(m_oOpt.Item("-module")), _
+                    CStr(m_oOpt.Item("-userdata")), _
                     sOutput) Then
                 ConsoleError "Failed emit: %1" & vbCrLf, oIR.LastError
                 Exit Sub
@@ -142,18 +143,18 @@ Private Sub Main()
         Clipboard.Clear
         Clipboard.SetText sOutput
     End If
-    If LenB(oOpt.Item("-o")) > 0 Then
+    If LenB(m_oOpt.Item("-o")) > 0 Then
         '--- fix output file extension if not supplied
-        If InStrRev(oOpt.Item("-o"), "\") >= InStrRev(oOpt.Item("-o"), ".") Then
-            oOpt.Item("-o") = oOpt.Item("-o") & IIf(oOpt.Item("-public") Or oOpt.Item("-private"), ".cls", ".bas")
+        If InStrRev(m_oOpt.Item("-o"), "\") >= InStrRev(m_oOpt.Item("-o"), ".") Then
+            m_oOpt.Item("-o") = m_oOpt.Item("-o") & IIf(m_oOpt.Item("-public") Or m_oOpt.Item("-private"), ".cls", ".bas")
         End If
-        SetFileLen oOpt.Item("-o"), Len(sOutput)
+        SetFileLen m_oOpt.Item("-o"), Len(sOutput)
         nFile = FreeFile
-        Open oOpt.Item("-o") For Binary Access Write Shared As nFile
+        Open m_oOpt.Item("-o") For Binary Access Write Shared As nFile
         Put nFile, , sOutput
         Close nFile
-        If Not oOpt.Item("-q") Then
-            ConsoleError "File " & oOpt.Item("-o") & " emitted successfully" & vbCrLf
+        If Not m_oOpt.Item("-q") Then
+            ConsoleError "File " & m_oOpt.Item("-o") & " emitted successfully" & vbCrLf
         End If
     Else
         ConsolePrint sOutput
@@ -162,6 +163,41 @@ Private Sub Main()
 EH:
     ConsoleError "Critical error: " & Err.Description & vbCrLf
 End Sub
+
+Public Function ConsoleTrace(ByVal lOffset As Long, sRule As String, ByVal lAction As Long, oUserData As cTree) As Boolean
+    Const LINE_LEN      As Long = 8
+    Const TEXT_LEN      As Long = 60
+    Static lLevel       As Long
+    Dim sText           As String
+    Dim sLine           As String
+    
+    If C_Bool(m_oOpt.Item("-trace")) Then
+        sText = Mid$(m_oParser.GetContents(), lOffset, TEXT_LEN)
+        If InStr(sText, vbCr) > 0 Then
+            sText = Left$(sText, InStr(sText, vbCr) - 1)
+        End If
+        If Len(sText) < TEXT_LEN Then
+            sText = sText & Space$(TEXT_LEN - Len(sText))
+        End If
+        sLine = Join(oUserData.CalcLine(lOffset), ":")
+        If Len(sLine) - InStr(sLine, ":") < LINE_LEN Then
+            sLine = sLine & Space$(LINE_LEN - Len(sLine) + InStr(sLine, ":"))
+        End If
+        If lAction = 1 Then
+            ConsoleError "%1|%2|%3?%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+            lLevel = lLevel + 1
+        Else
+            If lLevel > 0 Then
+                lLevel = lLevel - 1
+            End If
+            If lAction = 2 Then
+                ConsoleError "%1|%2|%3=%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+            Else
+                ConsoleError "%1|%2|%3!%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+            End If
+        End If
+    End If
+End Function
 
 Private Function GetOpt(vArgs As Variant, Optional OptionsWithArg As String) As Object
     Dim oRetVal         As Object

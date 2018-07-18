@@ -13,6 +13,8 @@
 #     January 14--16, 2004, Venice, Italy.
 #
 
+@trace ConsoleTrace
+
 # Syntax rules
 
 Grammar         <- Spacing (Setting / Rule)+ 
@@ -82,7 +84,7 @@ SettingValue    <- (Identifier / Literal / CodeBlock) SEMI?
 
 Identifier      <- < IdentStart IdentCont* > Spacing                    { }
 IdentStart      <- [a-zA-Z_\-]
-IdentCont       <- IdentStart / [0-9]
+IdentCont       <- [a-zA-Z_0-9\-]
 Literal         <- LiteralNoSpace Spacing
 LiteralNoSpace  <- ['] < (!['] Char )* > [']                            { }
                  / ["] < (!["] Char )* > ["]                            { }
@@ -130,7 +132,7 @@ AT              <- '@' Spacing
 CARET           <- '^' Spacing
 
 @members {
-    Errors              As Collection
+    ParseErrors         As Collection
 }
 
 @prolog {
@@ -138,6 +140,7 @@ CARET           <- '^' Spacing
     
     With ctx
 }
+
 @epilog {
     End With
 }
@@ -146,24 +149,24 @@ CARET           <- '^' Spacing
 Private Function ClearErrors(ByVal lOffset As Long) As Boolean
     Dim lIdx            As Long
     
-    If Not ctx.Errors Is Nothing Then
-        For lIdx = ctx.Errors.Count To 1 Step -1
-            If ctx.Errors.Item(lIdx)(1) <= lOffset Then
-                ctx.Errors.Remove lIdx
+    If Not ctx.ParseErrors Is Nothing Then
+        For lIdx = ctx.ParseErrors.Count To 1 Step -1
+            If ctx.ParseErrors.Item(lIdx)(1) <= lOffset Then
+                ctx.ParseErrors.Remove lIdx
             End If
         Next
-        If ctx.Errors.Count = 0 Then
-            Set ctx.Errors = Nothing
+        If ctx.ParseErrors.Count = 0 Then
+            Set ctx.ParseErrors = Nothing
         End If
     End If
     ClearErrors = True
 End Function
 
 Private Function AppendError(sText As String, ByVal lOffset As Long) As Boolean
-    If ctx.Errors Is Nothing Then
-        Set ctx.Errors = New Collection
+    If ctx.ParseErrors Is Nothing Then
+        Set ctx.ParseErrors = New Collection
     End If
-    ctx.Errors.Add Array(sText, lOffset)
+    ctx.ParseErrors.Add Array(sText, lOffset)
 End Function
 
 Private Function SetUserDataTag(sText As String) As Boolean
@@ -172,6 +175,10 @@ Private Function SetUserDataTag(sText As String) As Boolean
 End Function
 
 Public Function GetParseErrors() As Collection
-    Set GetParseErrors = ctx.Errors
+    Set GetParseErrors = ctx.ParseErrors
+End Function
+
+Public Function GetContents() As String
+    GetContents = ctx.Contents
 End Function
 }

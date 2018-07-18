@@ -1338,7 +1338,7 @@ Public Function EmitCode( _
 "                .VarResult = Empty" & vbCrLf & _
 "            Case ucsActResultSet" & vbCrLf & _
 "                With .ThunkData(lIdx)" & vbCrLf & _
-"                    ctx.VarResult = Mid$(ctx.Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin)" & vbCrLf & _
+"                    " & STR_CTX_VAR_NAME & ".VarResult = Mid$(" & STR_CTX_VAR_NAME & ".Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin)" & vbCrLf & _
 "                End With" & vbCrLf & _
 "            Case Else" & vbCrLf & _
 "                With .ThunkData(lIdx)" & vbCrLf & _
@@ -1395,7 +1395,7 @@ Public Function EmitCode( _
         If .CodeGenMatchString Then
             pvOutput _
 "Private Function pvMatchString(sText As String, Optional ByVal CmpFlags As Boolean) As Boolean" & vbCrLf & _
-"    With ctx" & vbCrLf & _
+"    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        If .BufPos + Len(sText) <= .BufSize Then" & vbCrLf & _
 "            pvMatchString = CompareStringW(LOCALE_USER_DEFAULT, CmpFlags, ByVal StrPtr(sText), Len(sText), .BufData(.BufPos), Len(sText)) = CSTR_EQUAL" & vbCrLf & _
 "        End If" & vbCrLf & _
