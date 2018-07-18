@@ -1370,10 +1370,6 @@ Public Function EmitCode( _
 "    End With" & vbCrLf & _
 "End Function" & vbCrLf
             pvOutput _
-"Private Sub pvPushAction(ByVal eAction As UcsParserActionsEnum)" & vbCrLf & _
-"    pvPushThunk eAction, " & STR_CTX_VAR_NAME & ".CaptureBegin, " & STR_CTX_VAR_NAME & ".CaptureEnd" & vbCrLf & _
-"End Sub" & vbCrLf
-            pvOutput _
 "Private Sub pvPushThunk(ByVal eAction As UcsParserActionsEnum, Optional ByVal lBegin As Long, Optional ByVal lEnd As Long)" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        If UBound(.ThunkData) < .ThunkPos Then" & vbCrLf & _
@@ -1542,14 +1538,17 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
         Case ucsIrtStmtCapture
             pvOutput .Text & " = .BufPos"
         Case ucsIrtStmtPushAction
+            vElem = Array(".CaptureBegin", ".CaptureEnd")
             If m_uIr.OutDictionary.Exists("lCaptureBegin") Then
                 pvOutput ".CaptureBegin = lCaptureBegin"
+                vElem(0) = "lCaptureBegin"
             End If
             If m_uIr.OutDictionary.Exists("lCaptureEnd") Then
                 pvOutput ".CaptureEnd = lCaptureEnd"
+                vElem(1) = "lCaptureEnd"
             End If
             If LenB(.Text) <> 0 Then
-                pvOutput "pvPushAction " & .Text
+                pvOutput "pvPushThunk " & .Text & ", " & vElem(0) & ", " & vElem(1)
             End If
         Case ucsIrtStmtGoTo
             pvOutput "GoTo " & .Text
