@@ -221,6 +221,7 @@ End Property
 Property Let SettingValue(sName As String, sValue As String)
     If m_oSettings Is Nothing Then
         Set m_oSettings = CreateObject("Scripting.Dictionary")
+        m_oSettings.CompareMode = vbTextCompare
     End If
     m_oSettings.Item(sName) = sValue
 End Property
@@ -799,7 +800,7 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
     Dim bNeedSavePos    As Boolean
     
     With m_uTree.Nodes(lNode)
-        bChildSavePos = bParentSavePos Or (.Flags And ucsNdfSavePos) <> 0
+        bChildSavePos = (.Flags And ucsNdfSavePos) <> 0
         For Each vElem In .Children
             If pvOptimizePass2(vElem, bChildSavePos) Then
                 pvOptimizePass2 = True
@@ -881,11 +882,8 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
                         pvOptimizePass2 = True
                     End If
                 End If
-                lCount = lCount + 1
-                If lCount > 1 Then
-                    If (m_uTree.Nodes(vElem).Flags And ucsNdfRestorePos) <> 0 Then
-                        bNeedSavePos = True
-                    End If
+                If (m_uTree.Nodes(vElem).Flags And ucsNdfRestorePos) <> 0 Then
+                    bNeedSavePos = True
                 End If
             Next
             If bNeedSavePos Then

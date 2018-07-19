@@ -191,7 +191,7 @@ Public Function ConsoleTrace(ByVal lOffset As Long, sRule As String, ByVal lActi
     Dim sLine           As String
     
     If C_Bool(m_oOpt.Item("-trace")) Then
-        sText = Mid$(m_oParser.GetContents(), lOffset, TEXT_LEN)
+        sText = Mid$(m_oParser.VbPegGetContents(), lOffset, TEXT_LEN)
         If InStr(sText, vbCr) > 0 Then
             sText = Left$(sText, InStr(sText, vbCr) - 1)
         End If
