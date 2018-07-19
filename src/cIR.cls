@@ -1273,7 +1273,7 @@ Public Function EmitCode( _
 "Public Function " & .OutModulePrefix & "Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As " & sUserData & ", Optional Result As " & sVarData & ") As Long" & vbCrLf & _
 "    If " & .OutModulePrefix & "BeginMatch(sSubject, StartPos, UserData) Then" & vbCrLf & _
 "        If " & .OutModulePrefix & .CodeGenStartFunc & "() Then" & vbCrLf & _
-"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(" & IIf(.CodeGenVarStack, "UserData, Result", vbNullString) & ")" & vbCrLf & _
+"            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(Result)" & vbCrLf & _
 "        ElseIf LenB(" & STR_CTX_VAR_NAME & ".LastError) = 0 Then" & vbCrLf & _
 "            " & STR_CTX_VAR_NAME & ".LastError = ""Fail""" & vbCrLf & _
 "        End If" & vbCrLf & _
@@ -1307,29 +1307,13 @@ Public Function EmitCode( _
 "    End With" & vbCrLf & _
 "    " & .OutModulePrefix & "BeginMatch = True" & vbCrLf & _
 "End Function" & vbCrLf
-        If .IrActionsEnum = 0 Then
-            pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch() As Long" & vbCrLf & _
-"    With " & STR_CTX_VAR_NAME & vbCrLf & _
-"        " & .OutModulePrefix & "EndMatch = .BufPos + 1" & vbCrLf & _
-"        .Contents = vbNullString" & vbCrLf & _
-"        Erase .BufData" & vbCrLf & _
-"        .BufPos = 0" & vbCrLf & _
-"        .BufSize = 0" & vbCrLf & _
-"        Erase .ThunkData" & vbCrLf & _
-"        .ThunkPos = 0" & vbCrLf & _
-"        .CaptureBegin = 0" & vbCrLf & _
-"        .CaptureEnd = 0" & vbCrLf & _
-"    End With" & vbCrLf & _
-"End Function" & vbCrLf
-        Else
-            pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch(" & IIf(.CodeGenVarStack, "Optional UserData As " & sUserData & ", Optional Result As " & sVarData, vbNullString) & ") As Long" & vbCrLf & _
+        pvOutput _
+"Public Function " & .OutModulePrefix & "EndMatch(Optional Result As " & sVarData & ") As Long" & vbCrLf & _
 "    Dim lIdx            As Long" & vbCrLf & _
 "    " & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME
-            If .CodeGenVarStack Then
-                pvOutput _
+        If .CodeGenVarStack Then
+            pvOutput _
 "        ReDim .VarStack(0 To 1024) As " & sVarData & vbCrLf & _
 "        For lIdx = 0 To .ThunkPos - 1" & vbCrLf & _
 "            Select Case .ThunkData(lIdx).Action" & vbCrLf & _
@@ -1353,26 +1337,21 @@ Public Function EmitCode( _
 "                End With" & vbCrLf & _
 "            End Select" & vbCrLf & _
 "        Next"
-                pvOutput _
-"        If IsObject(.UserData) Then" & vbCrLf & _
-"            Set UserData = .UserData" & vbCrLf & _
-"        Else" & vbCrLf & _
-"            UserData = .UserData" & vbCrLf & _
-"        End If" & vbCrLf & _
-"        If IsObject(.VarResult) Then" & vbCrLf & _
-"            Set Result = .VarResult" & vbCrLf & _
-"        Else" & vbCrLf & _
-"            Result = .VarResult" & vbCrLf & _
-"        End If"
-            Else
-                pvOutput _
+        ElseIf .IrActionsEnum <> 0 Then
+            pvOutput _
 "        For lIdx = 0 To .ThunkPos - 1" & vbCrLf & _
 "            With .ThunkData(lIdx)" & vbCrLf & _
 "                pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin" & vbCrLf & _
 "            End With" & vbCrLf & _
 "        Next"
-            End If
-            pvOutput _
+        End If
+        pvOutput _
+"        If IsObject(.VarResult) Then" & vbCrLf & _
+"            Set Result = .VarResult" & vbCrLf & _
+"        Else" & vbCrLf & _
+"            Result = .VarResult" & vbCrLf & _
+"        End If"
+        pvOutput _
 "        " & .OutModulePrefix & "EndMatch = .BufPos + 1" & vbCrLf & _
 "        .Contents = vbNullString" & vbCrLf & _
 "        Erase .BufData" & vbCrLf & _
@@ -1384,6 +1363,7 @@ Public Function EmitCode( _
 "        .CaptureEnd = 0" & vbCrLf & _
 "    End With" & vbCrLf & _
 "End Function" & vbCrLf
+        If .IrActionsEnum <> 0 Then
             pvOutput _
 "Private Sub pvPushThunk(ByVal eAction As UcsParserActionsEnum, Optional ByVal lBegin As Long, Optional ByVal lEnd As Long)" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _

@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 19.7.2018 9:11:38
+' Auto-generated on 19.7.2018 17:36:42
 Option Explicit
 DefObj A-Z
 
@@ -97,17 +97,17 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "19.7.2018 9:11:38"
+    ParserVersion = "19.7.2018 17:36:42"
 End Property
 
 '=========================================================================
 ' Methods
 '=========================================================================
 
-Public Function Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As cTree) As Long
+Public Function Match(sSubject As String, Optional ByVal StartPos As Long, Optional UserData As cTree, Optional Result As Variant) As Long
     If BeginMatch(sSubject, StartPos, UserData) Then
         If ParseGrammar() Then
-            Match = EndMatch()
+            Match = EndMatch(Result)
         ElseIf LenB(ctx.LastError) = 0 Then
             ctx.LastError = "Fail"
         End If
@@ -140,7 +140,7 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
     BeginMatch = True
 End Function
 
-Public Function EndMatch() As Long
+Public Function EndMatch(Optional Result As Variant) As Long
     Dim lIdx            As Long
     
     With ctx
@@ -149,6 +149,11 @@ Public Function EndMatch() As Long
                 pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin
             End With
         Next
+        If IsObject(.VarResult) Then
+            Set Result = .VarResult
+        Else
+            Result = .VarResult
+        End If
         EndMatch = .BufPos + 1
         .Contents = vbNullString
         Erase .BufData
@@ -1734,7 +1739,7 @@ Public Function ParseChar() As Boolean
             Exit Function
         End If
         If LenB(.LastError) = 0 Or .BufPos > .LastBufPos Then
-            .LastError = "Expected char" : .LastBufPos = .BufPos
+            .LastError = "Expected char": .LastBufPos = .BufPos
         End If
     End With
 End Function
