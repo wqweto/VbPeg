@@ -7,7 +7,9 @@ Private Function pvImplImmediateVar(ByVal lIndex As Long) As String
     With ctx
         For lIdx = .ThunkPos - 1 To 0 Step -1
             With .ThunkData(lIdx)
-                If .Action = ucsActVarSet Then
+                If .Action = ucsActVarAlloc Then
+                    Exit Function
+                ElseIf .Action = ucsActVarSet Then
                     If .CaptureBegin = lIndex Then
                         Exit For
                     End If
