@@ -36,7 +36,7 @@ Private Sub Main()
             vResult = Empty
             lPos = VbPegMatch(m_sContents, lPos - 1, Result:=vResult)
             If lPos = 0 Then
-                ConsolePrint "LastError: %1" & vbCrLf, VbPegLastError
+                ConsolePrint "LastError: %1, LastOffset: %2" & vbCrLf, VbPegLastError, VbPegLastOffset
                 Exit Do
             End If
             ConsolePrint "Pos: %1", lPos
@@ -44,10 +44,11 @@ Private Sub Main()
                 If TypeName(vResult) = "Dictionary" Then
                     ConsolePrint ", Result: %1", JsonDump(vResult)
                 Else
+                    ConsolePrint ", Result: %1", C_Str(vResult)
                 End If
             End If
             If LenB(VbPegLastError) <> 0 Then
-                ConsolePrint ", LastError: %1", C_Str(VbPegLastError)
+                ConsolePrint ", Warning: %1", VbPegLastError
             End If
             ConsolePrint vbCrLf
         Loop

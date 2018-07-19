@@ -45,7 +45,7 @@ ErrInteger
   = (!Integer .)+ Integer
   
 _ "whitespace"
-  = [ \t\n\ra-fh-Z\x30\u0031\62g]i* //t ti
+  = [ \t\n\r]i* //t ti
   
 //t = "abcd"
 //ti = "efgh"i
