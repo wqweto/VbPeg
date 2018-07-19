@@ -265,7 +265,7 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                         lFailure = AddChild(AddChild( _
                             AddNode(ucsIrtStmtIf), _
                                 AddNode(ucsIrtExprEmit, "LenB(.LastError) = 0 Or .BufPos > .LastBufPos")), _
-                                AddNode(ucsIrtStmtEmit, ".LastError = ""Expected " & .RuleDescription(vElem) & """ : .LastBufPos = .BufPos"))
+                                AddNode(ucsIrtStmtEmit, ".LastError = ""Expected " & .RuleDescription(vElem) & """: .LastBufPos = .BufPos"))
                     End If
                     lIrNode = pvCodeGenNode(.NodeChild(vElem, 0), lSuccess, lFailure)
                     If lIrNode = 0 Then
@@ -501,7 +501,7 @@ Private Function pvCodeGenNode( _
                         AddNode(ucsIrtStmtCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
                         lSuccess)
             Else
-                lIrNode = AddNode(ucsIrtStmtEmit, ".LastError = " & pvToVbString(.NodeText(lNode)) & " : .LastBufPos = .BufPos")
+                lIrNode = AddNode(ucsIrtStmtEmit, ".LastError = " & pvToVbString(.NodeText(lNode)) & ": .LastBufPos = .BufPos")
                 If lFailure = IR_CONTINUE Then
                     lFailure = lIrNode
                 Else

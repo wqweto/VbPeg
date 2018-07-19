@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 19.7.2018 17:36:42
+' Auto-generated on 19.7.2018 20:47:20
 Option Explicit
 DefObj A-Z
 
@@ -97,7 +97,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "19.7.2018 17:36:42"
+    ParserVersion = "19.7.2018 20:47:20"
 End Property
 
 '=========================================================================
@@ -142,7 +142,7 @@ End Function
 
 Public Function EndMatch(Optional Result As Variant) As Long
     Dim lIdx            As Long
-    
+
     With ctx
         For lIdx = 0 To .ThunkPos - 1
             With .ThunkData(lIdx)
@@ -197,20 +197,15 @@ Public Function ParseGrammar() As Boolean
         For i10 = 0 To LNG_MAXINT
             p9 = .BufPos
             q9 = .ThunkPos
-            If ParseSetting() Then
-                GoTo L1
-            Else
+            If Not ParseSetting() Then
                 .BufPos = p9
                 .ThunkPos = q9
-                If ParseRule() Then
-                    GoTo L1
-                Else
+                If Not ParseRule() Then
                     .BufPos = p9
                     .ThunkPos = q9
                     Exit For
                 End If
             End If
-L1:
         Next
         If i10 <> 0 Then
             If ParseEndOfFile() Then
@@ -238,16 +233,11 @@ End Function
 Public Sub ParseSpacing()
     Call ConsoleTrace(ctx.BufPos + 1, "Spacing", 1, ctx.UserData)
     Do
-        If ParseSpace() Then
-            GoTo L3
-        Else
-            If ParseComment() Then
-                GoTo L3
-            Else
+        If Not ParseSpace() Then
+            If Not ParseComment() Then
                 Exit Do
             End If
         End If
-L3:
     Loop
     Call ConsoleTrace(ctx.BufPos + 1, "Spacing", 2, ctx.UserData)
 End Sub
@@ -319,12 +309,10 @@ Public Function ParseRule() As Boolean
                 q29 = .ThunkPos
                 If ParseLiteral() Then
                     pvPushThunk ucsAct_2_Rule, .CaptureBegin, .CaptureEnd
-                    GoTo L6
                 Else
                     .BufPos = p29
                     .ThunkPos = q29
                 End If
-L6:
                 If ParseAssignLiteral() Then
                     Call ParseExpression
                     pvPushThunk ucsAct_3_Rule, .CaptureBegin, .CaptureEnd
@@ -778,24 +766,18 @@ Public Function ParseCodeBlock() As Boolean
             Do
                 Select Case .BufData(.BufPos)
                 Case 123, 125                       ' [{}]
-                    If ParseCodeNC() Then
-                        GoTo L11
-                    Else
+                    If Not ParseCodeNC() Then
                         Exit Do
                     End If
                 Case Else
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
-                        GoTo L11
                     Else
-                        If ParseCodeNC() Then
-                            GoTo L11
-                        Else
+                        If Not ParseCodeNC() Then
                             Exit Do
                         End If
                     End If
                 End Select
-L11:
             Loop
             lCaptureEnd = .BufPos
             If .BufData(.BufPos) = 125 Then         ' "}"
@@ -910,7 +892,6 @@ Public Function ParsePrimaryExpr() As Boolean
             If ParseAssignLiteral() Then
                 .BufPos = p170
                 .ThunkPos = q170
-                GoTo L13
             Else
                 .BufPos = p168
                 .ThunkPos = q168
@@ -919,7 +900,6 @@ Public Function ParsePrimaryExpr() As Boolean
                 ParsePrimaryExpr = True
                 Exit Function
             End If
-L13:
         Else
             .BufPos = p170
             .ThunkPos = q170
@@ -959,12 +939,10 @@ L13:
             q190 = .ThunkPos
             If ParseIgnoreCase() Then
                 pvPushThunk ucsAct_3_PrimaryExpr, .CaptureBegin, .CaptureEnd
-                GoTo L15
             Else
                 .BufPos = p190
                 .ThunkPos = q190
             End If
-L15:
             Call ParseSpacing
             Call ConsoleTrace(ctx.BufPos + 1, "PrimaryExpr", 2, ctx.UserData)
             ParsePrimaryExpr = True
@@ -981,12 +959,10 @@ L15:
             q199 = .ThunkPos
             If ParseIgnoreCase() Then
                 pvPushThunk ucsAct_5_PrimaryExpr, .CaptureBegin, .CaptureEnd
-                GoTo L16
             Else
                 .BufPos = p199
                 .ThunkPos = q199
             End If
-L16:
             Call ParseSpacing
             Call ConsoleTrace(ctx.BufPos + 1, "PrimaryExpr", 2, ctx.UserData)
             ParsePrimaryExpr = True
@@ -1995,24 +1971,18 @@ Public Function ParseCodeNC() As Boolean
             Do
                 Select Case .BufData(.BufPos)
                 Case 123, 125                       ' [{}]
-                    If ParseCodeNC() Then
-                        GoTo L24
-                    Else
+                    If Not ParseCodeNC() Then
                         Exit Do
                     End If
                 Case Else
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
-                        GoTo L24
                     Else
-                        If ParseCodeNC() Then
-                            GoTo L24
-                        Else
+                        If Not ParseCodeNC() Then
                             Exit Do
                         End If
                     End If
                 End Select
-L24:
             Loop
             If .BufData(.BufPos) = 125 Then         ' "}"
                 .BufPos = .BufPos + 1
