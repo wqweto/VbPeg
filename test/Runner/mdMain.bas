@@ -1,5 +1,19 @@
 Attribute VB_Name = "mdMain"
+'=========================================================================
+'
+' VbPeg (c) 2018 by wqweto@gmail.com
+'
+' PEG parser generator for VB6
+'
+' mdMain.bas - Test runner global functions
+'
+'=========================================================================
 Option Explicit
+DefObj A-Z
+
+'=========================================================================
+' API
+'=========================================================================
 
 Private Const STD_OUTPUT_HANDLE             As Long = -11&
 Private Const STD_ERROR_HANDLE              As Long = -12&
@@ -14,9 +28,17 @@ Private Declare Function ApiSysAllocString Lib "oleaut32" Alias "SysAllocString"
 Private Declare Function GetFileAttributes Lib "kernel32" Alias "GetFileAttributesA" (ByVal lpFileName As String) As Long
 Private Declare Function IsTextUnicode Lib "advapi32" (lpBuffer As Any, ByVal cb As Long, lpi As Long) As Long
 
+'=========================================================================
+' Constants and member variables
+'=========================================================================
+
 Private m_sContents         As String
 Private m_laOffsets()       As Long
 Private m_sFileName         As String
+
+'=========================================================================
+' Functions
+'=========================================================================
 
 Private Sub Main()
     Dim oOpt            As Object
@@ -254,31 +276,33 @@ Public Function ConsoleTrace(ByVal lOffset As Long, sRule As String, ByVal lActi
     Dim sText           As String
     Dim sLine           As String
     
-        sText = Mid$(m_sContents, lOffset, TEXT_LEN)
-        If InStr(sText, vbCr) > 0 Then
-            sText = Left$(sText, InStr(sText, vbCr) - 1)
+    #If vUserData Then '--- touch arg
+    #End If
+    sText = Mid$(m_sContents, lOffset, TEXT_LEN)
+    If InStr(sText, vbCr) > 0 Then
+        sText = Left$(sText, InStr(sText, vbCr) - 1)
+    End If
+    sText = Replace(Replace(sText, vbLf, " "), vbTab, " ")
+    If Len(sText) < TEXT_LEN Then
+        sText = sText & Space$(TEXT_LEN - Len(sText))
+    End If
+    sLine = Join(CalcLine(lOffset), ":")
+    If Len(sLine) - InStr(sLine, ":") < LINE_LEN Then
+        sLine = sLine & Space$(LINE_LEN - Len(sLine) + InStr(sLine, ":"))
+    End If
+    If lAction = 1 Then
+        ConsolePrint "%1|%2|%3?%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+        lLevel = lLevel + 1
+    Else
+        If lLevel > 0 Then
+            lLevel = lLevel - 1
         End If
-        sText = Replace(Replace(sText, vbLf, " "), vbTab, " ")
-        If Len(sText) < TEXT_LEN Then
-            sText = sText & Space$(TEXT_LEN - Len(sText))
-        End If
-        sLine = Join(CalcLine(lOffset), ":")
-        If Len(sLine) - InStr(sLine, ":") < LINE_LEN Then
-            sLine = sLine & Space$(LINE_LEN - Len(sLine) + InStr(sLine, ":"))
-        End If
-        If lAction = 1 Then
-            ConsolePrint "%1|%2|%3?%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
-            lLevel = lLevel + 1
+        If lAction = 2 Then
+            ConsolePrint "%1|%2|%3=%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
         Else
-            If lLevel > 0 Then
-                lLevel = lLevel - 1
-            End If
-            If lAction = 2 Then
-                ConsolePrint "%1|%2|%3=%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
-            Else
-                ConsolePrint "%1|%2|%3!%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
-            End If
+            ConsolePrint "%1|%2|%3!%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
         End If
+    End If
 End Function
 
 Private Sub pvBuildLineInfo(sSubject As String)

@@ -1,10 +1,11 @@
 Attribute VB_Name = "mdJson"
 '=========================================================================
 '
-' VBLLVM Project
-' GenIdl (c) 2018 by wqweto@gmail.com
+' VbPeg (c) 2018 by wqweto@gmail.com
 '
-' JSON functions
+' PEG parser generator for VB6
+'
+' mdJson.bas - Test runner JSON functions
 '
 '=========================================================================
 Option Explicit
