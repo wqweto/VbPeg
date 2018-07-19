@@ -9,7 +9,7 @@ Attribute VB_Name = "mdMain"
 Option Explicit
 DefObj A-Z
 
-#Const HasIVbCollection = False
+#Const HasIVbCollection = True
 
 '=========================================================================
 ' API

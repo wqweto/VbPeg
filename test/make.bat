@@ -4,7 +4,7 @@ set root_dir=%~dp0
 set runner_dir=%~dp0Runner
 set vb_exe="%ProgramFiles(x86)%\Microsoft Visual Studio\VB98\VB6.EXE"
 set diff_exe="%ProgramFiles%\Git\usr\bin\diff.exe" --color=auto -u
-set vbpeg_exe="%root_dir%..\..\vbpeg.exe"
+set vbpeg_exe="%root_dir%..\vbpeg.exe"
 set count_run=0
 set count_fail=0
 set update_exp=0
@@ -44,7 +44,7 @@ echo %1 compile results > %temp%\vb6.out
 start "" /wait %vb_exe% /make %runner_dir%\Runner.vbp /outdir %~dp1 /out %temp%\vb6.out
 if not exist %~dp1Runner.exe type %temp%\vb6.out& goto :make_failed
 
-:: run tests from *.in and diff *.out vs *.exp
+:: run tests from *.in and diff *.out vs *.expect
 for /f %%j in ('dir /b *.in') do (
     call :run_test %~dp1Runner.exe %%j
     if errorlevel 1 set test_failed=1
@@ -62,6 +62,6 @@ goto :eof
 :run_test
 del /q /s %~dpn2.out >nul 2>&1
 %1 %2 > %~dpn2.out
-if [%update_exp%]==[1] copy /y %~dpn2.out %~dpn2.exp >nul
-%diff_exe% %~dpn2.exp %~dpn2.out
+if [%update_exp%]==[1] copy /y %~dpn2.out %~dpn2.expect >nul
+%diff_exe% %~dpn2.expect %~dpn2.out
 exit /b %errorlevel%

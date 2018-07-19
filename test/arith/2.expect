@@ -1,0 +1,33 @@
+2.in:1:1     |a                                                           |?Expression
+2.in:1:1     |a                                                           |  ?Term
+2.in:1:1     |a                                                           |    ?Factor
+2.in:1:1     |a                                                           |      ?Integer
+2.in:1:1     |a                                                           |        ?_
+2.in:2:1     |                                                            |        =_
+2.in:1:1     |a                                                           |      !Integer
+2.in:1:1     |a                                                           |      ?ErrInteger
+2.in:1:1     |a                                                           |        ?Integer
+2.in:1:1     |a                                                           |          ?_
+2.in:2:1     |                                                            |          =_
+2.in:1:1     |a                                                           |        !Integer
+2.in:1:2     |                                                            |        ?Integer
+2.in:1:2     |                                                            |          ?_
+2.in:2:1     |                                                            |          =_
+2.in:1:2     |                                                            |        !Integer
+2.in:1:3     |                                                            |        ?Integer
+2.in:1:3     |                                                            |          ?_
+2.in:2:1     |                                                            |          =_
+2.in:1:3     |                                                            |        !Integer
+2.in:2:1     |                                                            |        ?Integer
+2.in:2:1     |                                                            |          ?_
+2.in:2:1     |                                                            |          =_
+2.in:2:1     |                                                            |        !Integer
+2.in:2:1     |                                                            |        ?Integer
+2.in:2:1     |                                                            |          ?_
+2.in:2:1     |                                                            |          =_
+2.in:2:1     |                                                            |        !Integer
+2.in:1:1     |a                                                           |      !ErrInteger
+2.in:1:1     |a                                                           |    !Factor
+2.in:1:1     |a                                                           |  !Term
+2.in:1:1     |a                                                           |!Expression
+LastError: ErrInteger
