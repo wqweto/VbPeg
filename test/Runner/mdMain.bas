@@ -41,7 +41,10 @@ Private Sub Main()
             End If
             ConsolePrint "Pos: %1", lPos
             If Not IsEmpty(vResult) Then
-                ConsolePrint ", Result: %1", C_Str(vResult)
+                If TypeName(vResult) = "Dictionary" Then
+                    ConsolePrint ", Result: %1", JsonDump(vResult)
+                Else
+                End If
             End If
             If LenB(VbPegLastError) <> 0 Then
                 ConsolePrint ", LastError: %1", C_Str(VbPegLastError)
@@ -309,4 +312,27 @@ Public Function CalcLine(ByVal lOffset As Long) As Variant
         End If
     Loop
     CalcLine = Array(m_sFileName, lUpper + 1, lOffset - m_laOffsets(lUpper))
+End Function
+
+Public Function Zn(sText As String, Optional IfEmptyString As Variant = Null) As Variant
+    Zn = IIf(LenB(sText) = 0, IfEmptyString, sText)
+End Function
+
+Public Function ConcatCollection(oCol As Collection, Optional Separator As String) As String
+    Dim lSize           As Long
+    Dim vElem           As Variant
+    
+    For Each vElem In oCol
+        lSize = lSize + Len(vElem) + Len(Separator)
+    Next
+    If lSize > 0 Then
+        ConcatCollection = String$(lSize - Len(Separator), 0)
+        lSize = 1
+        For Each vElem In oCol
+            If lSize <= Len(ConcatCollection) Then
+                Mid$(ConcatCollection, lSize, Len(vElem) + Len(Separator)) = vElem & Separator
+            End If
+            lSize = lSize + Len(vElem) + Len(Separator)
+        Next
+    End If
 End Function
