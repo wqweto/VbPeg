@@ -359,12 +359,10 @@ Public Function SetVariable(ByVal lOffset As Long, ByVal lNode As Long, ByVal lV
     
     With m_uTree
         SetVariable = AppendSequence(MakeSequence(lOffset, MakePredicate(lOffset, "YY_CLEAR", AlwaysTrue:=True)), lNode)
-        If NodeNumChildren(lNode) > 0 Then
-            lLastChild = NodeChild(lNode, NodeNumChildren(lNode) - 1)
-            If .Nodes(lLastChild).NodeType = ucsNdtPredicate And .Nodes(lLastChild).Text = "YY_END" Then
-                lNode = MakePredicate(lOffset, "YY_SET", AlwaysTrue:=True)
-                SetVariable = AppendSequence(SetVariable, lNode)
-            End If
+        lNode = NodeChild(SetVariable, NodeNumChildren(SetVariable) - 1)
+        If .Nodes(lNode).NodeType = ucsNdtPredicate And .Nodes(lNode).Text = "YY_END" Then
+            lNode = MakePredicate(lOffset, "YY_SET", AlwaysTrue:=True)
+            SetVariable = AppendSequence(SetVariable, lNode)
         End If
         .Nodes(lNode).RefVar = lVariable
     End With
