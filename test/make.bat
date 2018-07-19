@@ -7,12 +7,12 @@ set diff_exe="%ProgramFiles%\Git\usr\bin\diff.exe" --color=auto -u
 set vbpeg_exe="%root_dir%..\vbpeg.exe"
 set count_run=0
 set count_fail=0
-set update_exp=0
+set upd_expect=0
 set last_test=
 
 :param_loop
-if [%1]==[/update] (
-    set update_exp=1
+if [%1]==[/expect] (
+    set upd_expect=1
     shift /1
     goto :param_loop
 )
@@ -62,6 +62,6 @@ goto :eof
 :run_test
 del /q /s %~dpn2.out >nul 2>&1
 %1 %2 > %~dpn2.out
-if [%update_exp%]==[1] copy /y %~dpn2.out %~dpn2.expect >nul
+if [%upd_expect%]==[1] copy /y %~dpn2.out %~dpn2.expect >nul
 %diff_exe% %~dpn2.expect %~dpn2.out
 exit /b %errorlevel%
