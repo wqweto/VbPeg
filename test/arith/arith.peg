@@ -15,7 +15,7 @@
 @trace ConsoleTrace
 
 Expression
-  = head:Term (_ op:("+" / "-") _ tail:Term {
+  = head:Term (_ op:(<("+" / "-")>) _ tail:Term {
         If $op = "+" Then
             $head = $head + $tail
         Else
@@ -25,7 +25,7 @@ Expression
     )* { $$ = $head }
 
 Term
-  = head:Factor (_ op:("*"i / "/"s) _ tail:Factor {
+  = head:Factor (_ op:(<("*"i / "/"s)>) _ tail:Factor {
         If $op = "*" Then
             $head = $head * $tail
         Else

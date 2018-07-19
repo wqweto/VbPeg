@@ -258,7 +258,7 @@ Public Function ConsoleTrace(ByVal lOffset As Long, sRule As String, ByVal lActi
         If InStr(sText, vbCr) > 0 Then
             sText = Left$(sText, InStr(sText, vbCr) - 1)
         End If
-        sText = Replace(sText, vbLf, " ")
+        sText = Replace(Replace(sText, vbLf, " "), vbTab, " ")
         If Len(sText) < TEXT_LEN Then
             sText = sText & Space$(TEXT_LEN - Len(sText))
         End If
