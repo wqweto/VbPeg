@@ -355,8 +355,6 @@ QH:
 End Function
 
 Public Function SetVariable(ByVal lOffset As Long, ByVal lNode As Long, ByVal lVariable As Long) As Long
-    Dim lLastChild      As Long
-    
     With m_uTree
         SetVariable = AppendSequence(MakeSequence(lOffset, MakePredicate(lOffset, "YY_CLEAR", AlwaysTrue:=True)), lNode)
         lNode = NodeChild(SetVariable, NodeNumChildren(SetVariable) - 1)

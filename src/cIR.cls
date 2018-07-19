@@ -936,51 +936,110 @@ Private Function pvCodeGenTrimGotoNext(ByVal lNode As Long) As Boolean
             End If
         End With
     Next
-    If cLab.Count > 0 Then
-        For lIdx = 1 To oCol.Count
-            With m_uIr.Nodes(oCol.Item(lIdx))
-                If .NodeType = ucsIrtStmtGoTo Then
-                    If cLab.Item(.Text) = lIdx + 1 Then
-                        .NodeType = ucsIrtBlock
-                        .Text = vbNullString
-                    End If
+    If cLab.Count = 0 Then
+        GoTo QH
+    End If
+    If Not pvCodeGenTrimGotoRecursive(lNode) Then
+        GoTo QH
+    End If
+    For lIdx = 1 To oCol.Count
+        With m_uIr.Nodes(oCol.Item(lIdx))
+            If .NodeType = ucsIrtStmtGoTo Then
+                If SearchCollection(cLab, .Text) Then
+                    cLab.Remove .Text
                 End If
-            End With
-        Next
-        For lIdx = 1 To oCol.Count
-            With m_uIr.Nodes(oCol.Item(lIdx))
-                If .NodeType = ucsIrtStmtGoTo Then
-                    If SearchCollection(cLab, .Text) Then
-                        cLab.Remove .Text
-                    End If
-                End If
-            End With
-        Next
-        For lIdx = 1 To cLab.Count
-            With m_uIr.Nodes(oCol.Item(cLab.Item(lIdx)))
-                .NodeType = ucsIrtBlock
-                .Text = vbNullString
-            End With
-        Next
-        For lIdx = 1 To oCol.Count
-            With m_uIr.Nodes(oCol.Item(lIdx))
-                If .NodeType = ucsIrtStmtIf Then
-                    If .Count = 2 Then
-                        If m_uIr.Nodes(.Children(0)).NodeType = ucsIrtExprCall Then
-                            If pvEnumChildNodes(.Children(1)) = 1 Then
-                                If m_uIr.Nodes(.Children(1)).NodeType = ucsIrtBlock Then
-                                    .NodeType = ucsIrtStmtCall
-                                    .Text = m_uIr.Nodes(.Children(0)).Text
-                                    .Count = 0
-                                    Erase .Children
-                                End If
+            End If
+        End With
+    Next
+    For lIdx = 1 To cLab.Count
+        With m_uIr.Nodes(oCol.Item(cLab.Item(lIdx)))
+            .NodeType = ucsIrtBlock
+            .Text = vbNullString
+        End With
+    Next
+    For lIdx = 1 To oCol.Count
+        With m_uIr.Nodes(oCol.Item(lIdx))
+            If .NodeType = ucsIrtStmtIf Then
+                If m_uIr.Nodes(.Children(0)).NodeType = ucsIrtExprCall Then
+                    If pvEnumChildNodes(.Children(1)) = 1 Then
+                        If m_uIr.Nodes(.Children(1)).NodeType = ucsIrtBlock Then
+                            If .Count = 2 Then
+                                .NodeType = ucsIrtStmtCall
+                                .Text = m_uIr.Nodes(.Children(0)).Text
+                                .Count = 0
+                                Erase .Children
+                            ElseIf .Count = 3 Then
+                                .Children(0) = AddChild(AddNode(ucsIrtExprNot), .Children(0))
+                                .Children(1) = .Children(2)
+                                .Count = 2
                             End If
                         End If
                     End If
                 End If
+            End If
+        End With
+    Next
+    '--- success
+    pvCodeGenTrimGotoNext = True
+QH:
+End Function
+
+Private Function pvCodeGenTrimGotoRecursive(ByVal lNode As Long) As Boolean
+    Dim lPrevNode       As Long
+    Dim lIdx            As Long
+    Dim vElem           As Variant
+    
+    With m_uIr.Nodes(lNode)
+        For lIdx = 0 To .Count - 1
+            With m_uIr.Nodes(.Children(lIdx))
+                If .NodeType = ucsIrtDeclLabel Then
+                    Debug.Assert lPrevNode <> 0
+                    For Each vElem In pvEnumLeaveIrNodes(lPrevNode, New Collection)
+                        If m_uIr.Nodes(vElem).NodeType = ucsIrtStmtGoTo Then
+                            If m_uIr.Nodes(vElem).Text = .Text Then
+                                m_uIr.Nodes(vElem).NodeType = ucsIrtBlock
+                                m_uIr.Nodes(vElem).Text = vbNullString
+                                pvCodeGenTrimGotoRecursive = True
+                            End If
+                        End If
+                    Next
+                End If
             End With
+            lPrevNode = .Children(lIdx)
+            If pvCodeGenTrimGotoRecursive(.Children(lIdx)) Then
+                pvCodeGenTrimGotoRecursive = True
+            End If
         Next
-    End If
+    End With
+End Function
+
+Private Function pvEnumLeaveIrNodes(ByVal lNode As Long, oCol As Collection) As Collection
+    Dim lIdx            As Long
+    
+    With m_uIr.Nodes(lNode)
+        If .Count > 0 Then
+            Select Case .NodeType
+            Case ucsIrtStmtIf
+                If .Count > 1 Then
+                    pvEnumLeaveIrNodes .Children(1), oCol
+                End If
+                If .Count > 2 Then
+                    pvEnumLeaveIrNodes .Children(2), oCol
+                End If
+            Case ucsIrtStmtSelect
+                For lIdx = 0 To .Count - 1
+                    pvEnumLeaveIrNodes .Children(lIdx), oCol
+                Next
+            Case ucsIrtBlock, ucsIrtStmtWith, ucsIrtStmtCase, ucsIrtStmtDoLoop, ucsIrtStmtForLoop
+                pvEnumLeaveIrNodes .Children(.Count - 1), oCol
+            Case Else
+                Debug.Assert .Count = 0
+            End Select
+        Else
+            oCol.Add lNode
+        End If
+    End With
+    Set pvEnumLeaveIrNodes = oCol
 End Function
 
 Private Function pvCodeGenIsFinalJump(ByVal lNode As Long) As Boolean
