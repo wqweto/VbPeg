@@ -1,8 +1,11 @@
+@Members {
+    LocalVars(0 to 255)     As Long
+}
 
 Stmt    = - e:Expr EOL                  { ConsolePrint $e & vbCrLf }
         | ( !EOL . )* EOL               { ConsolePrint "error" & vbCrLf }
 
-Expr    = i:ID ASSIGN s:Expr            { .UserData($i) = $s : $$ = $s }
+Expr    = i:ID ASSIGN s:Expr            { .LocalVars($i) = $s : $$ = $s }
         | s:Sum                         { $$ = $s }
 
 Sum     = l:Product
@@ -16,7 +19,7 @@ Product = l:Value
                 )*                      { $$ = $l }
 
 Value   = i:NUMBER                      { $$ = CLng($$text) }
-        | i:ID !ASSIGN                  { $$ = .UserData($i) }
+        | i:ID !ASSIGN                  { $$ = .LocalVars($i) }
         | OPEN i:Expr CLOSE             { $$ = $i }
 
 NUMBER  = < [0-9]+ >    -               { $$ = CLng($$text) }

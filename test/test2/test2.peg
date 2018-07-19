@@ -1,9 +1,9 @@
 Preprocessor <- (LineComment / BlockComment / text / Scope / junk / moreJunk)+
 
-File                <-      (Scope / junk / moreJunk)+
+File                <-      (Scope / junk / moreJunk / TranslationUnit)+
 
 
-TranslationUnit <- Statement+ EndOfFile?
+TranslationUnit <- Statement+ Variable? EndOfFile?
 
 Statement           <-      Spacing (Expression ';' / File)
 
