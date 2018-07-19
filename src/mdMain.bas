@@ -36,6 +36,7 @@ Private Declare Function CreateFile Lib "kernel32" Alias "CreateFileA" (ByVal lp
 Private Declare Function SetFilePointer Lib "kernel32" (ByVal hFile As Long, ByVal lDistanceToMove As Long, ByVal lpDistanceToMoveHigh As Long, ByVal dwMoveMethod As Long) As Long
 Private Declare Function SetEndOfFile Lib "kernel32" (ByVal hFile As Long) As Long
 Private Declare Function CloseHandle Lib "kernel32" (ByVal hObject As Long) As Long
+Private Declare Sub ExitProcess Lib "kernel32" (ByVal uExitCode As Long)
 
 '=========================================================================
 ' Constants and member variables
@@ -51,6 +52,15 @@ Private m_oOpt                  As Object
 '=========================================================================
 
 Private Sub Main()
+    Dim lExitCode       As Long
+    
+    lExitCode = Process(SplitArgs(Command$))
+    If Not InIde Then
+        Call ExitProcess(lExitCode)
+    End If
+End Sub
+
+Private Function Process(vArgs As Variant) As Long
     Dim oTree           As cTree
     Dim oIR             As cIR
     Dim nFile           As Integer
@@ -61,14 +71,14 @@ Private Sub Main()
     
     On Error GoTo EH
     Set m_oParser = New cParser
-    Set m_oOpt = GetOpt(SplitArgs(Command$), "o:module:userdata")
+    Set m_oOpt = GetOpt(vArgs, "o:module:userdata")
     If Not m_oOpt.Item("-nologo") And Not m_oOpt.Item("-q") Then
         ConsoleError "VbPeg " & STR_VERSION & " (c) 2018 by wqweto@gmail.com (" & m_oParser.ParserVersion & ")" & vbCrLf & vbCrLf
     End If
     If LenB(m_oOpt.Item("error")) <> 0 Then
         ConsoleError "Error in command line: " & m_oOpt.Item("error") & vbCrLf & vbCrLf
         If Not (m_oOpt.Item("-h") Or m_oOpt.Item("-?") Or m_oOpt.Item("arg1") = "?") Then
-            Exit Sub
+            Exit Function
         End If
     End If
     If m_oOpt.Item("numarg") = 0 Or m_oOpt.Item("-h") Or m_oOpt.Item("-?") Or m_oOpt.Item("arg1") = "?" Then
@@ -83,24 +93,29 @@ Private Sub Main()
             "  -userdata TYPE  parser context's UserData member data-type [default: Variant]" & vbCrLf & _
             "  -q              in quiet operation outputs only errors" & vbCrLf & vbCrLf & _
             "If no -tree/-ir is used emits VB6 code. If no -o is used writes result to console. If no -public/-private is used emits standard .bas module." & vbCrLf
-        Exit Sub
+        If m_oOpt.Item("numarg") = 0 Then
+            Process = 100
+        End If
+        Exit Function
     End If
     Set oTree = New cTree
     lOffset = m_oParser.Match(oTree.ReadFile(m_oOpt.Item("arg1")), UserData:=oTree)
     If LenB(m_oParser.LastError) Then
         ConsoleError "%2: %3: %1" & vbCrLf, m_oParser.LastError, Join(oTree.CalcLine(m_oParser.LastOffset + 1), ":"), IIf(lOffset = 0, "error", "warning")
     End If
-    If Not m_oParser.GetParseErrors() Is Nothing Then
-        For Each vElem In m_oParser.GetParseErrors()
+    If Not m_oParser.VbPegGetParseErrors() Is Nothing Then
+        For Each vElem In m_oParser.VbPegGetParseErrors()
             ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
         Next
     End If
     If lOffset = 0 Then
-        Exit Sub
+        Process = 1
+        Exit Function
     End If
     If Not oTree.CheckTree(cWarnings) Then
         ConsoleError "%1" & vbCrLf, oTree.LastError
-        Exit Sub
+        Process = 2
+        Exit Function
     ElseIf Not cWarnings Is Nothing Then
         For Each vElem In cWarnings
             ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
@@ -108,7 +123,8 @@ Private Sub Main()
     End If
     If Not oTree.OptimizeTree(cWarnings) Then
         ConsoleError "Optimize failed: %1" & vbCrLf, oTree.LastError
-        Exit Sub
+        Process = 3
+        Exit Function
     ElseIf Not cWarnings Is Nothing Then
         For Each vElem In cWarnings
             ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
@@ -120,7 +136,8 @@ Private Sub Main()
         Set oIR = New cIR
         If Not oIR.CodeGen(oTree, m_oOpt.Item("-allrules")) Then
             ConsoleError "Failed codegen: %1" & vbCrLf, oIR.LastError
-            Exit Sub
+            Process = 4
+            Exit Function
         End If
         If m_oOpt.Item("-ir") Then
             sOutput = oIR.DumpIrTree
@@ -134,7 +151,8 @@ Private Sub Main()
                     CStr(m_oOpt.Item("-userdata")), _
                     sOutput) Then
                 ConsoleError "Failed emit: %1" & vbCrLf, oIR.LastError
-                Exit Sub
+                Process = 5
+                Exit Function
             End If
         End If
     End If
@@ -159,10 +177,11 @@ Private Sub Main()
     Else
         ConsolePrint sOutput
     End If
-    Exit Sub
+    Exit Function
 EH:
     ConsoleError "Critical error: " & Err.Description & vbCrLf
-End Sub
+    Process = 100
+End Function
 
 Public Function ConsoleTrace(ByVal lOffset As Long, sRule As String, ByVal lAction As Long, oUserData As cTree) As Boolean
     Const LINE_LEN      As Long = 8
