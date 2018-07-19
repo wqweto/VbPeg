@@ -853,7 +853,11 @@ Private Function pvCodeGenAction(sText As String, ByVal lRule As Long, Optional 
     With m_uIr.CodeGenTree
         For lIdx = 0 To .NodeNumVariables(lRule) - 1
             lPos = .NodeVariable(lRule, lIdx)
-            oVars.Item("$" & .NodeText(lPos)) = sCtxVar & ".VarStack(" & sCtxVar & ".VarPos - " & .NodeId(lPos) & ")"
+            If IsImmediate Then
+                oVars.Item("$" & .NodeText(lPos)) = .NodeId(lPos)
+            Else
+                oVars.Item("$" & .NodeText(lPos)) = sCtxVar & ".VarStack(" & sCtxVar & ".VarPos - " & .NodeId(lPos) & ")"
+            End If
         Next
     End With
     lPos = 1
@@ -1392,11 +1396,15 @@ Public Function EmitCode( _
 "            Case ucsActResultSet" & vbCrLf & _
 "                With .ThunkData(lIdx)" & vbCrLf & _
 "                    " & STR_CTX_VAR_NAME & ".VarResult = Mid$(" & STR_CTX_VAR_NAME & ".Contents, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin)" & vbCrLf & _
-"                End With" & vbCrLf & _
+"                End With"
+            If .IrActionsSelect <> 0 Then
+                pvOutput _
 "            Case Else" & vbCrLf & _
 "                With .ThunkData(lIdx)" & vbCrLf & _
 "                    pvImplAction .Action, .CaptureBegin + 1, .CaptureEnd - .CaptureBegin" & vbCrLf & _
-"                End With" & vbCrLf & _
+"                End With"
+            End If
+            pvOutput _
 "            End Select" & vbCrLf & _
 "        Next"
         ElseIf .IrActionsEnum <> 0 Then

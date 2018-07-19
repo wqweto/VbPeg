@@ -416,12 +416,16 @@ Public Function MakeAction(ByVal lOffset As Long, sText As String) As Long
 End Function
 
 Public Function MakePredicate(ByVal lOffset As Long, sText As String, Optional ByVal AlwaysTrue As Boolean) As Long
-    MakePredicate = pvNewNode(ucsNdtPredicate, lOffset, Text:=sText)
-    If AlwaysTrue Then
-        With m_uTree.Nodes(MakePredicate)
-            .Flags = .Flags Or ucsNdfAlwaysTrue
-        End With
-    End If
+    With m_uTree
+        Debug.Assert .ThisRule <> 0
+        MakePredicate = pvNewNode(ucsNdtPredicate, lOffset, Text:=sText)
+        .Nodes(MakePredicate).RefRule = .ThisRule
+        If AlwaysTrue Then
+            With .Nodes(MakePredicate)
+                .Flags = .Flags Or ucsNdfAlwaysTrue
+            End With
+        End If
+    End With
 End Function
 
 Public Function MakeChoice(ByVal lOffset As Long, ByVal lNode As Long) As Long
