@@ -1367,9 +1367,12 @@ Public Function EmitCode( _
 "    " & .OutModulePrefix & "BeginMatch = True" & vbCrLf & _
 "End Function" & vbCrLf
         pvOutput _
-"Public Function " & .OutModulePrefix & "EndMatch(Optional Result As " & sVarData & ") As Long" & vbCrLf & _
-"    Dim lIdx            As Long" & vbCrLf & _
-"    " & vbCrLf & _
+"Public Function " & .OutModulePrefix & "EndMatch(Optional Result As " & sVarData & ") As Long"
+        If .CodeGenVarStack Or .IrActionsEnum <> 0 Then
+            pvOutput _
+"    Dim lIdx            As Long" & vbCrLf
+        End If
+        pvOutput _
 "    With " & STR_CTX_VAR_NAME
         If .CodeGenVarStack Then
             pvOutput _
