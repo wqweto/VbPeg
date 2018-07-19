@@ -1398,7 +1398,7 @@ Public Function EmitCode( _
         End If
         If .CodeGenMatchString Then
             pvOutput _
-"Private Function pvMatchString(sText As String, Optional ByVal CmpFlags As Boolean) As Boolean" & vbCrLf & _
+"Private Function pvMatchString(sText As String, Optional ByVal CmpFlags As Long) As Boolean" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        If .BufPos + Len(sText) <= .BufSize Then" & vbCrLf & _
 "            pvMatchString = CompareStringW(LOCALE_USER_DEFAULT, CmpFlags, ByVal StrPtr(sText), Len(sText), .BufData(.BufPos), Len(sText)) = CSTR_EQUAL" & vbCrLf & _

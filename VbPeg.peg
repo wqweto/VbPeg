@@ -70,7 +70,8 @@ PrimaryExpr     <- Identifier !(LiteralNC? AssignLiteral)               { .Push 
                  / BEGIN                                                { .Push .MakePredicate(lOffset, "YY_BEGIN", AlwaysTrue:=True) }
                  / END                                                  { .Push .MakePredicate(lOffset, "YY_END", AlwaysTrue:=True) }
 
-Setting         <- SettingName                                          { .Push .MakeString(lOffset, $$text) }
+Setting         <- SettingName                                         &{ CheckSettingName($$text) }
+                                                                        { .Push .MakeString(lOffset, $$text) }
                                                                        &{ ClearErrors(ctx.BufPos + 1) And SetUserDataTag($$text) }
                                (SettingValue                            { .SetSettingValue .Pop, $$text }
                                 /                                      &{ AppendError("Invalid value for setting '" & .UserData.Tag & "'", ctx.BufPos + 1) }
@@ -149,8 +150,10 @@ Private Function ClearErrors(ByVal lOffset As Long) As Boolean
     
     If Not ctx.ParseErrors Is Nothing Then
         For lIdx = ctx.ParseErrors.Count To 1 Step -1
-            If ctx.ParseErrors.Item(lIdx)(1) <= lOffset Then
-                ctx.ParseErrors.Remove lIdx
+            If LenB(ctx.ParseErrors.Item(lIdx)(2)) = 0 Then
+                If ctx.ParseErrors.Item(lIdx)(1) <= lOffset Then
+                    ctx.ParseErrors.Remove lIdx
+                End If
             End If
         Next
         If ctx.ParseErrors.Count = 0 Then
@@ -160,11 +163,11 @@ Private Function ClearErrors(ByVal lOffset As Long) As Boolean
     ClearErrors = True
 End Function
 
-Private Function AppendError(sText As String, ByVal lOffset As Long) As Boolean
+Private Function AppendError(sText As String, ByVal lOffset As Long, Optional sType As String) As Boolean
     If ctx.ParseErrors Is Nothing Then
         Set ctx.ParseErrors = New Collection
     End If
-    ctx.ParseErrors.Add Array(sText, lOffset)
+    ctx.ParseErrors.Add Array(sText, lOffset, sType)
 End Function
 
 Private Function SetUserDataTag(sText As String) As Boolean
@@ -172,11 +175,19 @@ Private Function SetUserDataTag(sText As String) As Boolean
     SetUserDataTag = True
 End Function
 
-Public Function GetParseErrors() As Collection
-    Set GetParseErrors = ctx.ParseErrors
+Public Function VbPegGetParseErrors() As Collection
+    Set VbPegGetParseErrors = ctx.ParseErrors
 End Function
 
-Public Function GetContents() As String
-    GetContents = ctx.Contents
+Public Function VbPegGetContents() As String
+    VbPegGetContents = ctx.Contents
+End Function
+
+Private Function CheckSettingName(sName As String) As Boolean
+    Const STR_ALL = "||private|public|modulename|userdatatype|vardatatype|members|start|ignorecase|prolog|epilog|trace|"
+    If InStr(1, STR_ALL, "|" & sName & "|", vbTextCompare) = 0 Then
+        AppendError "Setting '" & sName & "' is unrecognized", ctx.CaptureBegin + 1, "warning"
+    End If
+    CheckSettingName = True
 End Function
 }
