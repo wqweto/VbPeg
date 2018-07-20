@@ -750,7 +750,7 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
                 .Flags = lFlags
                 pvOptimizePass1 = True
             End If
-            If .NodeType = ucsNdtRule Then
+            If .NodeType = ucsNdtRule And LenB(.Description) = 0 Then
                 If (.Flags And ucsNdfCanInline) = 0 Then
                     If UBound(m_uTree.Nodes(.Children(0)).Children) < 0 Then
                         .Flags = .Flags Or ucsNdfCanInline
@@ -808,7 +808,7 @@ Private Function pvOptimizePass2(ByVal lNode As Long, ByVal bParentSavePos As Bo
             bChildSavePos = False
         Next
         Select Case .NodeType
-        Case ucsNdtSequence, ucsNdtRule
+        Case ucsNdtSequence
             '--- merge String nodes
             lFlags = m_uTree.Nodes(.Children(0)).Flags
             For Each vElem In .Children
