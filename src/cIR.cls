@@ -492,32 +492,30 @@ Private Function pvCodeGenNode( _
                         lFailure)
             End If
         Case ucsNdtError
-            If .NodeFlag(lNode, ucsNdfAlwaysTrue) Or _
+            If .NodeRefRule(lNode) = 0 Or Not .NodeFlag(.NodeRefRule(lNode), ucsNdfUsed) Then
+                m_uIr.CodeGenSetError = True
+                lIrNode = AddNode(ucsIrtStmtEmit, "Call pvSetError(" & pvToVbString(.NodeText(lNode)) & ")")
+                If lFailure = IR_CONTINUE Then
+                    lFailure = lIrNode
+                Else
+                    lFailure = AddChild(AddChild( _
+                        AddNode(ucsIrtBlock), _
+                            lIrNode), _
+                            lFailure)
+                End If
+                pvCodeGenNode = lFailure
+            ElseIf .NodeFlag(lNode, ucsNdfAlwaysTrue) Or _
                     lSuccess = IR_CONTINUE And lFailure = IR_CONTINUE Then
                 pvCodeGenNode = AddChild(AddChild( _
                     AddNode(ucsIrtBlock), _
                         AddNode(ucsIrtStmtCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
                         lSuccess)
             Else
-                If .NodeRefRule(lNode) = 0 Then
-                    m_uIr.CodeGenSetError = True
-                    lIrNode = AddNode(ucsIrtStmtEmit, "Call pvSetError(" & pvToVbString(.NodeText(lNode)) & ")")
-                    If lFailure = IR_CONTINUE Then
-                        lFailure = lIrNode
-                    Else
-                        lFailure = AddChild(AddChild( _
-                            AddNode(ucsIrtBlock), _
-                                lIrNode), _
-                                lFailure)
-                    End If
-                    pvCodeGenNode = lFailure
-                Else
-                    pvCodeGenNode = AddChild(AddChild(AddChild( _
-                        AddNode(ucsIrtStmtIf), _
-                            AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
-                            lSuccess), _
-                            lFailure)
-                End If
+                pvCodeGenNode = AddChild(AddChild(AddChild( _
+                    AddNode(ucsIrtStmtIf), _
+                        AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
+                        lSuccess), _
+                        lFailure)
             End If
         Case ucsNdtAction
             '-- always true -> discard lFailure

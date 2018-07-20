@@ -64,6 +64,7 @@ Public Enum UcsTreeNodeFlagsEnum
     ucsNdfSkipAdvance = 2 ^ 9
     ucsNdfIgnoreCase = 2 ^ 10
     ucsNdfHasAdvance = 2 ^ 11
+    ucsNdfReferenced = 2 ^ 12
 End Enum
 
 Private Type UcsTreeNodeType
@@ -384,7 +385,9 @@ Public Function pvNewRef(ByVal eType As UcsTreeNodeTypeEnum, ByVal lOffset As Lo
     With m_uTree
         pvNewRef = pvNewNode(eType, lOffset, Text:=sName)
         .Nodes(pvNewRef).RefRule = lRule
-        .Nodes(lRule).Flags = .Nodes(lRule).Flags Or ucsNdfUsed
+        If eType = ucsNdtReference Then
+            .Nodes(lRule).Flags = .Nodes(lRule).Flags Or ucsNdfReferenced
+        End If
     End With
 End Function
 
@@ -615,8 +618,12 @@ Public Function CheckTree(cWarnings As Collection) As Boolean
         For Each vElem In .Children
             With m_uTree.Nodes(vElem)
                 If .Children(0) = 0 Then
-                    m_uTree.LastError = Join(CalcLine(.Offset), ":") & ": error: Undefined rule '" & .Text & "'"
-                    GoTo QH
+                    If (.Flags And ucsNdfReferenced) <> 0 Then
+                        m_uTree.LastError = Join(CalcLine(.Offset), ":") & ": error: Undefined rule '" & .Text & "'"
+                        GoTo QH
+                    Else
+                        .Children = EmptyLongArray
+                    End If
                 End If
             End With
             pvConsumeInput vElem, cResult
@@ -641,7 +648,7 @@ Private Function pvConsumeInput(ByVal lNode As Long, cResult As Collection) As B
                 If Not SearchCollection(cResult, "#" & lNode) Then
                     cResult.Add Array("Possible left recursion in rule '" & .Text & "'", .Offset), "#" & lNode
                 End If
-            ElseIf .Children(0) <> 0 Then
+            ElseIf UBound(.Children) >= 0 Then
                 .Flags = .Flags Or ucsNdfReached
                 pvConsumeInput = pvConsumeInput(.Children(0), cResult)
                 .Flags = .Flags And Not ucsNdfReached
@@ -708,7 +715,9 @@ Public Function OptimizeTree(cWarnings As Collection) As Boolean
                     .Flags = .Flags Or ucsNdfHasAdvance
                 End If
                 If (.Flags And ucsNdfUsed) = 0 And (.Flags And ucsNdfCanInline) = 0 Then
-                    cResult.Add Array("Unused rule '" & .Text & "'", .Offset)
+                    If UBound(.Children) >= 0 Then
+                        cResult.Add Array("Unused rule '" & .Text & "'", .Offset)
+                    End If
                 End If
             End With
         Next
@@ -748,21 +757,23 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
                 End If
             End If
         Case ucsNdtSequence, ucsNdtRule
-            lFlags = .Flags Or ucsNdfAlwaysTrue
-            For Each vElem In .Children
-                If (m_uTree.Nodes(vElem).Flags And ucsNdfAlwaysTrue) = 0 Then
-                    lFlags = lFlags And Not ucsNdfAlwaysTrue
+            If UBound(.Children) >= 0 Then
+                lFlags = .Flags Or ucsNdfAlwaysTrue
+                For Each vElem In .Children
+                    If (m_uTree.Nodes(vElem).Flags And ucsNdfAlwaysTrue) = 0 Then
+                        lFlags = lFlags And Not ucsNdfAlwaysTrue
+                    End If
+                Next
+                If .Flags <> lFlags Then
+                    .Flags = lFlags
+                    pvOptimizePass1 = True
                 End If
-            Next
-            If .Flags <> lFlags Then
-                .Flags = lFlags
-                pvOptimizePass1 = True
-            End If
-            If .NodeType = ucsNdtRule And LenB(.Description) = 0 Then
-                If (.Flags And ucsNdfCanInline) = 0 Then
-                    If UBound(m_uTree.Nodes(.Children(0)).Children) < 0 Then
-                        .Flags = .Flags Or ucsNdfCanInline
-                        pvOptimizePass1 = True
+                If .NodeType = ucsNdtRule And LenB(.Description) = 0 Then
+                    If (.Flags And ucsNdfCanInline) = 0 Then
+                        If UBound(m_uTree.Nodes(.Children(0)).Children) < 0 Then
+                            .Flags = .Flags Or ucsNdfCanInline
+                            pvOptimizePass1 = True
+                        End If
                     End If
                 End If
             End If
@@ -981,8 +992,10 @@ Private Function pvUpdateUsed(ByVal lNode As Long) As Boolean
         Case ucsNdtReference, ucsNdtError
             If .RefRule <> 0 Then
                 If (m_uTree.Nodes(.RefRule).Flags And ucsNdfUsed) = 0 Then
-                    m_uTree.Nodes(.RefRule).Flags = m_uTree.Nodes(.RefRule).Flags Or ucsNdfUsed
-                    pvUpdateUsed = True
+                    If UBound(m_uTree.Nodes(.RefRule).Children) >= 0 Then
+                        m_uTree.Nodes(.RefRule).Flags = m_uTree.Nodes(.RefRule).Flags Or ucsNdfUsed
+                        pvUpdateUsed = True
+                    End If
                 End If
             End If
         End Select
