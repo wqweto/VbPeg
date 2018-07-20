@@ -98,8 +98,10 @@ End Type
 Private m_uTree                 As UcsTreeType
 Private m_oSettings             As Object
 Private m_vTag                  As Variant
+Private m_sFilePath             As String
 Private m_sFileName             As String
 Private m_laOffsets()           As Long
+Private m_cFileQueue            As Collection
 
 '=========================================================================
 ' Properties
@@ -240,6 +242,10 @@ End Property
 
 Property Set Tag(vValue As Variant)
     Set m_vTag = vValue
+End Property
+
+Property Get FileQueue() As Collection
+    Set FileQueue = m_cFileQueue
 End Property
 
 '=========================================================================
@@ -514,6 +520,8 @@ Public Sub SetSettingValue(ByVal lName As Long, sValue As String)
     sName = m_uTree.Nodes(lName).Text
     If LenB(sName) = 0 Then
         SettingValue(sName) = SettingValue(sName) & sValue
+    ElseIf LCase$(sName) = "append" Then
+        AddFileToQueue PathMerge(m_sFilePath, sValue)
     Else
         SettingValue(sName) = sValue
     End If
@@ -1072,6 +1080,11 @@ Private Function pvFindAdvance(ByVal lNode As Long) As Boolean
 End Function
 
 Public Function ReadFile(sFile As String) As String
+    If InStrRev(sFile, "\") > 0 Then
+        m_sFilePath = Left$(sFile, InStrRev(sFile, "\") - 1)
+    Else
+        m_sFilePath = vbNullString
+    End If
     m_sFileName = Mid$(sFile, InStrRev(sFile, "\") + 1)
     ReadFile = ReadTextFile(sFile)
     pvBuildLineInfo ReadFile
@@ -1110,3 +1123,19 @@ Public Function CalcLine(ByVal lOffset As Long) As Variant
     Loop
     CalcLine = Array(m_sFileName, lUpper + 1, lOffset - m_laOffsets(lUpper))
 End Function
+
+Public Function AddFileToQueue(sFile As String) As Boolean
+    If Not SearchCollection(m_cFileQueue, "#" & sFile) Then
+        m_cFileQueue.Add sFile, "#" & sFile
+        '-- success
+        AddFileToQueue = True
+    End If
+End Function
+
+'=========================================================================
+' Base class events
+'=========================================================================
+
+Private Sub Class_Initialize()
+    Set m_cFileQueue = New Collection
+End Sub

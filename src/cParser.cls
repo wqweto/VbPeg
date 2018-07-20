@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 20.7.2018 14:08:35
+' Auto-generated on 20.7.2018 15:17:15
 Option Explicit
 DefObj A-Z
 
@@ -98,7 +98,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "20.7.2018 14:08:35"
+    ParserVersion = "20.7.2018 15:17:15"
 End Property
 
 '=========================================================================
@@ -2057,7 +2057,7 @@ Public Function VbPegGetContents() As String
 End Function
 
 Private Function CheckSettingName(sName As String) As Boolean
-    Const STR_ALL = "||private|public|modulename|userdatatype|vardatatype|members|start|ignorecase|prolog|epilog|trace|"
+    Const STR_ALL = "||private|public|modulename|userdatatype|vardatatype|members|start|ignorecase|prolog|epilog|trace|append|"
     If InStr(1, STR_ALL, "|" & sName & "|", vbTextCompare) = 0 Then
         AppendError "Setting '" & sName & "' is unrecognized", ctx.CaptureBegin + 1, "warning"
     End If

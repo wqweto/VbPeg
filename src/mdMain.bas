@@ -68,6 +68,7 @@ Private Function Process(vArgs As Variant) As Long
     Dim vElem           As Variant
     Dim cWarnings       As Collection
     Dim lOffset         As Long
+    Dim lIdx            As Long
     
     On Error GoTo EH
     Set m_oParser = New cParser
@@ -99,19 +100,29 @@ Private Function Process(vArgs As Variant) As Long
         Exit Function
     End If
     Set oTree = New cTree
-    lOffset = m_oParser.Match(oTree.ReadFile(m_oOpt.Item("arg1")), UserData:=oTree)
-    If LenB(m_oParser.LastError) Then
-        ConsoleError "%2: %3: %1" & vbCrLf, m_oParser.LastError, Join(oTree.CalcLine(m_oParser.LastOffset + 1), ":"), IIf(lOffset = 0, "error", "warning")
-    End If
-    If Not m_oParser.VbPegGetParseErrors() Is Nothing Then
-        For Each vElem In m_oParser.VbPegGetParseErrors()
-            ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
-        Next
-    End If
-    If lOffset = 0 Then
-        Process = 1
-        Exit Function
-    End If
+    For lIdx = 1 To m_oOpt.Item("numarg")
+        oTree.AddFileToQueue CanonicalPath(m_oOpt.Item("arg" & lIdx))
+    Next
+    lIdx = 1
+    Do While lIdx <= oTree.FileQueue.Count
+        If Not m_oOpt.Item("-q") Then
+            ConsoleError "%1" & vbCrLf, PathDifference(CurDir$, oTree.FileQueue.Item(lIdx))
+        End If
+        lOffset = m_oParser.Match(oTree.ReadFile(oTree.FileQueue.Item(lIdx)), UserData:=oTree)
+        If LenB(m_oParser.LastError) Then
+            ConsoleError "%2: %3: %1" & vbCrLf, m_oParser.LastError, Join(oTree.CalcLine(m_oParser.LastOffset + 1), ":"), IIf(lOffset = 0, "error", "warning")
+        End If
+        If Not m_oParser.VbPegGetParseErrors() Is Nothing Then
+            For Each vElem In m_oParser.VbPegGetParseErrors()
+                ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
+            Next
+        End If
+        If lOffset = 0 Then
+            Process = 1
+            Exit Function
+        End If
+        lIdx = lIdx + 1
+    Loop
     If Not oTree.CheckTree(cWarnings) Then
         ConsoleError "%1" & vbCrLf, oTree.LastError
         Process = 2
@@ -474,3 +485,58 @@ Public Function C_Bool(vValue As Variant) As Boolean
     End If
 QH:
 End Function
+
+Public Function CanonicalPath(sPath As String) As String
+    With CreateObject("Scripting.FileSystemObject")
+        CanonicalPath = .GetAbsolutePathName(sPath)
+    End With
+End Function
+
+Public Function PathDifference(sBase As String, sFolder As String) As String
+    Dim vBase           As Variant
+    Dim vFolder         As Variant
+    Dim lIdx            As Long
+    Dim lJdx            As Long
+    
+    If LCase$(Left$(sBase, 2)) <> LCase$(Left$(sFolder, 2)) Then
+        PathDifference = sFolder
+    Else
+        vBase = Split(sBase, "\")
+        vFolder = Split(sFolder, "\")
+        For lIdx = 0 To UBound(vFolder)
+            If lIdx <= UBound(vBase) Then
+                If LCase$(vBase(lIdx)) <> LCase$(vFolder(lIdx)) Then
+                    Exit For
+                End If
+            Else
+                Exit For
+            End If
+        Next
+        If lIdx > UBound(vBase) Then
+'            PathDifference = "."
+        Else
+            For lJdx = lIdx To UBound(vBase)
+                PathDifference = PathDifference & IIf(LenB(PathDifference) <> 0, "\", vbNullString) & ".."
+            Next
+        End If
+        For lJdx = lIdx To UBound(vFolder)
+            PathDifference = PathDifference & IIf(LenB(PathDifference) <> 0, "\", vbNullString) & vFolder(lJdx)
+        Next
+    End If
+End Function
+
+Public Function PathMerge(sBase As String, sFolder As String) As String
+    If Mid$(sFolder, 2, 1) = ":" Or Left$(sFolder, 2) = "\\" Then
+        PathMerge = sFolder
+    ElseIf Left$(sFolder, 1) = "\" Then
+        PathMerge = Left$(sBase, 2) & sFolder
+    Else
+        PathMerge = PathCombine(sBase, sFolder)
+    End If
+    PathMerge = CanonicalPath(PathMerge)
+End Function
+
+Public Function PathCombine(sPath As String, sFile As String) As String
+    PathCombine = sPath & IIf(LenB(sPath) <> 0 And Right$(sPath, 1) <> "\" And LenB(sFile) <> 0, "\", vbNullString) & sFile
+End Function
+
