@@ -1347,12 +1347,16 @@ Public Function EmitCode( _
 "    If " & .OutModulePrefix & "BeginMatch(sSubject, StartPos, UserData) Then" & vbCrLf & _
 "        If " & .OutModulePrefix & .CodeGenStartFunc & "() Then" & vbCrLf & _
 "            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(Result)" & vbCrLf & _
-"        ElseIf LenB(" & STR_CTX_VAR_NAME & ".LastError) = 0 Then" & vbCrLf & _
-"            If LenB(" & STR_CTX_VAR_NAME & ".LastExpected) = 0 Then" & vbCrLf & _
-"                " & STR_CTX_VAR_NAME & ".LastError = ""Fail""" & vbCrLf & _
-"            Else" & vbCrLf & _
-"                " & STR_CTX_VAR_NAME & ".LastError = ""Expected "" & ctx.LastExpected" & vbCrLf & _
-"            End If" & vbCrLf & _
+"        Else" & vbCrLf & _
+"            With " & STR_CTX_VAR_NAME & vbCrLf & _
+"                If LenB(.LastError) = 0 Then" & vbCrLf & _
+"                    If LenB(.LastExpected) = 0 Then" & vbCrLf & _
+"                        .LastError = ""Fail""" & vbCrLf & _
+"                    Else" & vbCrLf & _
+"                        .LastError = ""Expected "" & Join(Split(Mid$(.LastExpected, 2, Len(.LastExpected) - 2), vbNullChar), "" or "")" & vbCrLf & _
+"                    End If" & vbCrLf & _
+"                End If" & vbCrLf & _
+"            End With" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End If" & vbCrLf & _
 "End Function" & vbCrLf
@@ -1476,7 +1480,7 @@ Public Function EmitCode( _
         If True Then
             pvOutput _
 "Private Sub pvSetAdvance()" & vbCrLf & _
-"    With ctx" & vbCrLf & _
+"    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        If .BufPos > .LastBufPos Then" & vbCrLf & _
 "            .LastExpected = vbNullString" & vbCrLf & _
 "            .LastError = vbNullString" & vbCrLf & _
@@ -1486,12 +1490,14 @@ Public Function EmitCode( _
 "End Sub" & vbCrLf & _
 "" & vbCrLf & _
 "Private Sub pvSetExpected(sText As String)" & vbCrLf & _
-"    With ctx" & vbCrLf & _
+"    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        If LenB(.LastExpected) = 0 Or .BufPos > .LastBufPos Then" & vbCrLf & _
-"            .LastExpected = sText" & vbCrLf & _
+"            .LastExpected = vbNullChar & sText & vbNullChar" & vbCrLf & _
 "            .LastBufPos = .BufPos" & vbCrLf & _
 "        ElseIf .BufPos = .LastBufPos Then" & vbCrLf & _
-"            .LastExpected = .LastExpected & "" or "" & sText" & vbCrLf & _
+"            If InStr(.LastExpected, vbNullChar & sText & vbNullChar) = 0 Then" & vbCrLf & _
+"                .LastExpected = .LastExpected & sText & vbNullChar" & vbCrLf & _
+"            End If" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End With" & vbCrLf & _
 "End Sub" & vbCrLf
