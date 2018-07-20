@@ -1,0 +1,112 @@
+/*
+ * A simple java-like grammar with error recovery and throwing error labels from "Syntax Error 
+ * Recovery in Parsing Expression Grammars" by Sérgio Medeiros, Fabio Mascarenhas [1]
+ *
+ * [1] https://arxiv.org/abs/1806.11150
+ *
+ */
+
+# Syntax
+ 
+Prog 
+    = PUBLIC CLASS NAME LCUR 
+            PUBLIC STATIC VOID MAIN LPAR STRING LBRA RBRA NAME RPAR 
+                BlockStmt
+      RCUR
+
+BlockStmt 
+    = LCUR (Stmt)* RCUR^ErrRcblk
+
+Stmt 
+    = IfStmt / WhileStmt / PrintStmt / DecStmt / AssignStmt / BlockStmt
+
+IfStmt 
+    = IF LPAR^ErrLpif Exp^ErrCondi RPAR^ErrRpif Stmt^ErrThen (ELSE Stmt^ErrElse / EPSILON)
+
+WhileStmt 
+    = WHILE LPAR^ErrLpw Exp^ErrCondw RPAR^ErrRpw Stmt^ErrBody
+
+DecStmt 
+    = INT NAME^ErrNdec (ASSIGN Exp^ErrEdec / EPSILON) SEMI^ErrSemid
+
+AssignStmt 
+    = NAME ASSIGN^ErrAssign Exp^ErrRval SEMI^ErrSemia
+
+PrintStmt 
+    = PRINTLN LPAR^ErrLpp Exp^ErrEprint RPAR^ErrRpp SEMI^ErrSemip
+
+Exp 
+    = RelExp (EQ RelExp^ErrRelexp)*
+
+RelExp 
+    = AddExp (LT AddExp^ErrAddexp)*
+
+AddExp 
+    = MulExp ((PLUS / MINUS) MulExp^ErrMulexp)*
+
+MulExp 
+    = AtomExp ((TIMES / DIV) AtomExp^ErrAtomexp)*
+
+AtomExp 
+    = LPAR Exp^ErrParexp RPAR^ErrRpe / NUMBER / NAME
+
+# Lexical
+
+PUBLIC      = 'public' -
+CLASS       = 'class' -
+NAME        = [a-zA-Z_] [a-zA-Z_0-9]* -
+LCUR        = '{' -
+RCUR        = '}' -
+STATIC      = 'static' -
+VOID        = 'void' -
+MAIN        = 'main' -
+LPAR        = '(' -
+RPAR        = ')' -
+EPSILON     = '' -
+STRING      = 'String' -
+LBRA        = '[' -
+RBRA        = ']' -
+IF          = 'if' -
+ELSE        = 'else' -
+WHILE       = 'while' -
+INT         = 'int' -
+ASSIGN      = '=' -
+SEMI        = ';' -
+PRINTLN     = 'System.out.println' -
+EQ          = '=' -
+LT          = '<' -
+PLUS        = '+' -
+MINUS       = '-' -
+TIMES       = '*' -
+DIV         = '/' -
+NUMBER      = [0-9]+ -
+-           = [ \t\r\n]*
+
+# Error handling
+
+ErrSemia    = (!'')^"Missing semicolon in assignment"
+ErrRcblk    = (!'')^"Missing end of block"
+ErrLpif     = (!'')^"ErrLpif"
+ErrCondi    = (!'')^"ErrCondi"
+ErrRpif     = (!'')^"ErrRpif"
+ErrThen     = (!'')^"ErrThen"
+ErrElse     = (!'')^"ErrElse"
+ErrLpw      = (!'')^"ErrLpw"
+ErrCondw    = (!'')^"ErrCondw"
+ErrRpw      = (!'')^"ErrRpw"
+ErrBody     = (!'')^"ErrBody"
+ErrNdec     = (!'')^"ErrNdec"
+ErrEdec     = (!'')^"ErrEdec"
+ErrSemid    = (!'')^"ErrSemid"
+ErrAssign   = (!'')^"ErrAssign"
+ErrRval     = (!'')^"ErrRval"
+ErrLpp      = (!'')^"ErrLpp"
+ErrEprint   = (!'')^"ErrEprint"
+ErrRpp      = (!'')^"ErrRpp"
+ErrSemip    = (!'')^"ErrSemip"
+ErrRelexp   = (!'')^"ErrRelexp"
+ErrAddexp   = (!'')^"ErrAddexp"
+ErrMulexp   = (!'')^"ErrMulexp"
+ErrAtomexp  = (!'')^"ErrAtomexp"
+ErrParexp   = (!'')^"ErrParexp"
+ErrRpe      = (!'')^"ErrRpe"
