@@ -94,6 +94,8 @@ Private Type UcsIrType
     CodeGenStartFunc    As String
     CodeGenVarStack     As Boolean
     CodeGenMatchString  As Boolean
+    CodeGenSetExpected  As Boolean
+    CodeGenSetError     As Boolean
     IrActionsEnum       As Long
     IrActionsSelect     As Long
     OutModulePrefix     As String
@@ -260,6 +262,7 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                     End If
                     If LenB(.RuleDescription(vElem)) <> 0 Then
                         Debug.Assert lFailure = IR_CONTINUE
+                        m_uIr.CodeGenSetExpected = True
                         lFailure = AddNode(ucsIrtStmtEmit, "Call pvSetExpected(" & pvToVbString(.RuleDescription(vElem)) & ")")
                     End If
                     lIrNode = pvCodeGenNode(.NodeChild(vElem, 0), lSuccess, lFailure)
@@ -496,16 +499,17 @@ Private Function pvCodeGenNode( _
                         AddNode(ucsIrtStmtCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
                         lSuccess)
             Else
-                lIrNode = AddNode(ucsIrtStmtEmit, ".LastError = " & pvToVbString(.NodeText(lNode)) & ": .LastBufPos = .BufPos")
-                If lFailure = IR_CONTINUE Then
-                    lFailure = lIrNode
-                Else
-                    lFailure = AddChild(AddChild( _
-                        AddNode(ucsIrtBlock), _
-                            lIrNode), _
-                            lFailure)
-                End If
                 If .NodeRefRule(lNode) = 0 Then
+                    m_uIr.CodeGenSetError = True
+                    lIrNode = AddNode(ucsIrtStmtEmit, "Call pvSetError(" & pvToVbString(.NodeText(lNode)) & ")")
+                    If lFailure = IR_CONTINUE Then
+                        lFailure = lIrNode
+                    Else
+                        lFailure = AddChild(AddChild( _
+                            AddNode(ucsIrtBlock), _
+                                lIrNode), _
+                                lFailure)
+                    End If
                     pvCodeGenNode = lFailure
                 Else
                     pvCodeGenNode = AddChild(AddChild(AddChild( _
@@ -1493,8 +1497,10 @@ Public Function EmitCode( _
 "            .LastBufPos = .BufPos" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End With" & vbCrLf & _
-"End Sub" & vbCrLf & _
-"" & vbCrLf & _
+"End Sub" & vbCrLf
+        End If
+        If .CodeGenSetExpected Then
+            pvOutput _
 "Private Sub pvSetExpected(sText As String)" & vbCrLf & _
 "    With " & STR_CTX_VAR_NAME & vbCrLf & _
 "        If LenB(.LastExpected) = 0 Or .BufPos > .LastBufPos Then" & vbCrLf & _
@@ -1504,6 +1510,19 @@ Public Function EmitCode( _
 "            If InStr(.LastExpected, vbNullChar & sText & vbNullChar) = 0 Then" & vbCrLf & _
 "                .LastExpected = .LastExpected & sText & vbNullChar" & vbCrLf & _
 "            End If" & vbCrLf & _
+"        End If" & vbCrLf & _
+"    End With" & vbCrLf & _
+"End Sub" & vbCrLf
+        End If
+        If .CodeGenSetError Then
+            pvOutput _
+"Private Sub pvSetError(sText As String)" & vbCrLf & _
+"    With " & STR_CTX_VAR_NAME & vbCrLf & _
+"        If LenB(.LastError) = 0 Or .BufPos > .LastBufPos Then" & vbCrLf & _
+"            .LastError = sText" & vbCrLf & _
+"            .LastBufPos = .BufPos" & vbCrLf & _
+"        ElseIf .BufPos = .LastBufPos Then" & vbCrLf & _
+"            .LastError = .LastError & ""; "" & sText" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End With" & vbCrLf & _
 "End Sub" & vbCrLf

@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 20.7.2018 15:40:03
+' Auto-generated on 20.7.2018 18:01:44
 Option Explicit
 DefObj A-Z
 
@@ -98,7 +98,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "20.7.2018 15:40:03"
+    ParserVersion = "20.7.2018 18:01:44"
 End Property
 
 '=========================================================================
