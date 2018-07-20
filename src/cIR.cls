@@ -36,6 +36,7 @@ Private Const LNG_COMMENT_COLUMN    As Long = 51
 Private Const STR_FUNC_PREFIX       As String = "Parse"
 Private Const STR_BUFPOS_PREFIX     As String = "p"
 Private Const STR_THUNKPOS_PREFIX   As String = "q"
+Private Const STR_EXPECTED_PREFIX   As String = "e"
 Private Const STR_FOR_PREFIX        As String = "i"
 Private Const STR_CTX_VAR_NAME      As String = "ctx"
 Private Const STR_ACTIONS_ENUM_NAME As String = "UcsParserActionsEnum"
@@ -236,10 +237,7 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                     End If
                     IrFlag(lBody, ucsIrfPublic) = (.NodeText(vElem) <> UCase$(.NodeText(vElem)))
                     If .NodeFlag(vElem, ucsNdfHasAdvance) Then
-                        lSuccess = AddChild(AddChild( _
-                            AddNode(ucsIrtStmtIf), _
-                                AddNode(ucsIrtExprEmit, ".BufPos > .LastBufPos")), _
-                                AddNode(ucsIrtStmtEmit, ".LastError = vbNullString: .LastBufPos = .BufPos"))
+                        lSuccess = AddNode(ucsIrtStmtEmit, "Call pvSetAdvance")
                     Else
                         lSuccess = IR_CONTINUE
                     End If
@@ -262,10 +260,7 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                     End If
                     If LenB(.RuleDescription(vElem)) <> 0 Then
                         Debug.Assert lFailure = IR_CONTINUE
-                        lFailure = AddChild(AddChild( _
-                            AddNode(ucsIrtStmtIf), _
-                                AddNode(ucsIrtExprEmit, "LenB(.LastError) = 0 Or .BufPos > .LastBufPos")), _
-                                AddNode(ucsIrtStmtEmit, ".LastError = ""Expected " & .RuleDescription(vElem) & """: .LastBufPos = .BufPos"))
+                        lFailure = AddNode(ucsIrtStmtEmit, "Call pvSetExpected(" & pvToVbString(.RuleDescription(vElem)) & ")")
                     End If
                     lIrNode = pvCodeGenNode(.NodeChild(vElem, 0), lSuccess, lFailure)
                     If lIrNode = 0 Then
@@ -603,6 +598,15 @@ Private Function pvCodeGenNode( _
                     lIrNode = lSuccess
                 End If
                 pvCodeGenNode = pvCodeGenNode(.NodeChild(lNode, 0), lIrNode, lFailure)
+            ElseIf .NodeType(.NodeChild(lNode, 0)) = ucsNdtReference Then
+                lIrNode = AddChild(AddChild( _
+                    AddNode(ucsIrtBlock), _
+                        AddNode(ucsIrtStmtRestorePos, STR_EXPECTED_PREFIX & lNode)), _
+                        lSuccess)
+                pvCodeGenNode = AddChild(AddChild( _
+                    AddNode(ucsIrtBlock), _
+                        AddNode(ucsIrtStmtSavePos, STR_EXPECTED_PREFIX & lNode)), _
+                        pvCodeGenNode(.NodeChild(lNode, 0), lFailure, lIrNode))
             Else
                 pvCodeGenNode = pvCodeGenNode(.NodeChild(lNode, 0), lFailure, lSuccess)
             End If
@@ -1298,6 +1302,7 @@ Public Function EmitCode( _
 "    ThunkPos            As Long" & vbCrLf & _
 "    CaptureBegin        As Long" & vbCrLf & _
 "    CaptureEnd          As Long" & vbCrLf & _
+"    LastExpected        As String" & vbCrLf & _
 "    LastError           As String" & vbCrLf & _
 "    LastBufPos          As Long" & vbCrLf & _
 "    UserData            As " & sUserData & vbCrLf & _
@@ -1343,7 +1348,11 @@ Public Function EmitCode( _
 "        If " & .OutModulePrefix & .CodeGenStartFunc & "() Then" & vbCrLf & _
 "            " & .OutModulePrefix & "Match = " & .OutModulePrefix & "EndMatch(Result)" & vbCrLf & _
 "        ElseIf LenB(" & STR_CTX_VAR_NAME & ".LastError) = 0 Then" & vbCrLf & _
-"            " & STR_CTX_VAR_NAME & ".LastError = ""Fail""" & vbCrLf & _
+"            If LenB(" & STR_CTX_VAR_NAME & ".LastExpected) = 0 Then" & vbCrLf & _
+"                " & STR_CTX_VAR_NAME & ".LastError = ""Fail""" & vbCrLf & _
+"            Else" & vbCrLf & _
+"                " & STR_CTX_VAR_NAME & ".LastError = ""Expected "" & ctx.LastExpected" & vbCrLf & _
+"            End If" & vbCrLf & _
 "        End If" & vbCrLf & _
 "    End If" & vbCrLf & _
 "End Function" & vbCrLf
@@ -1463,6 +1472,29 @@ Public Function EmitCode( _
 "        End If" & vbCrLf & _
 "    End With" & vbCrLf & _
 "End Function" & vbCrLf
+        End If
+        If True Then
+            pvOutput _
+"Private Sub pvSetAdvance()" & vbCrLf & _
+"    With ctx" & vbCrLf & _
+"        If .BufPos > .LastBufPos Then" & vbCrLf & _
+"            .LastExpected = vbNullString" & vbCrLf & _
+"            .LastError = vbNullString" & vbCrLf & _
+"            .LastBufPos = .BufPos" & vbCrLf & _
+"        End If" & vbCrLf & _
+"    End With" & vbCrLf & _
+"End Sub" & vbCrLf & _
+"" & vbCrLf & _
+"Private Sub pvSetExpected(sText As String)" & vbCrLf & _
+"    With ctx" & vbCrLf & _
+"        If LenB(.LastExpected) = 0 Or .BufPos > .LastBufPos Then" & vbCrLf & _
+"            .LastExpected = sText" & vbCrLf & _
+"            .LastBufPos = .BufPos" & vbCrLf & _
+"        ElseIf .BufPos = .LastBufPos Then" & vbCrLf & _
+"            .LastExpected = .LastExpected & "" or "" & sText" & vbCrLf & _
+"        End If" & vbCrLf & _
+"    End With" & vbCrLf & _
+"End Sub" & vbCrLf
         End If
         pvOutput _
 "'= generated functions ===================================================" & vbCrLf
@@ -1584,14 +1616,22 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
         Case ucsIrtStmtSavePos
             If Left$(.Text, Len(STR_BUFPOS_PREFIX)) = STR_BUFPOS_PREFIX Then
                 pvOutput .Text & " = .BufPos"
-            Else
+            ElseIf Left$(.Text, Len(STR_THUNKPOS_PREFIX)) = STR_THUNKPOS_PREFIX Then
                 pvOutput .Text & " = .ThunkPos"
+            ElseIf Left$(.Text, Len(STR_EXPECTED_PREFIX)) = STR_EXPECTED_PREFIX Then
+                pvOutput .Text & " = .LastExpected"
+            Else
+                Debug.Assert False
             End If
         Case ucsIrtStmtRestorePos
             If Left$(.Text, Len(STR_BUFPOS_PREFIX)) = STR_BUFPOS_PREFIX Then
                 pvOutput ".BufPos = " & .Text
-            Else
+            ElseIf Left$(.Text, Len(STR_THUNKPOS_PREFIX)) = STR_THUNKPOS_PREFIX Then
                 pvOutput ".ThunkPos = " & .Text
+            ElseIf Left$(.Text, Len(STR_EXPECTED_PREFIX)) = STR_EXPECTED_PREFIX Then
+                pvOutput ".LastExpected = " & .Text
+            Else
+                Debug.Assert False
             End If
         Case ucsIrtStmtIncrPos
             If Left$(.Text, 1) = "-" Then
@@ -1659,7 +1699,13 @@ Private Sub pvEmitCollectDeclVar(ByVal lNode As Long)
     
     With m_uIr.Nodes(lNode)
         Select Case .NodeType
-        Case ucsIrtStmtSavePos, ucsIrtStmtForLoop, ucsIrtStmtCapture
+        Case ucsIrtStmtSavePos
+            If Left$(.Text, Len(STR_EXPECTED_PREFIX)) = STR_EXPECTED_PREFIX Then
+                m_uIr.OutDictionary.Item(.Text) = "String"
+            Else
+                m_uIr.OutDictionary.Item(.Text) = "Long"
+            End If
+        Case ucsIrtStmtForLoop, ucsIrtStmtCapture
             m_uIr.OutDictionary.Item(.Text) = "Long"
         End Select
         For lIdx = 0 To .Count - 1
