@@ -3,8 +3,8 @@
 //
 // Accepts expressions like "2 * (3 + 4)" and computes their value.
 
-//@namespace MyProject
-//@classname ExpressionParser
+@namespace MyProject
+@classname ExpressionParser
 
 @members {
     Indent              As Long
