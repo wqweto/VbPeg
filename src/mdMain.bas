@@ -42,7 +42,7 @@ Private Declare Sub ExitProcess Lib "kernel32" (ByVal uExitCode As Long)
 ' Constants and member variables
 '=========================================================================
 
-Private Const STR_VERSION           As String = "0.3.7"
+Private Const STR_VERSION           As String = "0.3.8"
 
 Private m_oParser               As cParser
 Private m_oOpt                  As Object
