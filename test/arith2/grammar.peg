@@ -1,0 +1,19 @@
+start
+  = additive
+
+additive
+  = left:multiplicative "+" right:additive { $$ = $left + $right }
+  / left:multiplicative "-" right:additive { $$ = $left - $right }
+  / multiplicative
+
+multiplicative
+  = left:primary "*" right:multiplicative { $$ = $left * $right }
+  / primary
+
+primary "primary"
+  = integer
+  / "(" additive:additive ")" { $$ = $additive }
+
+integer "integer"
+  = <[0-9]+> { $$ = CDbl($$text) }
+    
