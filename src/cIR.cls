@@ -902,10 +902,16 @@ Private Function pvCodeGenFindCtxUse(ByVal lNode As Long) As Boolean
     
     With m_uIr.Nodes(lNode)
         '--- note: euristic for emitted VB6 code that uses context member var
-        If Left$(.Text, 1) = "." Or .NodeType = ucsIrtStmtSavePos Or .NodeType = ucsIrtStmtRestorePos Or .NodeType = ucsIrtStmtCapture Or .NodeType = ucsIrtStmtPushAction Then
+        Select Case .NodeType
+        Case ucsIrtStmtSavePos, ucsIrtStmtRestorePos, ucsIrtStmtCapture, ucsIrtStmtPushAction
             pvCodeGenFindCtxUse = True
             Exit Function
-        End If
+        End Select
+        Select Case True
+        Case Left$(.Text, 1) = ".", Left$(.Text, 13) = "pvMatchString"
+            pvCodeGenFindCtxUse = True
+            Exit Function
+        End Select
         For lIdx = 0 To .Count - 1
             If pvCodeGenFindCtxUse(.Children(lIdx)) Then
                 pvCodeGenFindCtxUse = True
