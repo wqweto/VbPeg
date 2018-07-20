@@ -5,3 +5,6 @@
 *.dll -text
 *.cmp -text
 *.cobj -text
+
+# generated
+src/cParser.cls -text
