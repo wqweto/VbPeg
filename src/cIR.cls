@@ -444,7 +444,7 @@ Private Function pvCodeGenNode( _
                 lSuccess = AddNode(ucsIrtStmtGoTo, sText)
                 lIrNode = lFailure
                 For lIdx = .NodeNumChildren(lNode) - 1 To 0 Step -1
-                    lIrNode = pvCodeGenNode(.NodeChild(lNode, lIdx), lSuccess, lIrNode)
+                    lIrNode = pvCodeGenNode(.NodeChild(lNode, lIdx), pvCodeGenReplaceLabels(lSuccess), lIrNode)
                     If lIrNode = 0 Then
                         GoTo QH
                     End If
@@ -564,7 +564,7 @@ Private Function pvCodeGenNode( _
             If lIrNode = 0 Then
                 GoTo QH
             End If
-            If lSuccess = IR_CONTINUE Then
+            If lSuccess = IR_CONTINUE And lFailure <> IR_CONTINUE Then
                 pvCodeGenNode = AddChild(AddChild( _
                     AddNode(ucsIrtBlock), AddChild( _
                         AddNode(ucsIrtStmtForLoop, STR_FOR_PREFIX & lNode), _
@@ -662,7 +662,7 @@ Private Function pvCodeGenNode( _
 EmitStmtIfOnIrNode:
             pvCodeGenNode = AddNode(ucsIrtStmtIf, Comment:=IIf(.NodeType(lNode) = ucsNdtString, """" & .NodeText(lNode) & """" & _
                 IIf(.NodeFlag(lNode, ucsNdfIgnoreCase), "i", vbNullString), vbNullString))
-            If lSuccess = IR_CONTINUE Then
+            If lSuccess = IR_CONTINUE And lFailure <> IR_CONTINUE Then
                 AddChild pvCodeGenNode, AddChild(AddNode(ucsIrtExprNot), lIrNode)
                 AddChild pvCodeGenNode, lFailure
             Else
@@ -713,6 +713,11 @@ EmitStmtIfOnIrNode:
                         lIrNode = AddNode(ucsIrtExprEmit, sText)
                     Else
                         lIrNode = AddNode(ucsIrtExprEmit, "Not (" & sText & ")")
+                    End If
+                    If Right$(sText, 10) = " And False" Then
+                        lSuccess = IR_CONTINUE
+                    ElseIf Right$(sText, 8) = " Or True" Then
+                        lFailure = IR_CONTINUE
                     End If
                     GoTo EmitStmtIfOnIrNode
                 End If

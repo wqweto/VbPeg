@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 19.7.2018 20:47:20
+' Auto-generated on 20.7.2018 8:47:00
 Option Explicit
 DefObj A-Z
 
@@ -97,7 +97,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "19.7.2018 20:47:20"
+    ParserVersion = "20.7.2018 8:47:00"
 End Property
 
 '=========================================================================
@@ -225,7 +225,7 @@ Public Function ParseGrammar() As Boolean
             .ThunkPos = q17
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Grammar", 3, ctx.UserData) And False Then
-            ParseGrammar = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -287,7 +287,7 @@ Public Function ParseSetting() As Boolean
             .ThunkPos = q235
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Setting", 3, ctx.UserData) And False Then
-            ParseSetting = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -333,7 +333,7 @@ Public Function ParseRule() As Boolean
             .ThunkPos = q43
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Rule", 3, ctx.UserData) And False Then
-            ParseRule = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -347,7 +347,7 @@ Public Function ParseEndOfFile() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "EndOfFile", 3, ctx.UserData) And False Then
-            ParseEndOfFile = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -374,7 +374,7 @@ Public Function ParseIdentifier() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Identifier", 3, ctx.UserData) And False Then
-            ParseIdentifier = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -397,7 +397,7 @@ Public Function ParseLiteral() As Boolean
             .ThunkPos = q295
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Literal", 3, ctx.UserData) And False Then
-            ParseLiteral = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -415,7 +415,7 @@ Public Function ParseAssignLiteral() As Boolean
         Exit Function
     End If
     If ConsoleTrace(ctx.BufPos + 1, "AssignLiteral", 3, ctx.UserData) And False Then
-        ParseAssignLiteral = True
+        '--- do nothing
     End If
 End Function
 
@@ -439,10 +439,7 @@ Private Function ParseSEMI() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "SEMI", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseSEMI = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -509,7 +506,7 @@ Public Function ParseChoiceLiteral() As Boolean
         Exit Function
     End If
     If ConsoleTrace(ctx.BufPos + 1, "ChoiceLiteral", 3, ctx.UserData) And False Then
-        ParseChoiceLiteral = True
+        '--- do nothing
     End If
 End Function
 
@@ -569,7 +566,7 @@ L10:
             .ThunkPos = q99
         End If
         If ConsoleTrace(ctx.BufPos + 1, "ErrorExpr", 3, ctx.UserData) And False Then
-            ParseErrorExpr = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -611,7 +608,7 @@ Public Function ParseVariableExpr() As Boolean
             .ThunkPos = q112
         End If
         If ConsoleTrace(ctx.BufPos + 1, "VariableExpr", 3, ctx.UserData) And False Then
-            ParseVariableExpr = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -630,10 +627,7 @@ Private Function ParseCARET() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "CARET", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseCARET = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -652,10 +646,7 @@ Private Function ParseCOLON() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "COLON", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseCOLON = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -718,7 +709,7 @@ Public Function ParsePrefixExpr() As Boolean
             .ThunkPos = q129
         End If
         If ConsoleTrace(ctx.BufPos + 1, "PrefixExpr", 3, ctx.UserData) And False Then
-            ParsePrefixExpr = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -737,10 +728,7 @@ Private Function ParseAND() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "AND", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseAND = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -797,10 +785,7 @@ Public Function ParseCodeBlock() As Boolean
             End If
         End If
         If ConsoleTrace(ctx.BufPos + 1, "CodeBlock", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseCodeBlock = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -834,7 +819,7 @@ L12:
             .ThunkPos = q159
         End If
         If ConsoleTrace(ctx.BufPos + 1, "SuffixExpr", 3, ctx.UserData) And False Then
-            ParseSuffixExpr = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -853,10 +838,7 @@ Private Function ParseNOT() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "NOT", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseNOT = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1001,7 +983,7 @@ Public Function ParsePrimaryExpr() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "PrimaryExpr", 3, ctx.UserData) And False Then
-            ParsePrimaryExpr = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1020,10 +1002,7 @@ Private Function ParseQUESTION() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "QUESTION", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseQUESTION = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1042,10 +1021,7 @@ Private Function ParseSTAR() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "STAR", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseSTAR = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1064,10 +1040,7 @@ Private Function ParsePLUS() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "PLUS", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParsePLUS = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1127,10 +1100,7 @@ Public Function ParseLiteralNC() As Boolean
             End If
         End If
         If ConsoleTrace(ctx.BufPos + 1, "LiteralNC", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseLiteralNC = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1149,10 +1119,7 @@ Private Function ParseOPEN() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "OPEN", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseOPEN = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1171,10 +1138,7 @@ Private Function ParseCLOSE() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "CLOSE", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseCLOSE = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1248,10 +1212,7 @@ Public Function ParseLiteralNoSpace() As Boolean
             End If
         End If
         If ConsoleTrace(ctx.BufPos + 1, "LiteralNoSpace", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseLiteralNoSpace = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1277,10 +1238,7 @@ Public Function ParseIgnoreCase() As Boolean
             Exit Function
         End Select
         If ConsoleTrace(ctx.BufPos + 1, "IgnoreCase", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseIgnoreCase = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1323,10 +1281,7 @@ Public Function ParseClassNoSpace() As Boolean
             End If
         End If
         If ConsoleTrace(ctx.BufPos + 1, "ClassNoSpace", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseClassNoSpace = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1345,10 +1300,7 @@ Private Function ParseDOT() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "DOT", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseDOT = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1367,10 +1319,7 @@ Private Function ParseBEGIN() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "BEGIN", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseBEGIN = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1389,10 +1338,7 @@ Private Function ParseEND() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "END", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseEND = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1428,7 +1374,7 @@ Public Function ParseSettingName() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "SettingName", 3, ctx.UserData) And False Then
-            ParseSettingName = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1469,7 +1415,7 @@ Public Function ParseSettingValue() As Boolean
             .ThunkPos = q254
         End If
         If ConsoleTrace(ctx.BufPos + 1, "SettingValue", 3, ctx.UserData) And False Then
-            ParseSettingValue = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1488,10 +1434,7 @@ Private Function ParseAT() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "AT", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseAT = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1528,10 +1471,7 @@ Public Function ParseIdentStart() As Boolean
             Exit Function
         End Select
         If ConsoleTrace(ctx.BufPos + 1, "IdentStart", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseIdentStart = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1550,10 +1490,7 @@ Public Function ParseIdentCont() As Boolean
             Exit Function
         End Select
         If ConsoleTrace(ctx.BufPos + 1, "IdentCont", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseIdentCont = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1708,11 +1645,7 @@ Public Function ParseChar() As Boolean
             End If
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Char", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseChar = True
-            Exit Function
+            '--- do nothing
         End If
         If LenB(.LastError) = 0 Or .BufPos > .LastBufPos Then
             .LastError = "Expected char": .LastBufPos = .BufPos
@@ -1756,10 +1689,7 @@ Public Function ParseRange() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Range", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseRange = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1778,10 +1708,7 @@ Private Function ParseLEFTARROW() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "LEFTARROW", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseLEFTARROW = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1807,10 +1734,7 @@ Private Function ParseSLASH() As Boolean
             End If
         End If
         If ConsoleTrace(ctx.BufPos + 1, "SLASH", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseSLASH = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1845,10 +1769,7 @@ Public Function ParseSpace() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Space", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseSpace = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1913,10 +1834,7 @@ Public Function ParseComment() As Boolean
             End If
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Comment", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseComment = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1952,10 +1870,7 @@ Public Function ParseEndOfLine() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "EndOfLine", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseEndOfLine = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -1998,10 +1913,7 @@ Public Function ParseCodeNC() As Boolean
             End If
         End If
         If ConsoleTrace(ctx.BufPos + 1, "CodeNC", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseCodeNC = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -2020,10 +1932,7 @@ Private Function ParseEQUAL() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "EQUAL", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseEQUAL = True
+            '--- do nothing
         End If
     End With
 End Function
@@ -2042,10 +1951,7 @@ Private Function ParseBAR() As Boolean
             Exit Function
         End If
         If ConsoleTrace(ctx.BufPos + 1, "BAR", 3, ctx.UserData) And False Then
-            If .BufPos > .LastBufPos Then
-                .LastError = vbNullString: .LastBufPos = .BufPos
-            End If
-            ParseBAR = True
+            '--- do nothing
         End If
     End With
 End Function
