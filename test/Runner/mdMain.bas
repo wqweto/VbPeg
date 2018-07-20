@@ -54,7 +54,7 @@ Private Sub Main()
         m_sContents = ReadTextFile(m_sFileName)
         m_sFileName = Mid$(m_sFileName, InStrRev(m_sFileName, "\") + 1)
         pvBuildLineInfo m_sContents
-        Do While lPos < Len(m_sContents)
+        Do While lPos <= Len(m_sContents)
             vResult = Empty
             lPos = VbPegMatch(m_sContents, lPos - 1, Result:=vResult)
             If lPos = 0 Then
