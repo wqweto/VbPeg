@@ -110,8 +110,9 @@ OPEN            <- '(' Spacing
 CLOSE           <- ')' Spacing
 DOT             <- '.' Spacing
 EMPTY           <- < '' > Spacing                                       { }
-Spacing         <- (Space / Comment)*
-Comment         <- ('#' / '//') (!EndOfLine .)* EndOfLine
+Spacing         <- (Space / LineComment / BlockComment)*
+LineComment     <- ('#' / '//') [^\r\n]* EndOfLine
+BlockComment    <- '/*' ([^*/] / BlockComment / (!'*/' .))* '*/'
 Space           <- ' ' / '\t' / EndOfLine
 EndOfLine       <- '\r\n' / '\n' / '\r'
 EndOfFile       <- !.
