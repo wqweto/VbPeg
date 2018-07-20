@@ -44,7 +44,7 @@
 2.in:1:4     |a                                                           |    !Factor
 2.in:1:4     |a                                                           |  !Term
 2.in:1:3     |+a                                                          |=Expression
-Pos: 3, Result: 12, Warning: ErrInteger
+Pos: 3, Result: 12
 2.in:1:3     |+a                                                          |?Expression
 2.in:1:3     |+a                                                          |  ?Term
 2.in:1:3     |+a                                                          |    ?Factor
@@ -81,4 +81,4 @@ Pos: 3, Result: 12, Warning: ErrInteger
 2.in:1:3     |+a                                                          |    !Factor
 2.in:1:3     |+a                                                          |  !Term
 2.in:1:3     |+a                                                          |!Expression
-LastError: ErrInteger, LastOffset: 3
+LastError: Expected integer, LastOffset: 7
