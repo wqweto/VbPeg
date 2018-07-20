@@ -633,7 +633,7 @@ Private Function pvConsumeInput(ByVal lNode As Long, cResult As Collection) As B
                 If Not SearchCollection(cResult, "#" & lNode) Then
                     cResult.Add Array("Possible left recursion in rule '" & .Text & "'", .Offset), "#" & lNode
                 End If
-            Else
+            ElseIf .Children(0) <> 0 Then
                 .Flags = .Flags Or ucsNdfReached
                 pvConsumeInput = pvConsumeInput(.Children(0), cResult)
                 .Flags = .Flags And Not ucsNdfReached
