@@ -984,7 +984,6 @@ Private Function pvCodeGenTrimGotoNext(ByVal lNode As Long) As Boolean
     Dim lIdx            As Long
     Dim cLab            As Collection
     Dim bNeedTransform  As Boolean
-    Dim lNewNode        As Long
     
     Set oCol = New Collection
     pvEnumChildNodes lNode, oCol
@@ -1038,9 +1037,9 @@ Private Function pvCodeGenTrimGotoNext(ByVal lNode As Long) As Boolean
             End If
         End With
         If bNeedTransform Then
-            lNewNode = AddNode(ucsIrtExprNot)
+            m_uIr.Nodes(oCol.Item(lIdx)).Children(0) = AddChild( _
+                AddNode(ucsIrtExprNot), m_uIr.Nodes(oCol.Item(lIdx)).Children(0))
             With m_uIr.Nodes(oCol.Item(lIdx))
-                .Children(0) = AddChild(lNewNode, .Children(0))
                 .Children(1) = .Children(2)
                 .Count = 2
                 ReDim Preserve .Children(0 To 1) As Long
