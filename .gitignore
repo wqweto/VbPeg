@@ -11,7 +11,9 @@
 *.dll
 *.exe
 *.pdb
-*/_del/*
+**/_del
 ~*
 *.xlsb
 *.out
+test/markdown/3.expect
+test/markdown/3.in
