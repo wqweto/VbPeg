@@ -607,15 +607,23 @@ Private Function pvCodeGenNode( _
             End If
         Case ucsNdtQuery
             '-- always true -> discard lFailure
-            sText = "L" & pvCodeGenId
             pvCodeGenNode = AddNode(ucsIrtBlock)
             If .NodeFlag(lNode, ucsNdfSavePos) Then
                 AddChild pvCodeGenNode, AddNode(ucsIrtStmtSavePos, STR_BUFPOS_PREFIX & lNode)
                 If .NodeFlag(lNode, ucsNdfHasActions) Then
                     AddChild pvCodeGenNode, AddNode(ucsIrtStmtSavePos, STR_THUNKPOS_PREFIX & lNode)
                 End If
+                lIrNode = AddNode(ucsIrtBlock)
+                AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & lNode)
+                If .NodeFlag(lNode, ucsNdfHasActions) Then
+                    AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & lNode)
+                End If
+                lFailure = lIrNode
+            Else
+                lFailure = IR_CONTINUE
             End If
-            AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), AddNode(ucsIrtStmtGoTo, sText), IR_CONTINUE)
+            sText = "L" & pvCodeGenId
+            AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), AddNode(ucsIrtStmtGoTo, sText), lFailure)
             AddChild pvCodeGenNode, AddNode(ucsIrtDeclLabel, sText)
             AddChild pvCodeGenNode, lSuccess
         Case ucsNdtPeekFor
@@ -627,26 +635,30 @@ Private Function pvCodeGenNode( _
                 End If
             End If
             If Not .NodeFlag(lNode, ucsNdfIsNot) Then
-                If .NodeFlag(lNode, ucsNdfRestorePos) Then
-                    lIrNode = AddChild( _
-                        AddNode(ucsIrtBlock), _
-                            AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & .NodeRestoreFrom(lNode)))
+                If .NodeFlag(lNode, ucsNdfSavePos) Then
+                    lIrNode = AddNode(ucsIrtBlock)
+                    AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & lNode)
                     If .NodeFlag(lNode, ucsNdfHasActions) Then
-                        AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & .NodeRestoreFrom(lNode))
+                        AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & lNode)
                     End If
                     AddChild lIrNode, lSuccess
-                Else
-                    lIrNode = lSuccess
+                    lSuccess = lIrNode
                 End If
-                AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), lIrNode, lFailure)
-            ElseIf .NodeType(.NodeChild(lNode, 0)) = ucsNdtReference Then
-                lIrNode = AddChild(AddChild( _
-                    AddNode(ucsIrtBlock), _
-                        AddNode(ucsIrtStmtRestorePos, STR_EXPECTED_PREFIX & lNode)), _
-                        lSuccess)
-                AddChild pvCodeGenNode, AddNode(ucsIrtStmtSavePos, STR_EXPECTED_PREFIX & lNode)
-                AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), lFailure, lIrNode)
+                AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), lSuccess, lFailure)
             Else
+                If .NodeFlag(lNode, ucsNdfSavePos) Then
+                    lIrNode = AddNode(ucsIrtBlock)
+                    AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & lNode)
+                    If .NodeFlag(lNode, ucsNdfHasActions) Then
+                        AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & lNode)
+                    End If
+                    If .NodeType(.NodeChild(lNode, 0)) = ucsNdtReference Then
+                        AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_EXPECTED_PREFIX & lNode)
+                        AddChild pvCodeGenNode, AddNode(ucsIrtStmtSavePos, STR_EXPECTED_PREFIX & lNode)
+                    End If
+                    AddChild lIrNode, lSuccess
+                    lSuccess = lIrNode
+                End If
                 AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), lFailure, lSuccess)
             End If
         Case ucsNdtString
