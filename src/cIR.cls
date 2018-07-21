@@ -23,6 +23,8 @@ Attribute VB_Exposed = False
 Option Explicit
 DefObj A-Z
 
+#Const ImplLockedArrayTest = (DEBUG_LOCKED_ARRAY_TEST <> 0)
+
 '=========================================================================
 ' Constants and member variables
 '=========================================================================
@@ -152,6 +154,11 @@ Public Function AddNode( _
             .Count = IR_ROOT + 1
         ElseIf .Count > UBound(.Nodes) Then
             ReDim Preserve .Nodes(0 To 2 * UBound(.Nodes)) As UcsIrNodeType
+        Else
+            #If ImplLockedArrayTest Then
+                ReDim Preserve .Nodes(0 To UBound(.Nodes) + 1)
+                ReDim Preserve .Nodes(0 To UBound(.Nodes) - 1)
+            #End If
         End If
         AddNode = .Count
         With .Nodes(AddNode)
@@ -200,6 +207,11 @@ Public Function AddChild(ByVal lParent As Long, ByVal lNode As Long) As Long
             ReDim .Children(0 To 4) As Long
         ElseIf .Count > UBound(.Children) Then
             ReDim Preserve .Children(0 To 2 * UBound(.Children)) As Long
+        Else
+            #If ImplLockedArrayTest Then
+                ReDim Preserve .Children(0 To UBound(.Children) + 1)
+                ReDim Preserve .Children(0 To UBound(.Children) - 1)
+            #End If
         End If
         .Children(.Count) = lNode
         .Count = .Count + 1

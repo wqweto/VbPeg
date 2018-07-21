@@ -23,6 +23,8 @@ Attribute VB_Exposed = False
 Option Explicit
 DefObj A-Z
 
+#Const ImplLockedArrayTest = (DEBUG_LOCKED_ARRAY_TEST <> 0)
+
 '=========================================================================
 ' Constants and member variables
 '=========================================================================
@@ -268,6 +270,11 @@ Private Function pvNewNode( _
             .Count = 1
         ElseIf .Count > UBound(.Nodes) Then
             ReDim Preserve .Nodes(0 To 2 * UBound(.Nodes)) As UcsTreeNodeType
+        Else
+            #If ImplLockedArrayTest Then
+                ReDim Preserve .Nodes(0 To UBound(.Nodes) + 1)
+                ReDim Preserve .Nodes(0 To UBound(.Nodes) - 1)
+            #End If
         End If
         With .Nodes(.Count)
             .NodeType = eNodeType
