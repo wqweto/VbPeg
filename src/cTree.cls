@@ -578,7 +578,7 @@ Private Sub pvOutputNode(ByVal lNode As Long, ByVal lIndent As Long)
         If .NodeType > 0 Then
             m_uTree.OutBuilder.Add Space$(4 * lIndent) & "[" & lNode & "] " & At(m_uTree.OutNodeTypes, .NodeType) & _
                 IIf(.Offset <> 0, ", Offset=" & .Offset, vbNullString) & _
-                IIf(LenB(.Text) <> 0, ", Text=" & .Text, vbNullString) & _
+                IIf(LenB(.Text) <> 0, ", Text=" & Replace(.Text, vbCrLf, "{^p}"), vbNullString) & _
                 IIf(LenB(.Description) <> 0, ", Description=" & .Description, vbNullString) & _
                 IIf(.Id <> 0, ", Id=" & .Id, vbNullString) & _
                 IIf(.RefRule <> 0, ", RefRule=[" & .RefRule & "]", vbNullString) & _
@@ -737,7 +737,7 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
     Dim vElem           As Variant
     Dim lFlags          As Long
     Dim lIdx            As Long
-    Dim bTrim           As Boolean
+    Dim bTrimChoice     As Boolean
     
     For Each vElem In m_uTree.Nodes(lNode).Children
         Debug.Assert vElem > NODE_ROOT
@@ -748,16 +748,12 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
     With m_uTree.Nodes(lNode)
         Select Case .NodeType
         Case ucsNdtStar, ucsNdtQuery, ucsNdtAction
-            If (.Flags And ucsNdfAlwaysTrue) = 0 Then
-                .Flags = .Flags Or ucsNdfAlwaysTrue
+            If pvSetFlag(.Flags, ucsNdfAlwaysTrue, True) Then
                 pvOptimizePass1 = True
             End If
         Case ucsNdtString
-            If LenB(.Text) = 0 Then
-                If (.Flags And ucsNdfAlwaysTrue) = 0 Then
-                    .Flags = .Flags Or ucsNdfAlwaysTrue
-                    pvOptimizePass1 = True
-                End If
+            If pvSetFlag(.Flags, ucsNdfAlwaysTrue, LenB(.Text) = 0) Then
+                pvOptimizePass1 = True
             End If
         Case ucsNdtSequence, ucsNdtRule
             If UBound(.Children) >= 0 Then
@@ -772,11 +768,8 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
                     pvOptimizePass1 = True
                 End If
                 If .NodeType = ucsNdtRule And LenB(.Description) = 0 Then
-                    If (.Flags And ucsNdfCanInline) = 0 Then
-                        If UBound(m_uTree.Nodes(.Children(0)).Children) < 0 Then
-                            .Flags = .Flags Or ucsNdfCanInline
-                            pvOptimizePass1 = True
-                        End If
+                    If pvSetFlag(.Flags, ucsNdfCanInline, UBound(m_uTree.Nodes(.Children(0)).Children) < 0) Then
+                        pvOptimizePass1 = True
                     End If
                 End If
             End If
@@ -785,7 +778,7 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
                 For Each vElem In .Children
                     If (m_uTree.Nodes(vElem).Flags And ucsNdfAlwaysTrue) <> 0 Then
                         .Flags = .Flags Or ucsNdfAlwaysTrue
-                        bTrim = lIdx < UBound(.Children)
+                        bTrimChoice = lIdx < UBound(.Children)
                         pvOptimizePass1 = True
                         Exit For
                     End If
@@ -793,16 +786,18 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
                 Next
             End If
         Case ucsNdtReference, ucsNdtError
-            If (.Flags And ucsNdfAlwaysTrue) = 0 And .RefRule <> 0 Then
-                If (m_uTree.Nodes(.RefRule).Flags And ucsNdfAlwaysTrue) <> 0 Then
-                    .Flags = .Flags Or ucsNdfAlwaysTrue
-                    pvOptimizePass1 = True
-                End If
+            If pvSetFlag(.Flags, ucsNdfAlwaysTrue, .RefRule <> 0 _
+                    And (m_uTree.Nodes(.RefRule).Flags And ucsNdfAlwaysTrue) <> 0) Then
+                pvOptimizePass1 = True
             End If
         End Select
     End With
-    If bTrim Then
-        ReDim Preserve m_uTree.Nodes(lNode).Children(0 To lIdx) As Long
+    If bTrimChoice Then
+        If lIdx = 0 Then
+            m_uTree.Nodes(lNode) = m_uTree.Nodes(m_uTree.Nodes(lNode).Children(0))
+        Else
+            ReDim Preserve m_uTree.Nodes(lNode).Children(0 To lIdx) As Long
+        End If
     End If
 End Function
 
@@ -912,63 +907,67 @@ End Function
 Private Function pvUpdateSavePos(ByVal lNode As Long, ByVal bNeedSavePos As Boolean) As Boolean
     Dim vElem           As Variant
     Dim bChildSavePos   As Boolean
+    Dim bPrevChildPos   As Boolean
     
     With m_uTree.Nodes(lNode)
         Select Case .NodeType
         Case ucsNdtChoice
             For Each vElem In .Children
-                If pvUpdateSavePos(vElem, bChildSavePos) Then
-                    pvUpdateSavePos = True
-                End If
+                bPrevChildPos = bChildSavePos
                 With m_uTree.Nodes(vElem)
                     Select Case .NodeType
-                    Case ucsNdtReference, ucsNdtChoice, ucsNdtSequence
+                    Case ucsNdtReference, ucsNdtError, ucsNdtChoice, ucsNdtSequence
                         If (.Flags And ucsNdfSkipAdvance) = 0 Then
                             bChildSavePos = True
                         End If
-                    Case ucsNdtPeekFor, ucsNdtPlus
-                        GoTo SkipChildFlag
+                        If .NodeType = ucsNdtSequence Then
+                            If pvSetSequenceRestoreFlag(vElem, bChildSavePos, lNode) Then
+                                pvUpdateSavePos = True
+                            End If
+                        ElseIf pvSetFlag(.Flags, ucsNdfRestorePos, bChildSavePos) Then
+                            pvUpdateSavePos = True
+                        End If
+                        .RestoreFrom = IIf((.Flags And ucsNdfRestorePos) <> 0, lNode, 0)
                     End Select
-                    If pvSetFlag(.Flags, ucsNdfRestorePos, bChildSavePos) Then
-                        pvUpdateSavePos = True
-                    End If
-SkipChildFlag:
                 End With
+                If pvUpdateSavePos(vElem, bPrevChildPos) Then
+                    pvUpdateSavePos = True
+                End If
             Next
             If pvSetFlag(.Flags, ucsNdfSavePos, bNeedSavePos And bChildSavePos) Then
                 pvUpdateSavePos = True
             End If
             GoTo QH
-        Case ucsNdtPeekFor, ucsNdtPlus
-            With m_uTree.Nodes(.Children(0))
-                Select Case .NodeType
-                Case ucsNdtReference, ucsNdtChoice, ucsNdtSequence
-                    If (.Flags And ucsNdfSkipAdvance) = 0 Then
-                        bChildSavePos = True
-                    End If
-                End Select
-            End With
-            If pvSetFlag(.Flags, ucsNdfSavePos, bNeedSavePos And bChildSavePos) Then
-                pvUpdateSavePos = True
-            End If
-            If pvSetFlag(.Flags, ucsNdfRestorePos, bChildSavePos) Then
-                pvUpdateSavePos = True
-            End If
-        Case ucsNdtStar, ucsNdtQuery
-            With m_uTree.Nodes(.Children(0))
-                Select Case .NodeType
-                Case ucsNdtReference, ucsNdtChoice, ucsNdtSequence
-                    If (.Flags And ucsNdfSkipAdvance) = 0 Then
-                        bChildSavePos = True
-                    End If
-                Case ucsNdtPeekFor, ucsNdtPlus
-                    GoTo SkipChildFlag2
-                End Select
-                If pvSetFlag(.Flags, ucsNdfSavePos Or ucsNdfRestorePos, bChildSavePos) Then
+        Case ucsNdtStar, ucsNdtPlus
+            For Each vElem In .Children
+                If pvUpdateSavePos(vElem, bPrevChildPos) Then
                     pvUpdateSavePos = True
                 End If
-SkipChildFlag2:
-            End With
+                With m_uTree.Nodes(vElem)
+                    Select Case .NodeType
+                    Case ucsNdtReference, ucsNdtError, ucsNdtChoice, ucsNdtSequence
+                        If (.Flags And ucsNdfSkipAdvance) = 0 Then
+                            bChildSavePos = True
+                        End If
+                        If .NodeType = ucsNdtSequence Then
+                            If pvSetSequenceRestoreFlag(vElem, bChildSavePos, vElem) Then
+                                pvUpdateSavePos = True
+                            End If
+                        ElseIf pvSetFlag(.Flags, ucsNdfRestorePos, bChildSavePos) Then
+                            pvUpdateSavePos = True
+                        End If
+                        If pvSetFlag(.Flags, ucsNdfSavePos, bChildSavePos) Then
+                            pvUpdateSavePos = True
+                        End If
+                        .RestoreFrom = IIf((.Flags And ucsNdfRestorePos) <> 0, vElem, 0)
+                    End Select
+                End With
+            Next
+            GoTo QH
+        Case ucsNdtPeekFor, ucsNdtQuery
+            If pvSetFlag(.Flags, ucsNdfSavePos, True) Then
+                pvUpdateSavePos = True
+            End If
         End Select
         For Each vElem In .Children
             If pvUpdateSavePos(vElem, True) Then
@@ -977,6 +976,34 @@ SkipChildFlag2:
         Next
     End With
 QH:
+End Function
+
+Private Function pvSetSequenceRestoreFlag( _
+            ByVal lNode As Long, _
+            ByVal bValue As Boolean, _
+            ByVal lRestoreFrom As Long) As Boolean
+    Dim vElem           As Variant
+    Dim bChildSavePos   As Boolean
+    
+    If pvSetFlag(m_uTree.Nodes(lNode).Flags, ucsNdfRestorePos, False) Then
+        pvSetSequenceRestoreFlag = True
+    End If
+    For Each vElem In m_uTree.Nodes(lNode).Children
+        With m_uTree.Nodes(vElem)
+            Select Case IIf(bChildSavePos, 0, .NodeType)
+            Case ucsNdtReference, ucsNdtError, ucsNdtChoice, ucsNdtSequence, ucsNdtPeekFor, ucsNdtPlus, 0
+                If .NodeType = ucsNdtSequence Then
+                    If pvSetSequenceRestoreFlag(vElem, bValue, lRestoreFrom) Then
+                        pvSetSequenceRestoreFlag = True
+                    End If
+                ElseIf pvSetFlag(.Flags, ucsNdfRestorePos, bValue) Then
+                    pvSetSequenceRestoreFlag = True
+                End If
+                .RestoreFrom = IIf((.Flags And ucsNdfRestorePos) <> 0, lRestoreFrom, 0)
+                bChildSavePos = True
+            End Select
+        End With
+    Next
 End Function
 
 Private Function pvSetFlag( _
@@ -1027,7 +1054,7 @@ Private Function pvUpdateRestoreFrom(ByVal lNode As Long, ByVal lRestoreFrom As 
             lRestoreFrom = lNode
         End If
         If (.Flags And ucsNdfRestorePos) <> 0 Then
-            If .RestoreFrom <> lRestoreFrom Then
+            If .RestoreFrom = 0 Then
                 .RestoreFrom = lRestoreFrom
                 pvUpdateRestoreFrom = True
             End If
