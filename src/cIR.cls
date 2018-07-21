@@ -1403,6 +1403,9 @@ Public Function EmitCode( _
         End If
         pvOutput _
 "End Type" & vbCrLf
+        If LenB(SettingValue("declares")) <> 0 Then
+            pvOutput pvTrimCrLf(SettingValue("declares")) & vbCrLf
+        End If
         pvOutput _
 "Private " & STR_CTX_VAR_NAME & "                     As UcsParserType" & vbCrLf
         pvOutput _

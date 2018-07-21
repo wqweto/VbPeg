@@ -185,7 +185,7 @@ Public Function VbPegGetContents() As String
 End Function
 
 Private Function CheckSettingName(sName As String) As Boolean
-    Const STR_ALL = "||private|public|modulename|userdatatype|vardatatype|members|start|ignorecase|prolog|epilog|trace|append|"
+    Const STR_ALL = "||private|public|modulename|userdatatype|vardatatype|members|start|ignorecase|prolog|epilog|trace|append|declares|"
     If InStr(1, STR_ALL, "|" & sName & "|", vbTextCompare) = 0 Then
         AppendError "Setting '" & sName & "' is unrecognized", ctx.CaptureBegin + 1, "warning"
     End If

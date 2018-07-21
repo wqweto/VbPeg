@@ -724,24 +724,16 @@ RawNoteBlock =  a:StartList
                   '   $$->key = RAW;
                 }
 
-@members {
-End Type
-
+@declares {
 Private Enum UcsStateEnum
     EXT_NOTES
     EXT_STRIKE
     EXT_SMART
 End Enum
-
-Private Type UcsDummy
-    ID As Long
 }
 
 @{
-
 Private Function extension(ByVal eType As UcsStateEnum) As Boolean
 
 End Function
-
-
 }
