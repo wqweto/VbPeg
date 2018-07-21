@@ -564,8 +564,17 @@ Private Function pvCodeGenNode( _
                 If .NodeFlag(lNode, ucsNdfHasActions) Then
                     AddChild pvCodeGenNode, AddNode(ucsIrtStmtSavePos, STR_THUNKPOS_PREFIX & lNode)
                 End If
+                lIrNode = AddNode(ucsIrtBlock)
+                AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_BUFPOS_PREFIX & lNode)
+                If .NodeFlag(lNode, ucsNdfHasActions) Then
+                    AddChild lIrNode, AddNode(ucsIrtStmtRestorePos, STR_THUNKPOS_PREFIX & lNode)
+                End If
+                lFailure = lIrNode
+                AddChild lFailure, AddNode(ucsIrtStmtDoExit)
+            Else
+                lFailure = AddNode(ucsIrtStmtDoExit)
             End If
-            lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, AddNode(ucsIrtStmtDoExit))
+            lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), IR_CONTINUE, lFailure)
             If lIrNode = 0 Then
                 GoTo QH
             End If
@@ -587,18 +596,15 @@ Private Function pvCodeGenNode( _
             If lIrNode = 0 Then
                 GoTo QH
             End If
+            AddChild pvCodeGenNode, AddChild( _
+                AddNode(ucsIrtStmtForLoop, STR_FOR_PREFIX & lNode), _
+                    lIrNode)
             If lSuccess = IR_CONTINUE And lFailure <> IR_CONTINUE Then
-                AddChild pvCodeGenNode, AddChild( _
-                    AddNode(ucsIrtStmtForLoop, STR_FOR_PREFIX & lNode), _
-                        lIrNode)
                 AddChild pvCodeGenNode, AddChild(AddChild( _
                     AddNode(ucsIrtStmtIf), _
                         AddNode(ucsIrtExprEmit, STR_FOR_PREFIX & lNode & " = 0")), _
                         lFailure)
             Else
-                AddChild pvCodeGenNode, AddChild( _
-                    AddNode(ucsIrtStmtForLoop, STR_FOR_PREFIX & lNode), _
-                        lIrNode)
                 AddChild pvCodeGenNode, AddChild(AddChild(AddChild( _
                     AddNode(ucsIrtStmtIf), _
                         AddNode(ucsIrtExprEmit, STR_FOR_PREFIX & lNode & " <> 0")), _
@@ -623,7 +629,11 @@ Private Function pvCodeGenNode( _
                 lFailure = IR_CONTINUE
             End If
             sText = "L" & pvCodeGenId
-            AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), AddNode(ucsIrtStmtGoTo, sText), lFailure)
+            lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), AddNode(ucsIrtStmtGoTo, sText), lFailure)
+            If lIrNode = 0 Then
+                GoTo QH
+            End If
+            AddChild pvCodeGenNode, lIrNode
             AddChild pvCodeGenNode, AddNode(ucsIrtDeclLabel, sText)
             AddChild pvCodeGenNode, lSuccess
         Case ucsNdtPeekFor
@@ -644,7 +654,11 @@ Private Function pvCodeGenNode( _
                     AddChild lIrNode, lSuccess
                     lSuccess = lIrNode
                 End If
-                AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), lSuccess, lFailure)
+                lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), lSuccess, lFailure)
+                If lIrNode = 0 Then
+                    GoTo QH
+                End If
+                AddChild pvCodeGenNode, lIrNode
             Else
                 If .NodeFlag(lNode, ucsNdfSavePos) Then
                     lIrNode = AddNode(ucsIrtBlock)
@@ -659,7 +673,11 @@ Private Function pvCodeGenNode( _
                     AddChild lIrNode, lSuccess
                     lSuccess = lIrNode
                 End If
-                AddChild pvCodeGenNode, pvCodeGenNode(.NodeChild(lNode, 0), lFailure, lSuccess)
+                lIrNode = pvCodeGenNode(.NodeChild(lNode, 0), lFailure, lSuccess)
+                If lIrNode = 0 Then
+                    GoTo QH
+                End If
+                AddChild pvCodeGenNode, lIrNode
             End If
         Case ucsNdtString
             sText = pvFromPegString(.NodeText(lNode))
