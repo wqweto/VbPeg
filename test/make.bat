@@ -84,7 +84,7 @@ del /q /s "%~dpn2.out" >nul 2>&1
 if [%upd_expect%]==[1] copy /y "%~dpn2.out" "%~dpn2.expect" >nul
 if exist "%~dpn2.expect" (
     %diff_exe% "%~dpn2.expect" "%~dpn2.out"
-    exit /b %errorlevel%
+    exit /b !errorlevel!
 )
 type "%~dpn2.out"
 exit /b 1
