@@ -937,10 +937,9 @@ Private Function pvUpdateSavePos(ByVal lNode As Long, ByVal bNeedSavePos As Bool
             If pvSetFlag(.Flags, ucsNdfSavePos, bNeedSavePos And bChildSavePos) Then
                 pvUpdateSavePos = True
             End If
-            GoTo QH
-        Case ucsNdtStar, ucsNdtPlus
+        Case ucsNdtStar, ucsNdtPlus, ucsNdtQuery
             For Each vElem In .Children
-                If pvUpdateSavePos(vElem, bPrevChildPos) Then
+                If pvUpdateSavePos(vElem, False) Then
                     pvUpdateSavePos = True
                 End If
                 With m_uTree.Nodes(vElem)
@@ -963,19 +962,20 @@ Private Function pvUpdateSavePos(ByVal lNode As Long, ByVal bNeedSavePos As Bool
                     End Select
                 End With
             Next
-            GoTo QH
-        Case ucsNdtPeekFor, ucsNdtQuery
+        Case ucsNdtPeekFor
             If pvSetFlag(.Flags, ucsNdfSavePos, True) Then
                 pvUpdateSavePos = True
             End If
+            GoTo LoopChildren
+        Case Else
+LoopChildren:
+            For Each vElem In .Children
+                If pvUpdateSavePos(vElem, True) Then
+                    pvUpdateSavePos = True
+                End If
+            Next
         End Select
-        For Each vElem In .Children
-            If pvUpdateSavePos(vElem, True) Then
-                pvUpdateSavePos = True
-            End If
-        Next
     End With
-QH:
 End Function
 
 Private Function pvSetSequenceRestoreFlag( _
