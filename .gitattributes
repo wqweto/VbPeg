@@ -7,5 +7,5 @@
 *.cobj -text
 
 # generated
-src/cParser.cls diff=nodiff
-test/Runner/mdParser.bas diff=nodiff
+src/cParser.cls -diff
+test/Runner/mdParser.bas -diff
