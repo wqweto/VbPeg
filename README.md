@@ -13,7 +13,7 @@ VbPeg is self-hosted, meaning it can produce it's own parser in src\cParser.cls 
 
  - Generate a private VB6 class from PEG grammar in VbPeg.peg
 ```
-    c:> VbPeg.exe VbPeg.peg -o src\cParser -private -userdata:cTree
+    c:> VbPeg.exe VbPeg.peg -o src\cParser
 ```
 ### Command-line
 ```
@@ -23,12 +23,11 @@ Options:
   -o OUTFILE      write result to OUTFILE [default: stdout]
   -tree           output parse tree
   -ir             output intermediate represetation
-  -public         emit public VB6 class module
-  -private        emit private VB6 class module
-  -module NAME    VB6 class/module name [default: OUTFILE]
-  -userdata NAME  parser context UserData member data-type [default: Variant]
+  -set NAME=VALUE set or modify grammar settings
   -q              in quiet operation outputs only errors
+  -nologo         suppress startup banner
+  -allrules       output all rules (don't skip unused)
+  -trace          trace in_file.peg parsing as performed by %1.exe
 
-If no -tree/-ir is used emits VB6 code. If no -o is used writes result to 
-console. If no -public/-private is used emits standard .bas module.
+If no -tree/-ir is used emits VB6 code. If no -o is used writes result to console.
 ```

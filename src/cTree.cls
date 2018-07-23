@@ -128,7 +128,7 @@ Property Let RuleExpression(ByVal lRule As Long, ByVal lExpr As Long)
         .RulesCount = .RulesCount + 1
         .Nodes(lRule).Children(0) = lExpr
         .Nodes(lRule).Id = .RulesCount
-        If .StartRule = 0 Or .Nodes(lRule).Text = SettingValue("start") Then
+        If .StartRule = 0 Or .Nodes(lRule).Text = SettingValue(STR_SETTING_START) Then
             .StartRule = lRule
         End If
     End With
@@ -329,10 +329,10 @@ Public Sub SetExpression(ByVal lRule As Long, ByVal lNode As Long)
     Dim lOffset         As Long
     Dim sTrace          As String
     
-    If LenB(SettingValue("trace")) Then
+    If LenB(SettingValue(STR_SETTING_TRACE)) Then
         With m_uTree.Nodes(lRule)
             lOffset = .Offset
-            sTrace = SettingValue("trace") & "(" & STR_CTX_VAR_NAME & ".BufPos + 1, """ & .Text & """, %1, " & STR_CTX_VAR_NAME & ".UserData)"
+            sTrace = SettingValue(STR_SETTING_TRACE) & "(" & STR_CTX_VAR_NAME & ".BufPos + 1, """ & .Text & """, %1, " & STR_CTX_VAR_NAME & ".UserData)"
         End With
         lNode = AppendChild( _
             MakeChoice(lOffset, AppendSequence(AppendSequence( _
@@ -404,7 +404,7 @@ End Function
 
 Public Function MakeString(ByVal lOffset As Long, sText As String) As Long
     MakeString = pvNewNode(ucsNdtString, lOffset, Text:=sText)
-    NodeFlag(MakeString, ucsNdfIgnoreCase) = C_Bool(SettingValue("ignorecase"))
+    NodeFlag(MakeString, ucsNdfIgnoreCase) = C_Bool(SettingValue(STR_SETTING_IGNORECASE))
 End Function
 
 Public Function MakeErrorString(ByVal lOffset As Long, sText As String) As Long
@@ -413,7 +413,7 @@ End Function
 
 Public Function MakeClass(ByVal lOffset As Long, sText As String) As Long
     MakeClass = pvNewNode(ucsNdtClass, lOffset, Text:=sText)
-    NodeFlag(MakeClass, ucsNdfIgnoreCase) = C_Bool(SettingValue("ignorecase"))
+    NodeFlag(MakeClass, ucsNdfIgnoreCase) = C_Bool(SettingValue(STR_SETTING_IGNORECASE))
 End Function
 
 Public Function SetIgnoreCase(ByVal lNode As Long, ByVal bValue As Boolean) As Long

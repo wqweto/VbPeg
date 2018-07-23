@@ -13,7 +13,9 @@
 #     January 14--16, 2004, Venice, Italy.
 #
 
-@trace ConsoleTrace
+@trace          ConsoleTrace
+@private        True
+@userdatatype   cTree
 
 # Syntax rules
 

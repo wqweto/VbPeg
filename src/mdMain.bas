@@ -61,6 +61,7 @@ Private Sub Main()
 End Sub
 
 Private Function Process(vArgs As Variant) As Long
+    Dim sOutFile        As String
     Dim oTree           As cTree
     Dim oIR             As cIR
     Dim nFile           As Integer
@@ -72,7 +73,7 @@ Private Function Process(vArgs As Variant) As Long
     
     On Error GoTo EH
     Set m_oParser = New cParser
-    Set m_oOpt = GetOpt(vArgs, "o:module:userdata")
+    Set m_oOpt = GetOpt(vArgs, "o:set")
     If Not m_oOpt.Item("-nologo") And Not m_oOpt.Item("-q") Then
         ConsoleError "VbPeg " & STR_VERSION & " (c) 2018 by wqweto@gmail.com (" & m_oParser.ParserVersion & ")" & vbCrLf & vbCrLf
     End If
@@ -88,17 +89,18 @@ Private Function Process(vArgs As Variant) As Long
             "  -o OUTFILE      write result to OUTFILE [default: stdout]" & vbCrLf & _
             "  -tree           output parse tree" & vbCrLf & _
             "  -ir             output intermediate represetation" & vbCrLf & _
-            "  -public         emit public VB6 class module" & vbCrLf & _
-            "  -private        emit private VB6 class module" & vbCrLf & _
-            "  -module NAME    VB6 class/module name [default: OUTFILE]" & vbCrLf & _
-            "  -userdata TYPE  parser context's UserData member data-type [default: Variant]" & vbCrLf & _
-            "  -q              in quiet operation outputs only errors" & vbCrLf & vbCrLf & _
-            "If no -tree/-ir is used emits VB6 code. If no -o is used writes result to console. If no -public/-private is used emits standard .bas module." & vbCrLf
+            "  -set NAME=VALUE set or modify grammar settings" & vbCrLf & _
+            "  -q              in quiet operation outputs only errors" & vbCrLf & _
+            "  -nologo         suppress startup banner" & vbCrLf & _
+            "  -allrules       output all rules (don't skip unused)" & vbCrLf & _
+            "  -trace          trace in_file.peg parsing as performed by %1.exe" & vbCrLf & vbCrLf & _
+            "If no -tree/-ir is used emits VB6 code. If no -o is used writes result to console." & vbCrLf
         If m_oOpt.Item("numarg") = 0 Then
             Process = 100
         End If
         Exit Function
     End If
+    sOutFile = m_oOpt.Item("-o")
     Set oTree = New cTree
     For lIdx = 1 To m_oOpt.Item("numarg")
         oTree.AddFileToQueue CanonicalPath(m_oOpt.Item("arg" & lIdx))
@@ -141,6 +143,15 @@ Private Function Process(vArgs As Variant) As Long
             ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
         Next
     End If
+    For lIdx = 0 To m_oOpt.Item("#set")
+        vElem = Split2(m_oOpt.Item("-set" & IIf(lIdx > 0, lIdx, vbNullString)), "=")
+        If LenB(At(vElem, 0)) <> 0 Then
+            oTree.SettingValue(At(vElem, 0)) = At(vElem, 1)
+        End If
+    Next
+    If LenB(oTree.SettingValue(STR_SETTING_MODULENAME)) = 0 And LenB(sOutFile) <> 0 Then
+        oTree.SettingValue(STR_SETTING_MODULENAME) = GetFilePart(sOutFile)
+    End If
     If m_oOpt.Item("-tree") Then
         sOutput = oTree.DumpParseTree
     Else
@@ -153,14 +164,7 @@ Private Function Process(vArgs As Variant) As Long
         If m_oOpt.Item("-ir") Then
             sOutput = oIR.DumpIrTree
         Else
-            If LenB(m_oOpt.Item("-module")) = 0 Then
-                m_oOpt.Item("-module") = GetFilePart(m_oOpt.Item("-o"))
-            End If
-            If Not oIR.EmitCode( _
-                    Switch(C_Bool(m_oOpt.Item("-public")), vbTrue, C_Bool(m_oOpt.Item("-private")), vbFalse, True, vbUseDefault), _
-                    CStr(m_oOpt.Item("-module")), _
-                    CStr(m_oOpt.Item("-userdata")), _
-                    sOutput) Then
+            If Not oIR.EmitCode(sOutput) Then
                 ConsoleError "Failed emit: %1" & vbCrLf, oIR.LastError
                 Process = 5
                 Exit Function
@@ -172,18 +176,20 @@ Private Function Process(vArgs As Variant) As Long
         Clipboard.Clear
         Clipboard.SetText sOutput
     End If
-    If LenB(m_oOpt.Item("-o")) > 0 Then
+    If LenB(sOutFile) > 0 Then
         '--- fix output file extension if not supplied
-        If InStrRev(m_oOpt.Item("-o"), "\") >= InStrRev(m_oOpt.Item("-o"), ".") Then
-            m_oOpt.Item("-o") = m_oOpt.Item("-o") & IIf(m_oOpt.Item("-public") Or m_oOpt.Item("-private"), ".cls", ".bas")
+        If Right$(sOutFile, 1) <> ":" Then
+            If InStrRev(sOutFile, "\") >= InStrRev(sOutFile, ".") Then
+                sOutFile = sOutFile & IIf(C_Bool(oTree.SettingValue(STR_SETTING_PUBLIC)) Or C_Bool(oTree.SettingValue(STR_SETTING_PRIVATE)), ".cls", ".bas")
+            End If
         End If
-        SetFileLen m_oOpt.Item("-o"), Len(sOutput)
+        SetFileLen sOutFile, Len(sOutput)
         nFile = FreeFile
-        Open m_oOpt.Item("-o") For Binary Access Write Shared As nFile
+        Open sOutFile For Binary Access Write Shared As nFile
         Put nFile, , sOutput
         Close nFile
         If Not m_oOpt.Item("-q") Then
-            ConsoleError "File " & m_oOpt.Item("-o") & " emitted successfully" & vbCrLf
+            ConsoleError "File " & sOutFile & " emitted successfully" & vbCrLf
         End If
     Else
         ConsolePrint sOutput
@@ -235,6 +241,7 @@ Private Function GetOpt(vArgs As Variant, Optional OptionsWithArg As String) As 
     Dim bNoMoreOpt      As Boolean
     Dim vOptArg         As Variant
     Dim vElem           As Variant
+    Dim sValue          As String
 
     vOptArg = Split(OptionsWithArg, ":")
     Set oRetVal = CreateObject("Scripting.Dictionary")
@@ -246,16 +253,22 @@ Private Function GetOpt(vArgs As Variant, Optional OptionsWithArg As String) As 
                 For Each vElem In vOptArg
                     If Mid$(At(vArgs, lIdx), 2, Len(vElem)) = vElem Then
                         If Mid(At(vArgs, lIdx), Len(vElem) + 2, 1) = ":" Then
-                            .Item("-" & vElem) = Mid$(At(vArgs, lIdx), Len(vElem) + 3)
+                            sValue = Mid$(At(vArgs, lIdx), Len(vElem) + 3)
                         ElseIf Len(At(vArgs, lIdx)) > Len(vElem) + 1 Then
-                            .Item("-" & vElem) = Mid$(At(vArgs, lIdx), Len(vElem) + 2)
+                            sValue = Mid$(At(vArgs, lIdx), Len(vElem) + 2)
                         ElseIf LenB(At(vArgs, lIdx + 1)) <> 0 Then
-                            .Item("-" & vElem) = At(vArgs, lIdx + 1)
+                            sValue = At(vArgs, lIdx + 1)
                             lIdx = lIdx + 1
                         Else
                             .Item("error") = "Option -" & vElem & " requires an argument"
                         End If
-                        GoTo Conitnue
+                        If Not .Exists("-" & vElem) Then
+                            .Item("-" & vElem) = sValue
+                        Else
+                            .Item("#" & vElem) = .Item("#" & vElem) + 1
+                            .Item("-" & vElem & .Item("#" & vElem)) = sValue
+                        End If
+                        GoTo Continue
                     End If
                 Next
                 .Item("-" & Mid$(At(vArgs, lIdx), 2)) = True
@@ -263,7 +276,7 @@ Private Function GetOpt(vArgs As Variant, Optional OptionsWithArg As String) As 
                 .Item("numarg") = .Item("numarg") + 1
                 .Item("arg" & .Item("numarg")) = At(vArgs, lIdx)
             End Select
-Conitnue:
+Continue:
         Next
     End With
     Set GetOpt = oRetVal
@@ -540,3 +553,13 @@ Public Function PathCombine(sPath As String, sFile As String) As String
     PathCombine = sPath & IIf(LenB(sPath) <> 0 And Right$(sPath, 1) <> "\" And LenB(sFile) <> 0, "\", vbNullString) & sFile
 End Function
 
+Public Function Split2(sText As String, sDelim As String) As Variant
+    Dim lPos            As Long
+    
+    lPos = InStr(sText, sDelim)
+    If lPos > 0 Then
+        Split2 = Array(Left$(sText, lPos - 1), Mid$(sText, lPos + Len(sDelim)))
+    Else
+        Split2 = Array(sText)
+    End If
+End Function

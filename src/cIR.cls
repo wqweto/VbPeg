@@ -135,7 +135,7 @@ Property Let IrFlag(ByVal lNode As Long, ByVal eFlag As UcsIrNodeFlagsEnum, ByVa
     End With
 End Property
 
-Property Get SettingValue(sName As String) As String
+Private Property Get SettingValue(sName As String) As String
     SettingValue = m_uIr.CodeGenTree.SettingValue(sName)
 End Property
 
@@ -315,12 +315,12 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
         If .IrActionsSelect <> 0 Then
             lIrNode = AddNode(ucsIrtDeclFunc, "pvImplAction(ByVal eAction As " & STR_ACTIONS_ENUM_NAME & _
                 ", ByVal lOffset As Long, ByVal lSize As Long)")
-            If LenB(SettingValue("prolog")) <> 0 Or LenB(SettingValue("epilog")) <> 0 Then
+            If LenB(SettingValue(STR_SETTING_PROLOG)) <> 0 Or LenB(SettingValue(STR_SETTING_EPILOG)) <> 0 Then
                 AddChild lIrNode, AddChild(AddChild(AddChild( _
                     AddNode(ucsIrtBlock), _
-                        AddNode(ucsIrtStmtEmit, LTrim$(pvTrimCrLf(SettingValue("prolog"))))), _
+                        AddNode(ucsIrtStmtEmit, LTrim$(pvTrimCrLf(SettingValue(STR_SETTING_PROLOG))))), _
                         .IrActionsSelect), _
-                        AddNode(ucsIrtStmtEmit, LTrim$(pvTrimCrLf(SettingValue("epilog")))))
+                        AddNode(ucsIrtStmtEmit, LTrim$(pvTrimCrLf(SettingValue(STR_SETTING_EPILOG)))))
             Else
                 AddChild lIrNode, AddChild( _
                     AddNode(ucsIrtStmtWith, STR_CTX_VAR_NAME), _
@@ -924,7 +924,7 @@ Private Function pvCodeGenAction(sText As String, ByVal lRule As Long, Optional 
     Dim oMatch          As Object
     Dim lPos            As Long
     
-    If LenB(SettingValue("prolog")) <> 0 Then
+    If LenB(SettingValue(STR_SETTING_PROLOG)) <> 0 Then
         sCtxVar = STR_CTX_VAR_NAME
     End If
     Set oVars = CreateObject("Scripting.Dictionary")
@@ -1304,20 +1304,21 @@ Private Sub pvOutputIrNode(ByVal lNode As Long)
     End With
 End Sub
 
-Public Function EmitCode( _
-            ByVal ePublic As VbTriState, _
-            sModuleName As String, _
-            sUserData As String, _
-            sOutput As String) As Boolean
+Public Function EmitCode(sOutput As String) As Boolean
     Dim lIdx            As Long
+    Dim ePublic         As VbTriState
+    Dim sModuleName     As String
+    Dim sUserData       As String
     Dim sVarData        As String
-    
-    If C_Bool(SettingValue("public")) Or C_Bool(SettingValue("private")) Then
-        ePublic = IIf(C_Bool(SettingValue("public")), vbTrue, vbFalse)
+        
+    If C_Bool(SettingValue(STR_SETTING_PUBLIC)) Or C_Bool(SettingValue(STR_SETTING_PRIVATE)) Then
+        ePublic = IIf(C_Bool(SettingValue(STR_SETTING_PUBLIC)), vbTrue, vbFalse)
+    Else
+        ePublic = vbUseDefault
     End If
-    sModuleName = Zn(Zn(SettingValue("modulename"), sModuleName), IIf(ePublic <> vbUseDefault, "cParser", "mdParser"))
-    sUserData = Zn(Zn(SettingValue("userdatatype"), sUserData), "Variant")
-    sVarData = Zn(SettingValue("vardatatype"), "Variant")
+    sModuleName = Zn(SettingValue(STR_SETTING_MODULENAME), IIf(ePublic <> vbUseDefault, "cParser", "mdParser"))
+    sUserData = Zn(SettingValue(STR_SETTING_USERDATATYPE), "Variant")
+    sVarData = Zn(SettingValue(STR_SETTING_VARDATATYPE), "Variant")
     With m_uIr
         Set .OutBuilder = New Collection
         .OutIndent = 0
@@ -1403,15 +1404,15 @@ Public Function EmitCode( _
 "    VarStack()          As " & sVarData & vbCrLf & _
 "    VarPos              As Long"
         End If
-        If LenB(SettingValue("members")) <> 0 Then
+        If LenB(SettingValue(STR_SETTING_MEMBERS)) <> 0 Then
             pvOutput _
 "    '-- from @members setting"
-            pvOutput pvTrimCrLf(SettingValue("members"))
+            pvOutput pvTrimCrLf(SettingValue(STR_SETTING_MEMBERS))
         End If
         pvOutput _
 "End Type" & vbCrLf
-        If LenB(SettingValue("declares")) <> 0 Then
-            pvOutput pvTrimCrLf(SettingValue("declares")) & vbCrLf
+        If LenB(SettingValue(STR_SETTING_DECLARES)) <> 0 Then
+            pvOutput pvTrimCrLf(SettingValue(STR_SETTING_DECLARES)) & vbCrLf
         End If
         pvOutput _
 "Private " & STR_CTX_VAR_NAME & "                     As UcsParserType" & vbCrLf

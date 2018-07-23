@@ -4,6 +4,7 @@ Module=mdMain; mdMain.bas
 Class=cTree; cTree.cls
 Class=cParser; cParser.cls
 Class=cIR; cIR.cls
+Module=mdConsts; mdConsts.bas
 Startup="Sub Main"
 HelpFile=""
 Title="VbPeg"
