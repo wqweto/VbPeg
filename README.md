@@ -32,9 +32,3 @@ Options:
 If no -tree/-ir is used emits VB6 code. If no -o is used writes result to 
 console. If no -public/-private is used emits standard .bas module.
 ```
-
-### ToDo
-
- - Extend grammar based on [PEG.js](https://github.com/pegjs/pegjs)
- - Implement named captures
- - Case-insensitive matching
