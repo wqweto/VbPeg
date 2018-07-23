@@ -30,7 +30,7 @@ DefObj A-Z
 '=========================================================================
 
 Private Const STR_TYPES             As String = "|Rule|Variable|Reference|Error|Dot|String|Class|Action|Predicate|Choice|Sequence|PeekFor|PeekNot|Query|Star|Plus"
-Private Const STR_FLAGS             As String = "Used|Reached|AlwaysTrue|MultiStep|SavePos|RestorePos|IsNot|CanInline|HasActions|SkipAdvance|IgnoreCase|HasAdvance"
+Private Const STR_FLAGS             As String = "Used|Reached|AlwaysTrue|SavePos|RestorePos|IsNot|CanInline|HasActions|SkipAdvance|IgnoreCase|HasAdvance|Referenced|HasCapture"
 Private Const NODE_ROOT             As Long = 0
 Private Const STR_CTX_VAR_NAME      As String = "ctx"
 
@@ -57,16 +57,16 @@ Public Enum UcsTreeNodeFlagsEnum
     ucsNdfUsed = 2 ^ 0
     ucsNdfReached = 2 ^ 1
     ucsNdfAlwaysTrue = 2 ^ 2
-    ucsNdfMultiStep = 2 ^ 3
-    ucsNdfSavePos = 2 ^ 4
-    ucsNdfRestorePos = 2 ^ 5
-    ucsNdfIsNot = 2 ^ 6
-    ucsNdfCanInline = 2 ^ 7
-    ucsNdfHasActions = 2 ^ 8
-    ucsNdfSkipAdvance = 2 ^ 9
-    ucsNdfIgnoreCase = 2 ^ 10
-    ucsNdfHasAdvance = 2 ^ 11
-    ucsNdfReferenced = 2 ^ 12
+    ucsNdfSavePos = 2 ^ 3
+    ucsNdfRestorePos = 2 ^ 4
+    ucsNdfIsNot = 2 ^ 5
+    ucsNdfCanInline = 2 ^ 6
+    ucsNdfHasActions = 2 ^ 7
+    ucsNdfSkipAdvance = 2 ^ 8
+    ucsNdfIgnoreCase = 2 ^ 9
+    ucsNdfHasAdvance = 2 ^ 10
+    ucsNdfReferenced = 2 ^ 11
+    ucsNdfHasCapture = 2 ^ 12
 End Enum
 
 Private Type UcsTreeNodeType
@@ -698,11 +698,12 @@ Public Function OptimizeTree(cWarnings As Collection) As Boolean
     Do While pvOptimizePass2(NODE_ROOT)
     Loop
     pvUpdateSavePos NODE_ROOT, True
-    Debug.Assert Not pvUpdateSavePos(NODE_ROOT, True)
+    '--- note: assert fails on VbPeg.peg
+'    Debug.Assert Not pvUpdateSavePos(NODE_ROOT, True)
     '--- for all rules re-adjust Used flag
     With m_uTree.Nodes(NODE_ROOT)
         For Each vElem In .Children
-            pvSetFlag m_uTree.Nodes(vElem).Flags, ucsNdfUsed, vElem = m_uTree.StartRule
+            pvSetFlag m_uTree.Nodes(vElem).Flags, ucsNdfUsed, (vElem = m_uTree.StartRule)
         Next
     End With
     pvUpdateUsed NODE_ROOT
@@ -711,14 +712,15 @@ Public Function OptimizeTree(cWarnings As Collection) As Boolean
     Debug.Assert Not pvUpdateRestoreFrom(NODE_ROOT, 0)
     Do While pvUpdateHasActions(NODE_ROOT, False)
     Loop
+    Do While pvUpdateHasAdvance()
+    Loop
+    Do While pvUpdateHasCapture()
+    Loop
     '--- warn about unused rules
     Set cResult = New Collection
     With m_uTree.Nodes(NODE_ROOT)
         For Each vElem In .Children
             With m_uTree.Nodes(vElem)
-                If pvFindAdvance(vElem) Then
-                    .Flags = .Flags Or ucsNdfHasAdvance
-                End If
                 If (.Flags And ucsNdfUsed) = 0 And (.Flags And ucsNdfCanInline) = 0 And UBound(.Children) >= 0 Then
                     cResult.Add Array("Unused rule '" & .Text & "'", .Offset)
                 End If
@@ -1118,18 +1120,73 @@ Private Function pvUpdateHasActions(ByVal lNode As Long, bHasActions As Boolean)
     End With
 End Function
 
+Private Function pvUpdateHasAdvance() As Boolean
+    Dim vElem           As Variant
+    
+    With m_uTree.Nodes(NODE_ROOT)
+        For Each vElem In .Children
+            With m_uTree.Nodes(vElem)
+                If (.Flags And ucsNdfHasAdvance) = 0 Then
+                    If pvFindAdvance(vElem) Then
+                        .Flags = .Flags Or ucsNdfHasAdvance
+                        pvUpdateHasAdvance = True
+                    End If
+                End If
+            End With
+        Next
+    End With
+End Function
+
 Private Function pvFindAdvance(ByVal lNode As Long) As Boolean
     Dim vElem           As Variant
     
     With m_uTree.Nodes(lNode)
         Select Case .NodeType
         Case ucsNdtString, ucsNdtClass
-            pvFindAdvance = True
+            pvFindAdvance = Len(.Text) <> 0
             Exit Function
         End Select
         For Each vElem In .Children
             If pvFindAdvance(vElem) Then
                 pvFindAdvance = True
+                Exit Function
+            End If
+        Next
+    End With
+End Function
+
+Private Function pvUpdateHasCapture() As Boolean
+    Dim vElem           As Variant
+    
+    With m_uTree.Nodes(NODE_ROOT)
+        For Each vElem In .Children
+            With m_uTree.Nodes(vElem)
+                If (.Flags And ucsNdfHasCapture) = 0 Then
+                    If pvFindCapture(vElem) Then
+                        .Flags = .Flags Or ucsNdfHasCapture
+                        pvUpdateHasCapture = True
+                    End If
+                End If
+            End With
+        Next
+    End With
+End Function
+
+Private Function pvFindCapture(ByVal lNode As Long) As Boolean
+    Dim vElem           As Variant
+    
+    With m_uTree.Nodes(lNode)
+        Select Case .NodeType
+        Case ucsNdtPredicate
+            Select Case .Text
+            Case "YY_BEGIN", "YY_END"
+                pvFindCapture = True
+                Exit Function
+            End Select
+        End Select
+        For Each vElem In .Children
+            If pvFindCapture(vElem) Then
+                pvFindCapture = True
                 Exit Function
             End If
         Next

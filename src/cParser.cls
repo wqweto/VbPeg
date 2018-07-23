@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 22.7.2018 0:32:34
+' Auto-generated on 23.7.2018 14:24:42
 Option Explicit
 DefObj A-Z
 
@@ -98,7 +98,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "22.7.2018 0:32:34"
+    ParserVersion = "23.7.2018 14:24:42"
 End Property
 
 '=========================================================================
@@ -272,19 +272,19 @@ Public Function ParseGrammar() As Boolean
 End Function
 
 Public Sub ParseSpacing()
-    Dim p527 As Long
+    Dim p521 As Long
 
     With ctx
         Call ConsoleTrace(ctx.BufPos + 1, "Spacing", 1, ctx.UserData)
         Do
-            p527 = .BufPos
+            p521 = .BufPos
             If Not ParseSpace() Then
-                .BufPos = p527
+                .BufPos = p521
                 If Not ParseLineComment() Then
-                    .BufPos = p527
+                    .BufPos = p521
                     If Not ParseBlockComment() Then
-                        .BufPos = p527
-                        .BufPos = p527
+                        .BufPos = p521
+                        .BufPos = p521
                         Exit Do
                     End If
                 End If
@@ -398,17 +398,17 @@ Public Function ParseRule() As Boolean
 End Function
 
 Public Function ParseEndOfFile() As Boolean
-    Dim p590 As Long
-    Dim p586 As Long
+    Dim p584 As Long
+    Dim p580 As Long
 
     With ctx
-        p590 = .BufPos
+        p584 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "EndOfFile", 1, ctx.UserData)
-        p586 = .BufPos
+        p580 = .BufPos
         If .BufPos < .BufSize Then
-            .BufPos = p590
+            .BufPos = p584
         Else
-            .BufPos = p586
+            .BufPos = p580
             Call ConsoleTrace(ctx.BufPos + 1, "EndOfFile", 2, ctx.UserData)
             ParseEndOfFile = True
             Exit Function
@@ -420,15 +420,13 @@ Public Function ParseEndOfFile() As Boolean
 End Function
 
 Public Function ParseIdentifier() As Boolean
-    Dim p277 As Long
-    Dim q277 As Long
+    Dim p276 As Long
     Dim lCaptureBegin As Long
     Dim p269 As Long
     Dim lCaptureEnd As Long
 
     With ctx
-        p277 = .BufPos
-        q277 = .ThunkPos
+        p276 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "Identifier", 1, ctx.UserData)
         lCaptureBegin = .BufPos
         If ParseIdentStart() Then
@@ -441,14 +439,13 @@ Public Function ParseIdentifier() As Boolean
             Loop
             lCaptureEnd = .BufPos
             Call ParseSpacing
+            Call ConsoleTrace(ctx.BufPos + 1, "Identifier", 2, ctx.UserData)
             .CaptureBegin = lCaptureBegin
             .CaptureEnd = lCaptureEnd
-            Call ConsoleTrace(ctx.BufPos + 1, "Identifier", 2, ctx.UserData)
             ParseIdentifier = True
             Exit Function
         Else
-            .BufPos = p277
-            .ThunkPos = q277
+            .BufPos = p276
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Identifier", 3, ctx.UserData) And False Then
             '--- do nothing
@@ -457,12 +454,10 @@ Public Function ParseIdentifier() As Boolean
 End Function
 
 Public Function ParseLiteral() As Boolean
-    Dim p297 As Long
-    Dim q297 As Long
+    Dim p296 As Long
 
     With ctx
-        p297 = .BufPos
-        q297 = .ThunkPos
+        p296 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "Literal", 1, ctx.UserData)
         If ParseLiteralNoSpace() Then
             Call ParseSpacing
@@ -470,8 +465,7 @@ Public Function ParseLiteral() As Boolean
             ParseLiteral = True
             Exit Function
         Else
-            .BufPos = p297
-            .ThunkPos = q297
+            .BufPos = p296
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Literal", 3, ctx.UserData) And False Then
             '--- do nothing
@@ -480,28 +474,28 @@ Public Function ParseLiteral() As Boolean
 End Function
 
 Public Function ParseAssignLiteral() As Boolean
-    Dim p647 As Long
-    Dim p643 As Long
+    Dim p640 As Long
+    Dim p636 As Long
 
     With ctx
-        p647 = .BufPos
+        p640 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "AssignLiteral", 1, ctx.UserData)
-        p643 = .BufPos
+        p636 = .BufPos
         If ParseLEFTARROW() Then
             Call ConsoleTrace(ctx.BufPos + 1, "AssignLiteral", 2, ctx.UserData)
             ParseAssignLiteral = True
             Exit Function
         Else
-            .BufPos = p643
+            .BufPos = p636
         End If
         If ParseEQUAL() Then
             Call ConsoleTrace(ctx.BufPos + 1, "AssignLiteral", 2, ctx.UserData)
             ParseAssignLiteral = True
             Exit Function
         Else
-            .BufPos = p643
+            .BufPos = p636
         End If
-        .BufPos = p647
+        .BufPos = p640
         If ConsoleTrace(ctx.BufPos + 1, "AssignLiteral", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -516,10 +510,10 @@ L6:
 End Sub
 
 Private Function ParseSEMI() As Boolean
-    Dim p688 As Long
+    Dim p681 As Long
 
     With ctx
-        p688 = .BufPos
+        p681 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "SEMI", 1, ctx.UserData)
         If .BufData(.BufPos) = 59 Then              ' ";"
             .BufPos = .BufPos + 1
@@ -589,28 +583,28 @@ Public Sub ParseSequenceExpr()
 End Sub
 
 Public Function ParseChoiceLiteral() As Boolean
-    Dim p656 As Long
-    Dim p652 As Long
+    Dim p649 As Long
+    Dim p645 As Long
 
     With ctx
-        p656 = .BufPos
+        p649 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "ChoiceLiteral", 1, ctx.UserData)
-        p652 = .BufPos
+        p645 = .BufPos
         If ParseSLASH() Then
             Call ConsoleTrace(ctx.BufPos + 1, "ChoiceLiteral", 2, ctx.UserData)
             ParseChoiceLiteral = True
             Exit Function
         Else
-            .BufPos = p652
+            .BufPos = p645
         End If
         If ParseBAR() Then
             Call ConsoleTrace(ctx.BufPos + 1, "ChoiceLiteral", 2, ctx.UserData)
             ParseChoiceLiteral = True
             Exit Function
         Else
-            .BufPos = p652
+            .BufPos = p645
         End If
-        .BufPos = p656
+        .BufPos = p649
         If ConsoleTrace(ctx.BufPos + 1, "ChoiceLiteral", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -726,10 +720,10 @@ Public Function ParseVariableExpr() As Boolean
 End Function
 
 Private Function ParseCARET() As Boolean
-    Dim p704 As Long
+    Dim p697 As Long
 
     With ctx
-        p704 = .BufPos
+        p697 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "CARET", 1, ctx.UserData)
         If .BufData(.BufPos) = 94 Then              ' "^"
             .BufPos = .BufPos + 1
@@ -746,10 +740,10 @@ Private Function ParseCARET() As Boolean
 End Function
 
 Private Function ParseCOLON() As Boolean
-    Dim p680 As Long
+    Dim p673 As Long
 
     With ctx
-        p680 = .BufPos
+        p673 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "COLON", 1, ctx.UserData)
         If .BufData(.BufPos) = 58 Then              ' ":"
             .BufPos = .BufPos + 1
@@ -836,10 +830,10 @@ Public Function ParsePrefixExpr() As Boolean
 End Function
 
 Private Function ParseAND() As Boolean
-    Dim p454 As Long
+    Dim p449 As Long
 
     With ctx
-        p454 = .BufPos
+        p449 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "AND", 1, ctx.UserData)
         If .BufData(.BufPos) = 38 Then              ' "&"
             .BufPos = .BufPos + 1
@@ -856,34 +850,32 @@ Private Function ParseAND() As Boolean
 End Function
 
 Public Function ParseCodeBlock() As Boolean
-    Dim p609 As Long
-    Dim q609 As Long
-    Dim p593 As Long
+    Dim p602 As Long
+    Dim p587 As Long
     Dim lCaptureBegin As Long
-    Dim p600 As Long
+    Dim p594 As Long
     Dim lCaptureEnd As Long
 
     With ctx
-        p609 = .BufPos
-        q609 = .ThunkPos
+        p602 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "CodeBlock", 1, ctx.UserData)
         If .BufData(.BufPos) = 123 Then             ' "{"
             .BufPos = .BufPos + 1
             Do
-                p593 = .BufPos
+                p587 = .BufPos
                 If Not ParseEndOfLine() Then
-                    .BufPos = p593
+                    .BufPos = p587
                     Exit Do
                 End If
             Loop
             lCaptureBegin = .BufPos
             Do
-                p600 = .BufPos
+                p594 = .BufPos
                 Select Case .BufData(.BufPos)
                 Case 123, 125                       ' [{}]
                     If Not ParseCodeNC() Then
-                        .BufPos = p600
-                        .BufPos = p600
+                        .BufPos = p594
+                        .BufPos = p594
                         Exit Do
                     End If
                 Case Else
@@ -891,8 +883,8 @@ Public Function ParseCodeBlock() As Boolean
                         .BufPos = .BufPos + 1
                     Else
                         If Not ParseCodeNC() Then
-                            .BufPos = p600
-                            .BufPos = p600
+                            .BufPos = p594
+                            .BufPos = p594
                             Exit Do
                         End If
                     End If
@@ -902,9 +894,9 @@ Public Function ParseCodeBlock() As Boolean
             If .BufData(.BufPos) = 125 Then         ' "}"
                 .BufPos = .BufPos + 1
                 Call ParseSpacing
+                Call ConsoleTrace(ctx.BufPos + 1, "CodeBlock", 2, ctx.UserData)
                 .CaptureBegin = lCaptureBegin
                 .CaptureEnd = lCaptureEnd
-                Call ConsoleTrace(ctx.BufPos + 1, "CodeBlock", 2, ctx.UserData)
                 Call pvSetAdvance
                 ParseCodeBlock = True
                 Exit Function
@@ -967,10 +959,10 @@ L12:
 End Function
 
 Private Function ParseNOT() As Boolean
-    Dim p462 As Long
+    Dim p457 As Long
 
     With ctx
-        p462 = .BufPos
+        p457 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "NOT", 1, ctx.UserData)
         If .BufData(.BufPos) = 33 Then              ' "!"
             .BufPos = .BufPos + 1
@@ -994,7 +986,6 @@ Public Function ParsePrimaryExpr() As Boolean
     Dim p169 As Long
     Dim q169 As Long
     Dim p165 As Long
-    Dim q165 As Long
     Dim p181 As Long
     Dim q181 As Long
     Dim p190 As Long
@@ -1012,10 +1003,8 @@ Public Function ParsePrimaryExpr() As Boolean
             p169 = .BufPos
             q169 = .ThunkPos
             p165 = .BufPos
-            q165 = .ThunkPos
             If Not ParseLiteralNC() Then
                 .BufPos = p165
-                .ThunkPos = q165
             End If
             If ParseAssignLiteral() Then
                 .BufPos = p182
@@ -1141,10 +1130,10 @@ Public Function ParsePrimaryExpr() As Boolean
 End Function
 
 Private Function ParseQUESTION() As Boolean
-    Dim p470 As Long
+    Dim p465 As Long
 
     With ctx
-        p470 = .BufPos
+        p465 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "QUESTION", 1, ctx.UserData)
         If .BufData(.BufPos) = 63 Then              ' "?"
             .BufPos = .BufPos + 1
@@ -1161,10 +1150,10 @@ Private Function ParseQUESTION() As Boolean
 End Function
 
 Private Function ParseSTAR() As Boolean
-    Dim p478 As Long
+    Dim p473 As Long
 
     With ctx
-        p478 = .BufPos
+        p473 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "STAR", 1, ctx.UserData)
         If .BufData(.BufPos) = 42 Then              ' "*"
             .BufPos = .BufPos + 1
@@ -1181,10 +1170,10 @@ Private Function ParseSTAR() As Boolean
 End Function
 
 Private Function ParsePLUS() As Boolean
-    Dim p486 As Long
+    Dim p481 As Long
 
     With ctx
-        p486 = .BufPos
+        p481 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "PLUS", 1, ctx.UserData)
         If .BufData(.BufPos) = 43 Then              ' "+"
             .BufPos = .BufPos + 1
@@ -1201,30 +1190,30 @@ Private Function ParsePLUS() As Boolean
 End Function
 
 Public Function ParseLiteralNC() As Boolean
-    Dim p350 As Long
-    Dim p346 As Long
-    Dim p332 As Long
-    Dim p330 As Long
-    Dim p341 As Long
-    Dim p339 As Long
+    Dim p347 As Long
+    Dim p343 As Long
+    Dim p329 As Long
+    Dim p327 As Long
+    Dim p338 As Long
+    Dim p336 As Long
 
     With ctx
-        p350 = .BufPos
+        p347 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "LiteralNC", 1, ctx.UserData)
-        p346 = .BufPos
+        p343 = .BufPos
         If .BufData(.BufPos) = 39 Then              ' "'"
             .BufPos = .BufPos + 1
             Do
-                p332 = .BufPos
-                p330 = .BufPos
+                p329 = .BufPos
+                p327 = .BufPos
                 If .BufData(.BufPos) = 39 Then      ' "'"
-                    .BufPos = p332
+                    .BufPos = p329
                     Exit Do
                 Else
-                    .BufPos = p330
+                    .BufPos = p327
                 End If
                 If Not ParseChar() Then
-                    .BufPos = p332
+                    .BufPos = p329
                     Exit Do
                 End If
             Loop
@@ -1240,16 +1229,16 @@ Public Function ParseLiteralNC() As Boolean
         If .BufData(.BufPos) = 34 Then              ' """
             .BufPos = .BufPos + 1
             Do
-                p341 = .BufPos
-                p339 = .BufPos
+                p338 = .BufPos
+                p336 = .BufPos
                 If .BufData(.BufPos) = 34 Then      ' """
-                    .BufPos = p341
+                    .BufPos = p338
                     Exit Do
                 Else
-                    .BufPos = p339
+                    .BufPos = p336
                 End If
                 If Not ParseChar() Then
-                    .BufPos = p341
+                    .BufPos = p338
                     Exit Do
                 End If
             Loop
@@ -1262,7 +1251,7 @@ Public Function ParseLiteralNC() As Boolean
                 Exit Function
             End If
         End If
-        .BufPos = p350
+        .BufPos = p347
         If ConsoleTrace(ctx.BufPos + 1, "LiteralNC", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -1270,10 +1259,10 @@ Public Function ParseLiteralNC() As Boolean
 End Function
 
 Private Function ParseOPEN() As Boolean
-    Dim p494 As Long
+    Dim p489 As Long
 
     With ctx
-        p494 = .BufPos
+        p489 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "OPEN", 1, ctx.UserData)
         If .BufData(.BufPos) = 40 Then              ' "("
             .BufPos = .BufPos + 1
@@ -1290,10 +1279,10 @@ Private Function ParseOPEN() As Boolean
 End Function
 
 Private Function ParseCLOSE() As Boolean
-    Dim p502 As Long
+    Dim p497 As Long
 
     With ctx
-        p502 = .BufPos
+        p497 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "CLOSE", 1, ctx.UserData)
         If .BufData(.BufPos) = 41 Then              ' ")"
             .BufPos = .BufPos + 1
@@ -1310,48 +1299,42 @@ Private Function ParseCLOSE() As Boolean
 End Function
 
 Public Function ParseLiteralNoSpace() As Boolean
-    Dim p326 As Long
-    Dim q326 As Long
-    Dim p322 As Long
-    Dim q322 As Long
+    Dim p323 As Long
+    Dim p319 As Long
     Dim lCaptureBegin As Long
-    Dim p306 As Long
-    Dim p303 As Long
+    Dim p305 As Long
+    Dim p302 As Long
     Dim lCaptureEnd As Long
-    Dim p317 As Long
-    Dim q317 As Long
     Dim p315 As Long
-    Dim q315 As Long
+    Dim p313 As Long
 
     With ctx
-        p326 = .BufPos
-        q326 = .ThunkPos
+        p323 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "LiteralNoSpace", 1, ctx.UserData)
-        p322 = .BufPos
-        q322 = .ThunkPos
+        p319 = .BufPos
         If .BufData(.BufPos) = 39 Then              ' "'"
             .BufPos = .BufPos + 1
             lCaptureBegin = .BufPos
             Do
-                p306 = .BufPos
-                p303 = .BufPos
+                p305 = .BufPos
+                p302 = .BufPos
                 If .BufData(.BufPos) = 39 Then      ' "'"
-                    .BufPos = p306
+                    .BufPos = p305
                     Exit Do
                 Else
-                    .BufPos = p303
+                    .BufPos = p302
                 End If
                 If Not ParseChar() Then
-                    .BufPos = p306
+                    .BufPos = p305
                     Exit Do
                 End If
             Loop
             lCaptureEnd = .BufPos
             If .BufData(.BufPos) = 39 Then          ' "'"
                 .BufPos = .BufPos + 1
+                Call ConsoleTrace(ctx.BufPos + 1, "LiteralNoSpace", 2, ctx.UserData)
                 .CaptureBegin = lCaptureBegin
                 .CaptureEnd = lCaptureEnd
-                Call ConsoleTrace(ctx.BufPos + 1, "LiteralNoSpace", 2, ctx.UserData)
                 Call pvSetAdvance
                 ParseLiteralNoSpace = True
                 Exit Function
@@ -1361,37 +1344,31 @@ Public Function ParseLiteralNoSpace() As Boolean
             .BufPos = .BufPos + 1
             lCaptureBegin = .BufPos
             Do
-                p317 = .BufPos
-                q317 = .ThunkPos
                 p315 = .BufPos
-                q315 = .ThunkPos
+                p313 = .BufPos
                 If .BufData(.BufPos) = 34 Then      ' """
-                    .BufPos = p317
-                    .ThunkPos = q317
+                    .BufPos = p315
                     Exit Do
                 Else
-                    .BufPos = p315
-                    .ThunkPos = q315
+                    .BufPos = p313
                 End If
                 If Not ParseChar() Then
-                    .BufPos = p317
-                    .ThunkPos = q317
+                    .BufPos = p315
                     Exit Do
                 End If
             Loop
             lCaptureEnd = .BufPos
             If .BufData(.BufPos) = 34 Then          ' """
                 .BufPos = .BufPos + 1
+                Call ConsoleTrace(ctx.BufPos + 1, "LiteralNoSpace", 2, ctx.UserData)
                 .CaptureBegin = lCaptureBegin
                 .CaptureEnd = lCaptureEnd
-                Call ConsoleTrace(ctx.BufPos + 1, "LiteralNoSpace", 2, ctx.UserData)
                 Call pvSetAdvance
                 ParseLiteralNoSpace = True
                 Exit Function
             End If
         End If
-        .BufPos = p326
-        .ThunkPos = q326
+        .BufPos = p323
         If ConsoleTrace(ctx.BufPos + 1, "LiteralNoSpace", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -1399,23 +1376,21 @@ Public Function ParseLiteralNoSpace() As Boolean
 End Function
 
 Public Function ParseIgnoreCase() As Boolean
-    Dim p360 As Long
-    Dim q360 As Long
+    Dim p356 As Long
     Dim lCaptureBegin As Long
     Dim lCaptureEnd As Long
 
     With ctx
-        p360 = .BufPos
-        q360 = .ThunkPos
+        p356 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "IgnoreCase", 1, ctx.UserData)
         lCaptureBegin = .BufPos
         Select Case .BufData(.BufPos)
         Case 115, 105                               ' [si]
             .BufPos = .BufPos + 1
             lCaptureEnd = .BufPos
+            Call ConsoleTrace(ctx.BufPos + 1, "IgnoreCase", 2, ctx.UserData)
             .CaptureBegin = lCaptureBegin
             .CaptureEnd = lCaptureEnd
-            Call ConsoleTrace(ctx.BufPos + 1, "IgnoreCase", 2, ctx.UserData)
             Call pvSetAdvance
             ParseIgnoreCase = True
             Exit Function
@@ -1427,40 +1402,38 @@ Public Function ParseIgnoreCase() As Boolean
 End Function
 
 Public Function ParseClassNoSpace() As Boolean
-    Dim p377 As Long
-    Dim q377 As Long
+    Dim p372 As Long
     Dim lCaptureBegin As Long
-    Dim p369 As Long
-    Dim p366 As Long
+    Dim p365 As Long
+    Dim p362 As Long
     Dim lCaptureEnd As Long
 
     With ctx
-        p377 = .BufPos
-        q377 = .ThunkPos
+        p372 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "ClassNoSpace", 1, ctx.UserData)
         If .BufData(.BufPos) = 91 Then              ' "["
             .BufPos = .BufPos + 1
             lCaptureBegin = .BufPos
             Do
-                p369 = .BufPos
-                p366 = .BufPos
+                p365 = .BufPos
+                p362 = .BufPos
                 If .BufData(.BufPos) = 93 Then      ' "]"
-                    .BufPos = p369
+                    .BufPos = p365
                     Exit Do
                 Else
-                    .BufPos = p366
+                    .BufPos = p362
                 End If
                 If Not ParseRange() Then
-                    .BufPos = p369
+                    .BufPos = p365
                     Exit Do
                 End If
             Loop
             lCaptureEnd = .BufPos
             If .BufData(.BufPos) = 93 Then          ' "]"
                 .BufPos = .BufPos + 1
+                Call ConsoleTrace(ctx.BufPos + 1, "ClassNoSpace", 2, ctx.UserData)
                 .CaptureBegin = lCaptureBegin
                 .CaptureEnd = lCaptureEnd
-                Call ConsoleTrace(ctx.BufPos + 1, "ClassNoSpace", 2, ctx.UserData)
                 Call pvSetAdvance
                 ParseClassNoSpace = True
                 Exit Function
@@ -1473,10 +1446,10 @@ Public Function ParseClassNoSpace() As Boolean
 End Function
 
 Private Function ParseDOT() As Boolean
-    Dim p510 As Long
+    Dim p505 As Long
 
     With ctx
-        p510 = .BufPos
+        p505 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "DOT", 1, ctx.UserData)
         If .BufData(.BufPos) = 46 Then              ' "."
             .BufPos = .BufPos + 1
@@ -1493,10 +1466,10 @@ Private Function ParseDOT() As Boolean
 End Function
 
 Private Function ParseBEGIN() As Boolean
-    Dim p630 As Long
+    Dim p623 As Long
 
     With ctx
-        p630 = .BufPos
+        p623 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "BEGIN", 1, ctx.UserData)
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -1513,10 +1486,10 @@ Private Function ParseBEGIN() As Boolean
 End Function
 
 Private Function ParseEND() As Boolean
-    Dim p638 As Long
+    Dim p631 As Long
 
     With ctx
-        p638 = .BufPos
+        p631 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "END", 1, ctx.UserData)
         If .BufData(.BufPos) = 62 Then              ' ">"
             .BufPos = .BufPos + 1
@@ -1534,24 +1507,19 @@ End Function
 
 Public Function ParseSettingName() As Boolean
     Dim p250 As Long
-    Dim q250 As Long
     Dim p243 As Long
-    Dim q243 As Long
 
     With ctx
         p250 = .BufPos
-        q250 = .ThunkPos
         Call ConsoleTrace(ctx.BufPos + 1, "SettingName", 1, ctx.UserData)
         If ParseAT() Then
             p243 = .BufPos
-            q243 = .ThunkPos
             If ParseIdentifier() Then
                 Call ConsoleTrace(ctx.BufPos + 1, "SettingName", 2, ctx.UserData)
                 ParseSettingName = True
                 Exit Function
             Else
                 .BufPos = p243
-                .ThunkPos = q243
             End If
             If ParseLiteral() Then
                 Call ConsoleTrace(ctx.BufPos + 1, "SettingName", 2, ctx.UserData)
@@ -1559,17 +1527,14 @@ Public Function ParseSettingName() As Boolean
                 Exit Function
             Else
                 .BufPos = p243
-                .ThunkPos = q243
             End If
             Call ParseEMPTY
             Call ConsoleTrace(ctx.BufPos + 1, "SettingName", 2, ctx.UserData)
             ParseSettingName = True
             Exit Function
             .BufPos = p250
-            .ThunkPos = q250
         Else
             .BufPos = p250
-            .ThunkPos = q250
         End If
         If ConsoleTrace(ctx.BufPos + 1, "SettingName", 3, ctx.UserData) And False Then
             '--- do nothing
@@ -1579,62 +1544,47 @@ End Function
 
 Public Function ParseSettingValue() As Boolean
     Dim p262 As Long
-    Dim q262 As Long
     Dim p254 As Long
-    Dim q254 As Long
     Dim p256 As Long
-    Dim q256 As Long
 
     With ctx
         p262 = .BufPos
-        q262 = .ThunkPos
         Call ConsoleTrace(ctx.BufPos + 1, "SettingValue", 1, ctx.UserData)
         p254 = .BufPos
-        q254 = .ThunkPos
         If ParseIdentifier() Then
             p256 = .BufPos
-            q256 = .ThunkPos
             If Not ParseSEMI() Then
                 .BufPos = p256
-                .ThunkPos = q256
             End If
             Call ConsoleTrace(ctx.BufPos + 1, "SettingValue", 2, ctx.UserData)
             ParseSettingValue = True
             Exit Function
         Else
             .BufPos = p254
-            .ThunkPos = q254
         End If
         If ParseLiteral() Then
             p256 = .BufPos
-            q256 = .ThunkPos
             If Not ParseSEMI() Then
                 .BufPos = p256
-                .ThunkPos = q256
             End If
             Call ConsoleTrace(ctx.BufPos + 1, "SettingValue", 2, ctx.UserData)
             ParseSettingValue = True
             Exit Function
         Else
             .BufPos = p254
-            .ThunkPos = q254
         End If
         If ParseCodeBlock() Then
             p256 = .BufPos
-            q256 = .ThunkPos
             If Not ParseSEMI() Then
                 .BufPos = p256
-                .ThunkPos = q256
             End If
             Call ConsoleTrace(ctx.BufPos + 1, "SettingValue", 2, ctx.UserData)
             ParseSettingValue = True
             Exit Function
         Else
             .BufPos = p254
-            .ThunkPos = q254
         End If
         .BufPos = p262
-        .ThunkPos = q262
         If ConsoleTrace(ctx.BufPos + 1, "SettingValue", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -1642,10 +1592,10 @@ Public Function ParseSettingValue() As Boolean
 End Function
 
 Private Function ParseAT() As Boolean
-    Dim p696 As Long
+    Dim p689 As Long
 
     With ctx
-        p696 = .BufPos
+        p689 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "AT", 1, ctx.UserData)
         If .BufData(.BufPos) = 64 Then              ' "@"
             .BufPos = .BufPos + 1
@@ -1670,18 +1620,17 @@ Private Sub ParseEMPTY()
         lCaptureBegin = .BufPos
         lCaptureEnd = .BufPos
         Call ParseSpacing
+        Call ConsoleTrace(ctx.BufPos + 1, "EMPTY", 2, ctx.UserData)
         .CaptureBegin = lCaptureBegin
         .CaptureEnd = lCaptureEnd
-        Call ConsoleTrace(ctx.BufPos + 1, "EMPTY", 2, ctx.UserData)
-        Call pvSetAdvance
     End With
 End Sub
 
 Public Function ParseIdentStart() As Boolean
-    Dim p283 As Long
+    Dim p282 As Long
 
     With ctx
-        p283 = .BufPos
+        p282 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "IdentStart", 1, ctx.UserData)
         Select Case .BufData(.BufPos)
         Case 97 To 122, 65 To 90, 95, 92, 45        ' [a-zA-Z_\-]
@@ -1698,10 +1647,10 @@ Public Function ParseIdentStart() As Boolean
 End Function
 
 Public Function ParseIdentCont() As Boolean
-    Dim p289 As Long
+    Dim p288 As Long
 
     With ctx
-        p289 = .BufPos
+        p288 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "IdentCont", 1, ctx.UserData)
         Select Case .BufData(.BufPos)
         Case 97 To 122, 65 To 90, 95, 48 To 57, 92, 45 ' [a-zA-Z_0-9\-]
@@ -1718,14 +1667,14 @@ Public Function ParseIdentCont() As Boolean
 End Function
 
 Public Function ParseChar() As Boolean
-    Dim p426 As Long
-    Dim p400 As Long
-    Dim p420 As Long
+    Dim p421 As Long
+    Dim p395 As Long
+    Dim p415 As Long
 
     With ctx
-        p426 = .BufPos
+        p421 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "Char", 1, ctx.UserData)
-        p400 = .BufPos
+        p395 = .BufPos
         If .BufData(.BufPos) = 92 Then              ' "\\"
             .BufPos = .BufPos + 1
             Select Case .BufData(.BufPos)
@@ -1816,11 +1765,11 @@ Public Function ParseChar() As Boolean
             ParseChar = True
             Exit Function
         End If
-        p420 = .BufPos
+        p415 = .BufPos
         If .BufData(.BufPos) = 92 Then              ' "\\"
-            .BufPos = p400
+            .BufPos = p395
         Else
-            .BufPos = p420
+            .BufPos = p415
             If .BufPos < .BufSize Then
                 .BufPos = .BufPos + 1
                 Call ConsoleTrace(ctx.BufPos + 1, "Char", 2, ctx.UserData)
@@ -1828,10 +1777,10 @@ Public Function ParseChar() As Boolean
                 ParseChar = True
                 Exit Function
             Else
-                .BufPos = p400
+                .BufPos = p395
             End If
         End If
-        .BufPos = p426
+        .BufPos = p421
         If ConsoleTrace(ctx.BufPos + 1, "Char", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -1840,36 +1789,36 @@ Public Function ParseChar() As Boolean
 End Function
 
 Public Function ParseRange() As Boolean
-    Dim p390 As Long
-    Dim p386 As Long
-    Dim p383 As Long
+    Dim p385 As Long
+    Dim p381 As Long
+    Dim p378 As Long
 
     With ctx
-        p390 = .BufPos
+        p385 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "Range", 1, ctx.UserData)
-        p386 = .BufPos
+        p381 = .BufPos
         If ParseChar() Then
             If .BufData(.BufPos) = 45 Then          ' "-"
                 .BufPos = .BufPos + 1
-                p383 = .BufPos
+                p378 = .BufPos
                 If .BufData(.BufPos) = 93 Then      ' "]"
-                    .BufPos = p386
+                    .BufPos = p381
                 Else
-                    .BufPos = p383
+                    .BufPos = p378
                     If ParseChar() Then
                         Call ConsoleTrace(ctx.BufPos + 1, "Range", 2, ctx.UserData)
                         Call pvSetAdvance
                         ParseRange = True
                         Exit Function
                     Else
-                        .BufPos = p386
+                        .BufPos = p381
                     End If
                 End If
             Else
-                .BufPos = p386
+                .BufPos = p381
             End If
         Else
-            .BufPos = p386
+            .BufPos = p381
         End If
         If ParseChar() Then
             Call ConsoleTrace(ctx.BufPos + 1, "Range", 2, ctx.UserData)
@@ -1877,9 +1826,9 @@ Public Function ParseRange() As Boolean
             ParseRange = True
             Exit Function
         Else
-            .BufPos = p386
+            .BufPos = p381
         End If
-        .BufPos = p390
+        .BufPos = p385
         If ConsoleTrace(ctx.BufPos + 1, "Range", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -1887,10 +1836,10 @@ Public Function ParseRange() As Boolean
 End Function
 
 Private Function ParseLEFTARROW() As Boolean
-    Dim p435 As Long
+    Dim p430 As Long
 
     With ctx
-        p435 = .BufPos
+        p430 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "LEFTARROW", 1, ctx.UserData)
         If .BufData(.BufPos) = 60 And .BufData(.BufPos + 1) = 45 Then ' "<-"
             .BufPos = .BufPos + 2
@@ -1907,19 +1856,19 @@ Private Function ParseLEFTARROW() As Boolean
 End Function
 
 Private Function ParseSLASH() As Boolean
-    Dim p446 As Long
-    Dim p440 As Long
+    Dim p441 As Long
+    Dim p435 As Long
 
     With ctx
-        p446 = .BufPos
+        p441 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "SLASH", 1, ctx.UserData)
         If .BufData(.BufPos) = 47 Then              ' "/"
             .BufPos = .BufPos + 1
-            p440 = .BufPos
+            p435 = .BufPos
             If .BufData(.BufPos) = 47 Then          ' "/"
-                .BufPos = p446
+                .BufPos = p441
             Else
-                .BufPos = p440
+                .BufPos = p435
                 Call ParseSpacing
                 Call ConsoleTrace(ctx.BufPos + 1, "SLASH", 2, ctx.UserData)
                 Call pvSetAdvance
@@ -1934,13 +1883,13 @@ Private Function ParseSLASH() As Boolean
 End Function
 
 Public Function ParseSpace() As Boolean
-    Dim p574 As Long
-    Dim p569 As Long
+    Dim p568 As Long
+    Dim p563 As Long
 
     With ctx
-        p574 = .BufPos
+        p568 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "Space", 1, ctx.UserData)
-        p569 = .BufPos
+        p563 = .BufPos
         If .BufData(.BufPos) = 32 Then              ' " "
             .BufPos = .BufPos + 1
             Call ConsoleTrace(ctx.BufPos + 1, "Space", 2, ctx.UserData)
@@ -1961,9 +1910,9 @@ Public Function ParseSpace() As Boolean
             ParseSpace = True
             Exit Function
         Else
-            .BufPos = p569
+            .BufPos = p563
         End If
-        .BufPos = p574
+        .BufPos = p568
         If ConsoleTrace(ctx.BufPos + 1, "Space", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -1971,11 +1920,11 @@ Public Function ParseSpace() As Boolean
 End Function
 
 Public Function ParseLineComment() As Boolean
-    Dim p549 As Long
-    Dim p545 As Long
+    Dim p543 As Long
+    Dim p539 As Long
 
     With ctx
-        p549 = .BufPos
+        p543 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "LineComment", 1, ctx.UserData)
         If .BufData(.BufPos) = 35 Then              ' "#"
             .BufPos = .BufPos + 1
@@ -1991,14 +1940,14 @@ Public Function ParseLineComment() As Boolean
                     End If
                 End Select
             Loop
-            p545 = .BufPos
+            p539 = .BufPos
             If ParseEndOfLine() Then
                 Call ConsoleTrace(ctx.BufPos + 1, "LineComment", 2, ctx.UserData)
                 Call pvSetAdvance
                 ParseLineComment = True
                 Exit Function
             Else
-                .BufPos = p545
+                .BufPos = p539
             End If
             If ParseEndOfFile() Then
                 Call ConsoleTrace(ctx.BufPos + 1, "LineComment", 2, ctx.UserData)
@@ -2006,9 +1955,9 @@ Public Function ParseLineComment() As Boolean
                 ParseLineComment = True
                 Exit Function
             Else
-                .BufPos = p545
+                .BufPos = p539
             End If
-            .BufPos = p549
+            .BufPos = p543
             GoTo L23
         End If
         If .BufData(.BufPos) = 47 And .BufData(.BufPos + 1) = 47 Then ' "//"
@@ -2025,14 +1974,14 @@ Public Function ParseLineComment() As Boolean
                     End If
                 End Select
             Loop
-            p545 = .BufPos
+            p539 = .BufPos
             If ParseEndOfLine() Then
                 Call ConsoleTrace(ctx.BufPos + 1, "LineComment", 2, ctx.UserData)
                 Call pvSetAdvance
                 ParseLineComment = True
                 Exit Function
             Else
-                .BufPos = p545
+                .BufPos = p539
             End If
             If ParseEndOfFile() Then
                 Call ConsoleTrace(ctx.BufPos + 1, "LineComment", 2, ctx.UserData)
@@ -2040,12 +1989,12 @@ Public Function ParseLineComment() As Boolean
                 ParseLineComment = True
                 Exit Function
             Else
-                .BufPos = p545
+                .BufPos = p539
             End If
-            .BufPos = p549
+            .BufPos = p543
             GoTo L23
         End If
-        .BufPos = p549
+        .BufPos = p543
 L23:
         If ConsoleTrace(ctx.BufPos + 1, "LineComment", 3, ctx.UserData) And False Then
             '--- do nothing
@@ -2054,33 +2003,33 @@ L23:
 End Function
 
 Public Function ParseBlockComment() As Boolean
-    Dim p565 As Long
-    Dim p554 As Long
-    Dim p556 As Long
+    Dim p559 As Long
+    Dim p548 As Long
+    Dim p550 As Long
 
     With ctx
-        p565 = .BufPos
+        p559 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "BlockComment", 1, ctx.UserData)
         If .BufData(.BufPos) = 47 And .BufData(.BufPos + 1) = 42 Then ' "/*"
             .BufPos = .BufPos + 2
             Do
-                p554 = .BufPos
+                p548 = .BufPos
                 Select Case .BufData(.BufPos)
                 Case 42, 47                         ' [*/]
                     If Not ParseBlockComment() Then
-                        .BufPos = p554
-                        p556 = .BufPos
+                        .BufPos = p548
+                        p550 = .BufPos
                         If .BufData(.BufPos) = 42 And .BufData(.BufPos + 1) = 47 Then ' "*/"
-                            .BufPos = p554
-                            .BufPos = p554
+                            .BufPos = p548
+                            .BufPos = p548
                             Exit Do
                         Else
-                            .BufPos = p556
+                            .BufPos = p550
                             If .BufPos < .BufSize Then
                                 .BufPos = .BufPos + 1
                             Else
-                                .BufPos = p554
-                                .BufPos = p554
+                                .BufPos = p548
+                                .BufPos = p548
                                 Exit Do
                             End If
                         End If
@@ -2090,19 +2039,19 @@ Public Function ParseBlockComment() As Boolean
                         .BufPos = .BufPos + 1
                     Else
                         If Not ParseBlockComment() Then
-                            .BufPos = p554
-                            p556 = .BufPos
+                            .BufPos = p548
+                            p550 = .BufPos
                             If .BufData(.BufPos) = 42 And .BufData(.BufPos + 1) = 47 Then ' "*/"
-                                .BufPos = p554
-                                .BufPos = p554
+                                .BufPos = p548
+                                .BufPos = p548
                                 Exit Do
                             Else
-                                .BufPos = p556
+                                .BufPos = p550
                                 If .BufPos < .BufSize Then
                                     .BufPos = .BufPos + 1
                                 Else
-                                    .BufPos = p554
-                                    .BufPos = p554
+                                    .BufPos = p548
+                                    .BufPos = p548
                                     Exit Do
                                 End If
                             End If
@@ -2125,10 +2074,10 @@ Public Function ParseBlockComment() As Boolean
 End Function
 
 Public Function ParseEndOfLine() As Boolean
-    Dim p583 As Long
+    Dim p577 As Long
 
     With ctx
-        p583 = .BufPos
+        p577 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "EndOfLine", 1, ctx.UserData)
         If .BufData(.BufPos) = 13 And .BufData(.BufPos + 1) = 10 Then ' "\r\n"
             .BufPos = .BufPos + 2
@@ -2151,7 +2100,7 @@ Public Function ParseEndOfLine() As Boolean
             ParseEndOfLine = True
             Exit Function
         End If
-        .BufPos = p583
+        .BufPos = p577
         If ConsoleTrace(ctx.BufPos + 1, "EndOfLine", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -2159,21 +2108,21 @@ Public Function ParseEndOfLine() As Boolean
 End Function
 
 Public Function ParseCodeNC() As Boolean
-    Dim p622 As Long
-    Dim p614 As Long
+    Dim p615 As Long
+    Dim p607 As Long
 
     With ctx
-        p622 = .BufPos
+        p615 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "CodeNC", 1, ctx.UserData)
         If .BufData(.BufPos) = 123 Then             ' "{"
             .BufPos = .BufPos + 1
             Do
-                p614 = .BufPos
+                p607 = .BufPos
                 Select Case .BufData(.BufPos)
                 Case 123, 125                       ' [{}]
                     If Not ParseCodeNC() Then
-                        .BufPos = p614
-                        .BufPos = p614
+                        .BufPos = p607
+                        .BufPos = p607
                         Exit Do
                     End If
                 Case Else
@@ -2181,8 +2130,8 @@ Public Function ParseCodeNC() As Boolean
                         .BufPos = .BufPos + 1
                     Else
                         If Not ParseCodeNC() Then
-                            .BufPos = p614
-                            .BufPos = p614
+                            .BufPos = p607
+                            .BufPos = p607
                             Exit Do
                         End If
                     End If
@@ -2204,10 +2153,10 @@ Public Function ParseCodeNC() As Boolean
 End Function
 
 Private Function ParseEQUAL() As Boolean
-    Dim p664 As Long
+    Dim p657 As Long
 
     With ctx
-        p664 = .BufPos
+        p657 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "EQUAL", 1, ctx.UserData)
         If .BufData(.BufPos) = 61 Then              ' "="
             .BufPos = .BufPos + 1
@@ -2224,10 +2173,10 @@ Private Function ParseEQUAL() As Boolean
 End Function
 
 Private Function ParseBAR() As Boolean
-    Dim p672 As Long
+    Dim p665 As Long
 
     With ctx
-        p672 = .BufPos
+        p665 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "BAR", 1, ctx.UserData)
         If .BufData(.BufPos) = 124 Then             ' "|"
             .BufPos = .BufPos + 1

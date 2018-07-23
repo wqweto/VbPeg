@@ -250,7 +250,15 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                         m_uIr.CodeGenStartFunc = m_uIr.Nodes(lBody).Text
                     End If
                     IrFlag(lBody, ucsIrfPublic) = (.NodeText(vElem) <> UCase$(.NodeText(vElem)))
-                    If .NodeFlag(vElem, ucsNdfHasAdvance) Then
+                    If .NodeFlag(vElem, ucsNdfHasCapture) And Not .NodeFlag(vElem, ucsNdfHasActions) Then
+                        If .NodeFlag(vElem, ucsNdfHasAdvance) Then
+                            lSuccess = AddNode(ucsIrtBlock)
+                            AddChild lSuccess, AddNode(ucsIrtStmtPushAction)
+                            AddChild lSuccess, AddNode(ucsIrtStmtEmit, "Call pvSetAdvance")
+                        Else
+                            lSuccess = AddNode(ucsIrtStmtPushAction)
+                        End If
+                    ElseIf .NodeFlag(vElem, ucsNdfHasAdvance) Then
                         lSuccess = AddNode(ucsIrtStmtEmit, "Call pvSetAdvance")
                     Else
                         lSuccess = IR_CONTINUE
@@ -539,10 +547,9 @@ Private Function pvCodeGenNode( _
             If LenB(Trim$(.NodeText(lNode))) <> 0 Then
                 sText = Replace(Replace(STR_ACTIONS_ENUM_FMT, "%1", .NodeId(lNode)), "%2", .NodeText(.NodeRefRule(lNode)))
             End If
-            pvCodeGenNode = AddChild(AddChild( _
-                AddNode(ucsIrtBlock), _
-                    AddNode(ucsIrtStmtPushAction, sText)), _
-                    lSuccess)
+            pvCodeGenNode = AddNode(ucsIrtBlock)
+            AddChild pvCodeGenNode, AddNode(ucsIrtStmtPushAction, sText)
+            AddChild pvCodeGenNode, lSuccess
             If LenB(sText) <> 0 Then
                 If m_uIr.IrActionsEnum = 0 Then
                     m_uIr.IrActionsEnum = AddNode(ucsIrtDeclEnum, STR_ACTIONS_ENUM_NAME)
