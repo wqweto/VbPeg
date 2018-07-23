@@ -81,16 +81,16 @@ SettingValue    <- (Identifier / Literal / CodeBlock) SEMI?
                  
 # Lexical rules
 
-Identifier      <- < IdentStart IdentCont* > Spacing                    { }
+Identifier      <- < IdentStart IdentCont* > Spacing
 IdentStart      <- [a-zA-Z_\-]
 IdentCont       <- [a-zA-Z_0-9\-]
 Literal         <- LiteralNoSpace Spacing
-LiteralNoSpace  <- ['] < (!['] Char )* > [']                            { }
-                 / ["] < (!["] Char )* > ["]                            { }
+LiteralNoSpace  <- ['] < (!['] Char )* > [']
+                 / ["] < (!["] Char )* > ["]
 LiteralNC       <- ['] (!['] Char )* ['] Spacing                        # Non-capture version
                  / ["] (!["] Char )* ["] Spacing
-IgnoreCase      <- < [si] >                                             { }
-ClassNoSpace    <- '[' < (!']' Range)* > ']'                            { }
+IgnoreCase      <- < [si] >
+ClassNoSpace    <- '[' < (!']' Range)* > ']'
 Range           <- Char '-' !']' Char / Char
 Char "char"     <- '\\' [abefnrtv'"\[\]\\]
                  / '\\' [0-3][0-7][0-7]
@@ -109,7 +109,7 @@ PLUS            <- '+' Spacing
 OPEN            <- '(' Spacing
 CLOSE           <- ')' Spacing
 DOT             <- '.' Spacing
-EMPTY           <- < '' > Spacing                                       { }
+EMPTY           <- < '' > Spacing
 Spacing         <- (Space / LineComment / BlockComment)*
 LineComment     <- ('#' / '//') [^\r\n]* (EndOfLine / EndOfFile)
 BlockComment    <- '/*' ([^*/] / BlockComment / (!'*/' .))* '*/'
@@ -117,7 +117,7 @@ Space           <- ' ' / '\t' / EndOfLine
 EndOfLine       <- '\r\n' / '\n' / '\r'
 EndOfFile       <- !.
 
-CodeBlock       <- '{' EndOfLine* < ([^{}] / CodeNC)* > '}' Spacing     { }
+CodeBlock       <- '{' EndOfLine* < ([^{}] / CodeNC)* > '}' Spacing
 CodeNC          <- '{' ([^{}] / CodeNC)* '}' Spacing                    # Non-capture version
 BEGIN           <- '<' Spacing
 END             <- '>' Spacing
