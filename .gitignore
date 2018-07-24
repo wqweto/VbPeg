@@ -15,5 +15,5 @@
 ~*
 *.xlsb
 *.out
-test/markdown/3.expect
-test/markdown/3.in
+test/Runner/peg/markdown/3.in
+test/Runner/peg/markdown/3.expect

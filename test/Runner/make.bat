@@ -1,10 +1,10 @@
 @echo off
 setlocal
-set root_dir=%~dp0
-set runner_dir=%~dp0Runner
+set peg_dir=%~dp0peg
+set runner_dir=%~dp0src
 set vb_exe="%ProgramFiles(x86)%\Microsoft Visual Studio\VB98\VB6.EXE"
 set diff_exe="%ProgramFiles%\Git\usr\bin\diff.exe" --color=auto -u
-set vbpeg_exe="%root_dir%..\vbpeg.exe" -q
+set vbpeg_exe="%~dp0..\..\vbpeg.exe" -q
 set count_run=0
 set count_fail=0
 set upd_expect=0
@@ -19,12 +19,12 @@ if [%1]==[/expect] (
 
 if not [%1]==[] (
     set last_test=%1
-    for /f "usebackq delims=" %%i in (`for /f %%k in ^('dir /b /s /on "%root_dir%%1\*.peg"'^) do @if [%%~xk]^=^=[.peg] echo %%k`) do call :make_test "%%i"
+    for /f "usebackq delims=" %%i in (`for /f %%k in ^('dir /b /s /on "%peg_dir%%1\*.peg"'^) do @if [%%~xk]^=^=[.peg] echo %%k`) do call :make_test "%%i"
     shift /1
     goto :param_loop
 )
 if [%last_test%]==[] (
-    for /f "usebackq delims=" %%i in (`for /f %%k in ^('dir /b /s /on "%root_dir%\*.peg"'^) do @if [%%~xk]^=^=[.peg] echo %%k`) do call :make_test "%%i"
+    for /f "usebackq delims=" %%i in (`for /f %%k in ^('dir /b /s /on "%peg_dir%\*.peg"'^) do @if [%%~xk]^=^=[.peg] echo %%k`) do call :make_test "%%i"
 )
 
 echo %count_run% tests run, %count_fail% tests failed
