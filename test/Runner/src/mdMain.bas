@@ -42,13 +42,15 @@ Private m_sFileName         As String
 
 Private Sub Main()
     Dim oOpt            As Object
+    Dim oParser         As Object
     Dim lIdx            As Long
-    Dim vResult         As Variant
     Dim lPos            As Long
+    Dim vResult         As Variant
     
     On Error GoTo EH
     Set oOpt = GetOpt(SplitArgs(Command$))
-    For lIdx = 1 To oOpt.Item("numarg")
+    Set oParser = CreateObjectPrivate(oOpt.Item("arg1"))
+    For lIdx = 2 To oOpt.Item("numarg")
         lPos = 1
         m_sFileName = oOpt.Item("arg" & lIdx)
         m_sContents = ReadTextFile(m_sFileName)
@@ -56,9 +58,9 @@ Private Sub Main()
         pvBuildLineInfo m_sContents
         Do While lPos <= Len(m_sContents)
             vResult = Empty
-            lPos = VbPegMatch(m_sContents, lPos - 1, Result:=vResult)
+            lPos = oParser.Match(m_sContents, lPos - 1, Result:=vResult)
             If lPos = 0 Then
-                ConsolePrint "LastError: %1, LastOffset: %2" & vbCrLf, VbPegLastError, VbPegLastOffset
+                ConsolePrint "LastError: %1, LastOffset: %2" & vbCrLf, oParser.LastError, oParser.LastOffset
                 Exit Do
             End If
             ConsolePrint "Pos: %1", lPos
@@ -69,8 +71,8 @@ Private Sub Main()
                     ConsolePrint ", Result: %1", C_Str(vResult)
                 End If
             End If
-            If LenB(VbPegLastError) <> 0 Then
-                ConsolePrint ", Warning: %1", VbPegLastError
+            If LenB(oParser.LastError) <> 0 Then
+                ConsolePrint ", Warning: %1", oParser.LastError
             End If
             ConsolePrint vbCrLf
         Loop
