@@ -1,2 +1,0 @@
-test2.peg:6:1: warning: Unused rule 'TranslationUnit'
-test2.peg:24:1: warning: Unused rule 'Variable'

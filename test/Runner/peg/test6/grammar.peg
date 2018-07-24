@@ -1,6 +1,0 @@
-@trace ConsoleTrace
-
-start = (!Endline Inline | Endline &Inline)+ '!'
-
-Endline "EndLine" = [ \r\n]
-Inline "Inline" = [a-z]+

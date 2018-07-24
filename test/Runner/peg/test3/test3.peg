@@ -1,9 +1,0 @@
-list <- open elem* close
-elem <- list / atom / sstring / dstring
-atom <- [a-z0-9_]+ space*
-dstring <- '"' [^"]* '"' space*
-sstring <- "'" [^']* "'" space*
-open <- '(' space*
-close <- ')' space*
-space <- ' ' / '\t' / eol
-eol <- '\r\n' / '\n' / '\r'

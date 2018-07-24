@@ -1,3 +1,0 @@
-Start = Char+ End
-End "'e'"  = "e"
-Char "[a-z]" = !End [a-z]

@@ -1,1 +1,0 @@
-From https://github.com/for-GET/core-pegjs/tree/master/src/w3c
