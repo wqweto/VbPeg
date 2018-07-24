@@ -1,0 +1,31 @@
+Preprocessor <- (LineComment / BlockComment / text / Scope / junk / moreJunk)+
+
+File                <-      (Scope / junk / moreJunk)+
+
+
+TranslationUnit <- Statement+ EndOfFile?
+
+Statement           <-      Spacing (Expression ';' / File)
+
+LineComment         <-      '//' (!EndOfLine .)* EndOfLine
+BlockComment        <-      '/*' (!'*/' .)* '*/'
+text                <-      quote Text quote
+Text                <-      (!quote .)*
+Scope               <-      '{' (Scope / (![{}] .)+) '}'
+
+#Block              <-      '(' ((![(){};] .)+ / Block)* ')'
+
+#FunctionDef        <-      Type? Identifier ('::' Identifier)? Spacing* '(' FunctionArgument* ')' (Spacing* 'const')? (![{};] .)+ Scope
+#FunctionArgument   <-      Type Identifier?
+
+Expression          <-      Type Identifier
+
+Type                <-      ((Spacing 'const' Spacing)? Identifier ('::' Identifier)? (Spacing / '*' / '&' / Spacing 'const' Spacing)+)+
+Variable            <-      Type Identifier
+Identifier          <-      [a-zA-Z_] [a-zA-Z_0-9]* Spacing*
+Spacing             <-      (LineComment / BlockComment / [ \t\n\r] / EndOfLine)+
+EndOfLine           <-      !'\\' ('\r\n' / '\n' / '\r')
+quote               <-      !'\\' '"'
+junk                <-      (![a-zA-Z_{}"/*:()] .)+ Spacing*
+moreJunk            <-      .
+EndOfFile           <-      !.

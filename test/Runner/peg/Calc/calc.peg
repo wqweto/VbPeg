@@ -1,0 +1,36 @@
+@Members {
+    LocalVars(0 to 255)     As Long
+}
+
+Stmt    = - e:Expr EOL                  { ConsolePrint $e & vbCrLf }
+        | ( !EOL . )* EOL               { ConsolePrint "error" & vbCrLf }
+
+Expr    = i:ID ASSIGN s:Expr            { .LocalVars($i) = $s : $$ = $s }
+        | s:Sum                         { $$ = $s }
+
+Sum     = l:Product
+                ( PLUS  r:Product       { $l = $l + $r }
+                | MINUS r:Product       { $l = $l - $r }
+                )*                      { $$ = $l }
+
+Product = l:Value
+                ( TIMES  r:Value        { $l = $l * $r }
+                | DIVIDE r:Value        { $l = $l / $r }
+                )*                      { $$ = $l }
+
+Value   = i:NUMBER                      { $$ = CLng($$text) }
+        | i:ID !ASSIGN                  { $$ = .LocalVars($i) }
+        | OPEN i:Expr CLOSE             { $$ = $i }
+
+NUMBER  = < [0-9]+ >    -               { $$ = CLng($$text) }
+ID      = < [a-z]  >    -               { $$ = Asc($$text) }
+ASSIGN  = '='           -
+PLUS    = '+'           -
+MINUS   = '-'           -
+TIMES   = '*'           -
+DIVIDE  = '/'           -
+OPEN    = '('           -
+CLOSE   = ')'           -
+
+-       = [ \t]*
+EOL     = '\n' | '\r\n' | '\r' | ';'

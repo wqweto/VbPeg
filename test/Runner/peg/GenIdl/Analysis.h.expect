@@ -1,0 +1,48 @@
+Pos: 2706, Result: [
+    {
+        "Tag": "SkipStmt",
+        "Text": "/*===-- llvm-c/Analysis.h - Analysis Library C Interface --------*- C++ -*-===*\\\r\n|*                                                                            *|\r\n|*                     The LLVM Compiler Infrastructure                       *|\r\n|*                                                                            *|\r\n|* This file is distributed under the University of Illinois Open Source      *|\r\n|* License. See LICENSE.TXT for details.                                      *|\r\n|*                                                                            *|\r\n|*===----------------------------------------------------------------------===*|\r\n|*                                                                            *|\r\n|* This header declares the C interface to libLLVMAnalysis.a, which           *|\r\n|* implements various analyses of the LLVM IR.                                *|\r\n|*                                                                            *|\r\n|* Many exotic languages can interoperate with C code but have a harder time  *|\r\n|* with C++ due to name mangling. So in addition to C, this interface enables *|\r\n|* tools written in such languages.                                           *|\r\n|*                                                                            *|\r\n\\*===----------------------------------------------------------------------===*/\r\n\r\n#ifndef LLVM_C_ANALYSIS_H\r\n#define LLVM_C_ANALYSIS_H\r\n\r\n#include \"llvm-c/Types.h\"\r\n\r\n#ifdef __cplusplus\r\n"
+    },
+    {
+        "Tag": "SkipStmt",
+        "Text": "extern \"C\" {\r\n#endif\r\n\r\n/**\r\n * @defgroup LLVMCAnalysis Analysis\r\n * @ingroup LLVMC\r\n *\r\n * @{\r\n */\r\n\r\n"
+    },
+    {
+        "Tag": "EnumDecl",
+        "Items": [
+            { "Name": "LLVMAbortProcessAction" },
+            { "Name": "LLVMPrintMessageAction" },
+            { "Name": "LLVMReturnStatusAction" }
+        ],
+        "Name": "LLVMVerifierFailureAction"
+    },
+    {
+        "Tag": "FunDecl",
+        "Name": "LLVMVerifyModule",
+        "Type": "LLVMBool ",
+        "Params": [
+            { "Type": "LLVMModuleRef ", "Name": "M" },
+            { "Type": "LLVMVerifierFailureAction ", "Name": "Action" },
+            { "Type": "char **", "Name": "OutMessage" }
+        ]
+    },
+    {
+        "Tag": "FunDecl",
+        "Name": "LLVMVerifyFunction",
+        "Type": "LLVMBool ",
+        "Params": [ { "Type": "LLVMValueRef ", "Name": "Fn" }, { "Type": "LLVMVerifierFailureAction ", "Name": "Action" } ]
+    },
+    {
+        "Tag": "FunDecl",
+        "Name": "LLVMViewFunctionCFG",
+        "Type": "void ",
+        "Params": [ { "Type": "LLVMValueRef ", "Name": "Fn" } ]
+    },
+    {
+        "Tag": "FunDecl",
+        "Name": "LLVMViewFunctionCFGOnly",
+        "Type": "void ",
+        "Params": [ { "Type": "LLVMValueRef ", "Name": "Fn" } ]
+    },
+    { "Tag": "SkipStmt", "Text": "}\r\n#endif\r\n\r\n#endif\r\n" }
+]
