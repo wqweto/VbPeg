@@ -7,7 +7,7 @@ VbPeg is a simple parser generator for VB6 that can be used to build interpreter
 
 VbPeg generates recursive-descent parsers from Parsing Expression Grammars (PEG) [[Ford 2004]](http://bford.info/pub/lang/peg.pdf) and is currently based on the original Ford syntax with some additions for 'semantic actions' as implemented by Ian Piumarta's [peg/leg](http://piumarta.com/software/peg/) project.
 
-VbPeg is self-hosted, meaning it can produce it's own parser in src\cParser.cls from the grammar in VbPeg.peg in root.
+VbPeg is self-hosted, meaning it can produce it's own parser in `src\cParser.cls` from the grammar in `VbPeg.peg` in root.
 
 ### Sample usage
 
