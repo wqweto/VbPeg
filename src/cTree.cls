@@ -1201,25 +1201,27 @@ Public Function ReadFile(sFile As String) As String
     End If
     m_sFileName = Mid$(sFile, InStrRev(sFile, "\") + 1)
     ReadFile = ReadTextFile(sFile)
-    pvBuildLineInfo ReadFile
+    m_laOffsets = pvBuildLineInfo(ReadFile)
 End Function
 
-Private Sub pvBuildLineInfo(sSubject As String)
+Private Function pvBuildLineInfo(sSubject As String) As Long()
     Dim lIdx            As Long
+    Dim laRetVal()      As Long
     
     With CreateObject("VBScript.RegExp")
         .Global = True
         .Pattern = "\r?\n"
         With .Execute(sSubject)
-            ReDim m_laOffsets(0 To .Count) As Long
+            ReDim laRetVal(0 To .Count) As Long
             For lIdx = 0 To .Count - 1
                 With .Item(lIdx)
-                    m_laOffsets(lIdx + 1) = .FirstIndex + .Length
+                    laRetVal(lIdx + 1) = .FirstIndex + .Length
                 End With
             Next
         End With
     End With
-End Sub
+    pvBuildLineInfo = laRetVal
+End Function
 
 Public Function CalcLine(ByVal lOffset As Long) As Variant
     Dim lLower          As Long
