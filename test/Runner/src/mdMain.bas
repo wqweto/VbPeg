@@ -27,6 +27,28 @@ Private Declare Function LocalFree Lib "kernel32" (ByVal hMem As Long) As Long
 Private Declare Function ApiSysAllocString Lib "oleaut32" Alias "SysAllocString" (ByVal Ptr As Long) As Long
 Private Declare Function GetFileAttributes Lib "kernel32" Alias "GetFileAttributesA" (ByVal lpFileName As String) As Long
 Private Declare Function IsTextUnicode Lib "advapi32" (lpBuffer As Any, ByVal cb As Long, lpi As Long) As Long
+Private Declare Function SetConsoleTextAttribute Lib "kernel32" (ByVal hConsoleOutput As Long, ByVal wAttributes As Long) As Long
+Private Declare Function GetConsoleScreenBufferInfo Lib "kernel32" (ByVal hConsoleOutput As Long, lpConsoleScreenBufferInfo As CONSOLE_SCREEN_BUFFER_INFO) As Long
+
+Private Type COORD
+    X                   As Integer
+    Y                   As Integer
+End Type
+
+Private Type SMALL_RECT
+    Left                As Integer
+    Top                 As Integer
+    Right               As Integer
+    Bottom              As Integer
+End Type
+
+Private Type CONSOLE_SCREEN_BUFFER_INFO
+    dwSize              As COORD
+    dwCursorPosition    As COORD
+    wAttributes         As Integer
+    srWindow            As SMALL_RECT
+    dwMaximumWindowSize As COORD
+End Type
 
 '=========================================================================
 ' Constants and member variables
@@ -88,6 +110,28 @@ End Function
 
 Public Function ConsoleError(ByVal sText As String, ParamArray A() As Variant) As String
     ConsoleError = pvConsoleOutput(GetStdHandle(STD_ERROR_HANDLE), sText, CVar(A))
+End Function
+
+Public Function ConsoleColorPrint(ByVal wAttr As Long, ByVal wMask As Long, ByVal sText As String, ParamArray A() As Variant) As String
+    Dim hConsole        As Long
+    Dim uInfo           As CONSOLE_SCREEN_BUFFER_INFO
+    
+    hConsole = GetStdHandle(STD_OUTPUT_HANDLE)
+    Call GetConsoleScreenBufferInfo(hConsole, uInfo)
+    Call SetConsoleTextAttribute(hConsole, (uInfo.wAttributes And Not wMask) Or (wAttr And wMask))
+    ConsoleColorPrint = pvConsoleOutput(hConsole, sText, CVar(A))
+    Call SetConsoleTextAttribute(hConsole, uInfo.wAttributes)
+End Function
+
+Public Function ConsoleColorError(ByVal wAttr As Long, ByVal wMask As Long, ByVal sText As String, ParamArray A() As Variant) As String
+    Dim hConsole        As Long
+    Dim uInfo           As CONSOLE_SCREEN_BUFFER_INFO
+    
+    hConsole = GetStdHandle(STD_ERROR_HANDLE)
+    Call GetConsoleScreenBufferInfo(hConsole, uInfo)
+    Call SetConsoleTextAttribute(hConsole, (uInfo.wAttributes And Not wMask) Or (wAttr And wMask))
+    ConsoleColorError = pvConsoleOutput(hConsole, sText, CVar(A))
+    Call SetConsoleTextAttribute(hConsole, uInfo.wAttributes)
 End Function
 
 Private Function pvConsoleOutput(ByVal hOut As Long, ByVal sText As String, A As Variant) As String
@@ -280,29 +324,36 @@ Public Function ConsoleTrace(ByVal lOffset As Long, sRule As String, ByVal lActi
     
     #If vUserData Then '--- touch arg
     #End If
-    sText = Mid$(m_sContents, lOffset, TEXT_LEN)
-    If InStr(sText, vbCr) > 0 Then
-        sText = Left$(sText, InStr(sText, vbCr) - 1)
-    End If
-    sText = Replace(Replace(sText, vbLf, " "), vbTab, " ")
-    If Len(sText) < TEXT_LEN Then
-        sText = sText & Space$(TEXT_LEN - Len(sText))
-    End If
-    sLine = Join(CalcLine(lOffset), ":")
-    If Len(sLine) - InStr(sLine, ":") < LINE_LEN Then
-        sLine = sLine & Space$(LINE_LEN - Len(sLine) + InStr(sLine, ":"))
-    End If
-    If lAction = 1 Then
-        ConsolePrint "%1|%2|%3?%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+    If lAction = 0 Then
         lLevel = lLevel + 1
     Else
-        If lLevel > 0 Then
-            lLevel = lLevel - 1
+        sText = Mid$(m_sContents, lOffset, TEXT_LEN)
+        If InStr(sText, vbCr) > 0 Then
+            sText = Left$(sText, InStr(sText, vbCr) - 1)
         End If
-        If lAction = 2 Then
-            ConsolePrint "%1|%2|%3=%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+        sText = Replace(Replace(sText, vbLf, " "), vbTab, " ")
+        If Len(sText) < TEXT_LEN Then
+            sText = sText & String$(TEXT_LEN - Len(sText), "~")
+        End If
+        sLine = Join(CalcLine(lOffset), ":")
+        If Len(sLine) - InStr(sLine, ":") < LINE_LEN Then
+            sLine = sLine & Space$(LINE_LEN - Len(sLine) + InStr(sLine, ":"))
+        End If
+        If lAction = 1 Then
+            ConsolePrint "%1|%2|%3?%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+            lLevel = lLevel + 1
         Else
-            ConsolePrint "%1|%2|%3!%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+            Debug.Assert lLevel > 0
+            lLevel = lLevel - 1
+            If lAction = 2 Then
+                Const FOREGROUND_GREEN As Long = &H2
+                Const FOREGROUND_MASK As Long = &HF
+                ConsoleColorPrint FOREGROUND_GREEN, FOREGROUND_MASK, "%1|%2|%3=%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+            ElseIf lAction = 3 Then
+                ConsolePrint "%1|%2|%3!%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+            Else
+                ConsolePrint "Trace error: lAction=" & lAction & vbCrLf
+            End If
         End If
     End If
 End Function
