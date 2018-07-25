@@ -1840,7 +1840,7 @@ Private Function pvEmitExpr(ByVal lNode As Long) As String
                 pvEmitExpr = .Text & "()"
             End If
         Case ucsIrtExprNot
-            pvEmitExpr = "Not " & pvEmitExpr(.Children(0))
+            pvEmitExpr = "Not (" & pvEmitExpr(.Children(0)) & ")"
         Case ucsIrtExprEmit
             pvEmitExpr = .Text
         End Select

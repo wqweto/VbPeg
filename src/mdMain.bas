@@ -37,6 +37,28 @@ Private Declare Function SetFilePointer Lib "kernel32" (ByVal hFile As Long, ByV
 Private Declare Function SetEndOfFile Lib "kernel32" (ByVal hFile As Long) As Long
 Private Declare Function CloseHandle Lib "kernel32" (ByVal hObject As Long) As Long
 Private Declare Sub ExitProcess Lib "kernel32" (ByVal uExitCode As Long)
+Private Declare Function SetConsoleTextAttribute Lib "kernel32" (ByVal hConsoleOutput As Long, ByVal wAttributes As Long) As Long
+Private Declare Function GetConsoleScreenBufferInfo Lib "kernel32" (ByVal hConsoleOutput As Long, lpConsoleScreenBufferInfo As CONSOLE_SCREEN_BUFFER_INFO) As Long
+
+Private Type COORD
+    X                   As Integer
+    Y                   As Integer
+End Type
+
+Private Type SMALL_RECT
+    Left                As Integer
+    Top                 As Integer
+    Right               As Integer
+    Bottom              As Integer
+End Type
+
+Private Type CONSOLE_SCREEN_BUFFER_INFO
+    dwSize              As COORD
+    dwCursorPosition    As COORD
+    wAttributes         As Integer
+    srWindow            As SMALL_RECT
+    dwMaximumWindowSize As COORD
+End Type
 
 '=========================================================================
 ' Constants and member variables
@@ -125,6 +147,7 @@ Private Function Process(vArgs As Variant) As Long
         End If
         lIdx = lIdx + 1
     Loop
+    Set cWarnings = Nothing
     If Not oTree.CheckTree(cWarnings) Then
         ConsoleError "%1" & vbCrLf, oTree.LastError
         Process = 2
@@ -134,6 +157,7 @@ Private Function Process(vArgs As Variant) As Long
             ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
         Next
     End If
+    Set cWarnings = Nothing
     If Not oTree.OptimizeTree(cWarnings) Then
         ConsoleError "Optimize failed: %1" & vbCrLf, oTree.LastError
         Process = 3
@@ -208,28 +232,35 @@ Public Function ConsoleTrace(ByVal lOffset As Long, sRule As String, ByVal lActi
     Dim sLine           As String
     
     If C_Bool(m_oOpt.Item("-trace")) Then
-        sText = Mid$(m_oParser.VbPegGetContents(), lOffset, TEXT_LEN)
-        If InStr(sText, vbCr) > 0 Then
-            sText = Left$(sText, InStr(sText, vbCr) - 1)
-        End If
-        If Len(sText) < TEXT_LEN Then
-            sText = sText & Space$(TEXT_LEN - Len(sText))
-        End If
-        sLine = Join(oUserData.CalcLine(lOffset), ":")
-        If Len(sLine) - InStr(sLine, ":") < LINE_LEN Then
-            sLine = sLine & Space$(LINE_LEN - Len(sLine) + InStr(sLine, ":"))
-        End If
-        If lAction = 1 Then
-            ConsoleError "%1|%2|%3?%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+        If lAction = 0 Then
             lLevel = lLevel + 1
         Else
-            If lLevel > 0 Then
-                lLevel = lLevel - 1
+            sText = Mid$(m_oParser.VbPegGetContents(), lOffset, TEXT_LEN)
+            If InStr(sText, vbCr) > 0 Then
+                sText = Left$(sText, InStr(sText, vbCr) - 1)
             End If
-            If lAction = 2 Then
-                ConsoleError "%1|%2|%3=%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+            If Len(sText) < TEXT_LEN Then
+                sText = sText & String$(TEXT_LEN - Len(sText), "~")
+            End If
+            sLine = Join(oUserData.CalcLine(lOffset), ":")
+            If Len(sLine) - InStr(sLine, ":") < LINE_LEN Then
+                sLine = sLine & Space$(LINE_LEN - Len(sLine) + InStr(sLine, ":"))
+            End If
+            If lAction = 1 Then
+                ConsoleError "%1|%2|%3?%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+                lLevel = lLevel + 1
             Else
-                ConsoleError "%1|%2|%3!%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+                Debug.Assert lLevel > 0
+                lLevel = lLevel - 1
+                If lAction = 2 Then
+                    Const FOREGROUND_GREEN As Long = &H2
+                    Const FOREGROUND_MASK As Long = &HF
+                    ConsoleColorError FOREGROUND_GREEN, FOREGROUND_MASK, "%1|%2|%3=%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+                ElseIf lAction = 3 Then
+                    ConsoleError "%1|%2|%3!%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+                Else
+                    ConsoleError "Trace error: lAction=" & lAction & vbCrLf
+                End If
             End If
         End If
     End If
@@ -288,6 +319,28 @@ End Function
 
 Public Function ConsoleError(ByVal sText As String, ParamArray A() As Variant) As String
     ConsoleError = pvConsoleOutput(GetStdHandle(STD_ERROR_HANDLE), sText, CVar(A))
+End Function
+
+Public Function ConsoleColorPrint(ByVal wAttr As Long, ByVal wMask As Long, ByVal sText As String, ParamArray A() As Variant) As String
+    Dim hConsole        As Long
+    Dim uInfo           As CONSOLE_SCREEN_BUFFER_INFO
+    
+    hConsole = GetStdHandle(STD_OUTPUT_HANDLE)
+    Call GetConsoleScreenBufferInfo(hConsole, uInfo)
+    Call SetConsoleTextAttribute(hConsole, (uInfo.wAttributes And Not wMask) Or (wAttr And wMask))
+    ConsoleColorPrint = pvConsoleOutput(hConsole, sText, CVar(A))
+    Call SetConsoleTextAttribute(hConsole, uInfo.wAttributes)
+End Function
+
+Public Function ConsoleColorError(ByVal wAttr As Long, ByVal wMask As Long, ByVal sText As String, ParamArray A() As Variant) As String
+    Dim hConsole        As Long
+    Dim uInfo           As CONSOLE_SCREEN_BUFFER_INFO
+    
+    hConsole = GetStdHandle(STD_ERROR_HANDLE)
+    Call GetConsoleScreenBufferInfo(hConsole, uInfo)
+    Call SetConsoleTextAttribute(hConsole, (uInfo.wAttributes And Not wMask) Or (wAttr And wMask))
+    ConsoleColorError = pvConsoleOutput(hConsole, sText, CVar(A))
+    Call SetConsoleTextAttribute(hConsole, uInfo.wAttributes)
 End Function
 
 Private Function pvConsoleOutput(ByVal hOut As Long, ByVal sText As String, A As Variant) As String

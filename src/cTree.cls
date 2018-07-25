@@ -327,20 +327,14 @@ End Function
 
 Public Sub SetExpression(ByVal lRule As Long, ByVal lNode As Long)
     Dim lOffset         As Long
-    Dim sTrace          As String
+    Dim sText           As String
     
-    If LenB(SettingValue(STR_SETTING_TRACE)) Then
+    If LenB(SettingValue(STR_SETTING_TRACE)) <> 0 Then
         With m_uTree.Nodes(lRule)
             lOffset = .Offset
-            sTrace = SettingValue(STR_SETTING_TRACE) & "(" & STR_CTX_VAR_NAME & ".BufPos + 1, """ & .Text & """, %1, " & STR_CTX_VAR_NAME & ".UserData)"
+            sText = .Text
         End With
-        lNode = AppendChild( _
-            MakeChoice(lOffset, AppendSequence(AppendSequence( _
-                MakeSequence(lOffset, _
-                    MakePredicate(lOffset, Replace(sTrace, "%1", 1), AlwaysTrue:=True)), _
-                    lNode), _
-                    MakePredicate(lOffset, Replace(sTrace, "%1", 2), AlwaysTrue:=True))), _
-                MakePredicate(lOffset, Replace(sTrace, "%1", 3) & " And False"))
+        lNode = pvMakeTrace(lOffset, sText, lNode)
     End If
     RuleExpression(lRule) = lNode
 End Sub
@@ -416,9 +410,42 @@ Public Function MakeClass(ByVal lOffset As Long, sText As String) As Long
     NodeFlag(MakeClass, ucsNdfIgnoreCase) = C_Bool(SettingValue(STR_SETTING_IGNORECASE))
 End Function
 
-Public Function SetIgnoreCase(ByVal lNode As Long, ByVal bValue As Boolean) As Long
-    NodeFlag(lNode, ucsNdfIgnoreCase) = bValue
+Public Function SetIgnoreCase(ByVal lNode As Long, ByVal sFlag As String) As Long
+    Dim lOffset         As Long
+    Dim sText           As String
+    
+    Select Case sFlag
+    Case "i"
+        NodeFlag(lNode, ucsNdfIgnoreCase) = True
+    Case "s"
+        NodeFlag(lNode, ucsNdfIgnoreCase) = False
+    End Select
+    If LenB(SettingValue(STR_SETTING_TRACE)) <> 0 Then
+        With m_uTree.Nodes(lNode)
+            lOffset = .Offset
+            If .NodeType = ucsNdtString Then
+                sText = """" & Replace(.Text, """", """""") & """"
+            Else
+                sText = "[" & .Text & "]"
+            End If
+            sText = sText & IIf((.Flags And ucsNdfIgnoreCase) <> 0, "i", vbNullString)
+        End With
+        lNode = pvMakeTrace(lOffset, sText, lNode, FirstAction:=0)
+    End If
     SetIgnoreCase = lNode
+End Function
+
+Private Function pvMakeTrace(ByVal lOffset As Long, sText As String, ByVal lNode As Long, Optional ByVal FirstAction As Long = 1) As Long
+    Dim sTrace      As String
+    
+    sTrace = SettingValue(STR_SETTING_TRACE) & "(" & STR_CTX_VAR_NAME & ".BufPos + 1, """ & Replace(sText, """", """""") & """, %1, " & STR_CTX_VAR_NAME & ".UserData)"
+    pvMakeTrace = AppendChild( _
+        MakeChoice(lOffset, AppendSequence(AppendSequence( _
+            MakeSequence(lOffset, _
+                MakePredicate(lOffset, Replace(sTrace, "%1", FirstAction), AlwaysTrue:=True)), _
+                lNode), _
+                MakePredicate(lOffset, Replace(sTrace, "%1", 2), AlwaysTrue:=True))), _
+            MakePredicate(lOffset, Replace(sTrace, "%1", 3) & " And False"))
 End Function
 
 Public Function MakeAction(ByVal lOffset As Long, sText As String) As Long
@@ -672,7 +699,9 @@ Private Function pvConsumeInput(ByVal lNode As Long, cResult As Collection) As B
             End If
         Case ucsNdtChoice
             For lIdx = 0 To UBound(.Children)
-                If Not pvConsumeInput(.Children(lIdx), cResult) Then
+                If NodeType(.Children(lIdx)) = ucsNdtPredicate Then
+                    '--- do nothing
+                ElseIf Not pvConsumeInput(.Children(lIdx), cResult) Then
                     GoTo QH
                 End If
             Next

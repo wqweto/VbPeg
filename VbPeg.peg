@@ -62,11 +62,11 @@ PrimaryExpr     <- Identifier !(LiteralNC? AssignLiteral)               { .Push 
                          /                                             &{ AppendError("Invalid expression", ctx.BufPos + 1) }
                         )
                  / LiteralNoSpace                                       { .Push .MakeString(lOffset, $$text) }
-                    (IgnoreCase                                         { .SetIgnoreCase .Top, ($$text = "i") }
-                    )? Spacing
+                    (IgnoreCase / EMPTY)                                { .Push .SetIgnoreCase(.Pop, $$text) }
+                    Spacing
                  / ClassNoSpace                                         { .Push .MakeClass(lOffset, $$text) }
-                    (IgnoreCase                                         { .SetIgnoreCase .Top, ($$text = "i") }
-                    )? Spacing
+                    (IgnoreCase / EMPTY)                                { .Push .SetIgnoreCase(.Pop, $$text) }
+                    Spacing
                  / DOT                                                  { .Push .MakeDot(lOffset) }
                  / CodeBlock                                            { .Push .MakeAction(lOffset, $$text) }
                  / BEGIN                                                { .Push .MakePredicate(lOffset, "YY_BEGIN", AlwaysTrue:=True) }
