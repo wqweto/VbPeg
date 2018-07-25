@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 24.7.2018 14:17:09
+' Auto-generated on 25.7.2018 18:55:46
 Option Explicit
 DefObj A-Z
 
@@ -66,7 +66,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "24.7.2018 14:17:09"
+    ParserVersion = "25.7.2018 18:55:46"
 End Property
 
 '=========================================================================
@@ -155,7 +155,7 @@ Public Function Parselist() As Boolean
         If Parseopen() Then
             Do
                 p5 = .BufPos
-                If Not Parseelem() Then
+                If Not (Parseelem()) Then
                     .BufPos = p5
                     Exit Do
                 End If
@@ -175,7 +175,7 @@ Public Function Parseopen() As Boolean
             .BufPos = .BufPos + 1
             Do
                 p39 = .BufPos
-                If Not Parsespace() Then
+                If Not (Parsespace()) Then
                     .BufPos = p39
                     Exit Do
                 End If
@@ -226,7 +226,7 @@ Public Function Parseclose() As Boolean
             .BufPos = .BufPos + 1
             Do
                 p43 = .BufPos
-                If Not Parsespace() Then
+                If Not (Parsespace()) Then
                     .BufPos = p43
                     Exit Do
                 End If
@@ -253,7 +253,7 @@ Public Function Parseatom() As Boolean
         If i19 <> 0 Then
             Do
                 p21 = .BufPos
-                If Not Parsespace() Then
+                If Not (Parsespace()) Then
                     .BufPos = p21
                     Exit Do
                 End If
@@ -281,7 +281,7 @@ Public Function Parsesstring() As Boolean
                 .BufPos = .BufPos + 1
                 Do
                     p36 = .BufPos
-                    If Not Parsespace() Then
+                    If Not (Parsespace()) Then
                         .BufPos = p36
                         Exit Do
                     End If
@@ -310,7 +310,7 @@ Public Function Parsedstring() As Boolean
                 .BufPos = .BufPos + 1
                 Do
                     p29 = .BufPos
-                    If Not Parsespace() Then
+                    If Not (Parsespace()) Then
                         .BufPos = p29
                         Exit Do
                     End If

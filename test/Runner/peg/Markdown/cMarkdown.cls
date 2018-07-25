@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 24.7.2018 14:17:09
+' Auto-generated on 25.7.2018 18:55:46
 Option Explicit
 DefObj A-Z
 
@@ -191,7 +191,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "24.7.2018 14:17:09"
+    ParserVersion = "25.7.2018 18:55:46"
 End Property
 
 '=========================================================================
@@ -335,7 +335,7 @@ Public Function ParseDoc() As Boolean
             Do
                 p14 = .BufPos
                 q14 = .ThunkPos
-                If Not ParseBlock() Then
+                If Not (ParseBlock()) Then
                     .BufPos = p14
                     .ThunkPos = q14
                     Exit Do
@@ -371,7 +371,7 @@ Public Function ParseBlock() As Boolean
     With ctx
         Do
             p18 = .BufPos
-            If Not ParseBlankLine() Then
+            If Not (ParseBlankLine()) Then
                 .BufPos = p18
                 Exit Do
             End If
@@ -498,7 +498,7 @@ Public Function ParseVerbatim() As Boolean
             For i228 = 0 To LNG_MAXINT
                 p227 = .BufPos
                 q227 = .ThunkPos
-                If Not ParseVerbatimChunk() Then
+                If Not (ParseVerbatimChunk()) Then
                     .BufPos = p227
                     .ThunkPos = q227
                     Exit For
@@ -548,7 +548,7 @@ Public Function ParseNote() As Boolean
                                     .ThunkPos = q2940
                                     Exit Do
                                 End If
-                                If Not ParseRawNoteBlock() Then
+                                If Not (ParseRawNoteBlock()) Then
                                     .BufPos = p2940
                                     .ThunkPos = q2940
                                     Exit Do
@@ -577,7 +577,7 @@ Public Function ParseReference() As Boolean
         pvPushThunk ucsActVarAlloc, 3
         Call ParseNonindentSpace
         p2157 = .BufPos
-        If Not .BufData(.BufPos) = 91 And .BufData(.BufPos + 1) = 93 Then ' "[]"
+        If Not (.BufData(.BufPos) = 91 And .BufData(.BufPos + 1) = 93) Then ' "[]"
             .BufPos = p2157
             pvPushThunk ucsActResultClear
             If ParseLabel() Then
@@ -594,7 +594,7 @@ Public Function ParseReference() As Boolean
                         For i2176 = 0 To LNG_MAXINT
                             p2175 = .BufPos
                             q2175 = .ThunkPos
-                            If Not ParseBlankLine() Then
+                            If Not (ParseBlankLine()) Then
                                 .BufPos = p2175
                                 .ThunkPos = q2175
                                 Exit For
@@ -646,7 +646,7 @@ Public Function ParseHorizontalRule() As Boolean
                     If ParseNewline() Then
                         For i266 = 0 To LNG_MAXINT
                             p265 = .BufPos
-                            If Not ParseBlankLine() Then
+                            If Not (ParseBlankLine()) Then
                                 .BufPos = p265
                                 Exit For
                             End If
@@ -687,7 +687,7 @@ Public Function ParseHorizontalRule() As Boolean
                     If ParseNewline() Then
                         For i266 = 0 To LNG_MAXINT
                             p265 = .BufPos
-                            If Not ParseBlankLine() Then
+                            If Not (ParseBlankLine()) Then
                                 .BufPos = p265
                                 Exit For
                             End If
@@ -728,7 +728,7 @@ Public Function ParseHorizontalRule() As Boolean
                     If ParseNewline() Then
                         For i266 = 0 To LNG_MAXINT
                             p265 = .BufPos
-                            If Not ParseBlankLine() Then
+                            If Not (ParseBlankLine()) Then
                                 .BufPos = p265
                                 Exit For
                             End If
@@ -853,7 +853,7 @@ Public Function ParseHtmlBlock() As Boolean
             lCaptureEnd = .BufPos
             For i1547 = 0 To LNG_MAXINT
                 p1546 = .BufPos
-                If Not ParseBlankLine() Then
+                If Not (ParseBlankLine()) Then
                     .BufPos = p1546
                     Exit For
                 End If
@@ -872,7 +872,7 @@ Public Function ParseHtmlBlock() As Boolean
             lCaptureEnd = .BufPos
             For i1547 = 0 To LNG_MAXINT
                 p1546 = .BufPos
-                If Not ParseBlankLine() Then
+                If Not (ParseBlankLine()) Then
                     .BufPos = p1546
                     Exit For
                 End If
@@ -891,7 +891,7 @@ Public Function ParseHtmlBlock() As Boolean
             lCaptureEnd = .BufPos
             For i1547 = 0 To LNG_MAXINT
                 p1546 = .BufPos
-                If Not ParseBlankLine() Then
+                If Not (ParseBlankLine()) Then
                     .BufPos = p1546
                     Exit For
                 End If
@@ -920,7 +920,7 @@ Public Function ParseStyleBlock() As Boolean
             lCaptureEnd = .BufPos
             Do
                 p1665 = .BufPos
-                If Not ParseBlankLine() Then
+                If Not (ParseBlankLine()) Then
                     .BufPos = p1665
                     Exit Do
                 End If
@@ -947,7 +947,7 @@ Public Function ParsePara() As Boolean
             For i55 = 0 To LNG_MAXINT
                 p54 = .BufPos
                 q54 = .ThunkPos
-                If Not ParseBlankLine() Then
+                If Not (ParseBlankLine()) Then
                     .BufPos = p54
                     .ThunkPos = q54
                     Exit For
@@ -1080,7 +1080,7 @@ Public Function ParseInlines() As Boolean
             If i1685 <> 0 Then
                 p1686 = .BufPos
                 q1686 = .ThunkPos
-                If Not ParseEndline() Then
+                If Not (ParseEndline()) Then
                     .BufPos = p1686
                     .ThunkPos = q1686
                 End If
@@ -1100,7 +1100,7 @@ Public Function ParseAtxInline() As Boolean
     With ctx
         p65 = .BufPos
         e65 = .LastExpected
-        If Not ParseNewline() Then
+        If Not (ParseNewline()) Then
             .BufPos = p65
             .LastExpected = e65
             p73 = .BufPos
@@ -1113,7 +1113,7 @@ Public Function ParseAtxInline() As Boolean
                 End If
             Loop
             Call ParseSp
-            If Not ParseNewline() Then
+            If Not (ParseNewline()) Then
                 .BufPos = p73
                 If ParseInline() Then
                     Call pvSetAdvance
@@ -1152,7 +1152,7 @@ Public Sub ParseSp()
     With ctx
         Do
             p2551 = .BufPos
-            If Not ParseSpacechar() Then
+            If Not (ParseSpacechar()) Then
                 .BufPos = p2551
                 Exit Do
             End If
@@ -1376,7 +1376,7 @@ Public Function ParseAtxHeading() As Boolean
                 For i102 = 0 To LNG_MAXINT
                     p101 = .BufPos
                     q101 = .ThunkPos
-                    If Not ParseAtxInline() Then
+                    If Not (ParseAtxInline()) Then
                         .BufPos = p101
                         .ThunkPos = q101
                         Exit For
@@ -1464,7 +1464,7 @@ Public Function ParseSetextHeading1() As Boolean
                             .ThunkPos = q139
                             .LastExpected = e139
                         End If
-                        If Not ParseInline() Then
+                        If Not (ParseInline()) Then
                             .BufPos = p141
                             .ThunkPos = q141
                             Exit For
@@ -1520,7 +1520,7 @@ Public Function ParseSetextHeading2() As Boolean
                             .ThunkPos = q158
                             .LastExpected = e158
                         End If
-                        If Not ParseInline() Then
+                        If Not (ParseInline()) Then
                             .BufPos = p160
                             .ThunkPos = q160
                             Exit For
@@ -1714,7 +1714,7 @@ Public Function ParseBlockQuoteRaw() As Boolean
                 If .BufData(.BufPos) = 32 Then      ' " "
                     .BufPos = .BufPos + 1
                 End If
-                If Not ParseLine() Then
+                If Not (ParseLine()) Then
                     .BufPos = p183
                     .ThunkPos = q183
                     Exit For
@@ -1745,7 +1745,7 @@ Public Function ParseBlockQuoteRaw() As Boolean
                         .ThunkPos = q190
                         .LastExpected = e190
                     End If
-                    If Not ParseLine() Then
+                    If Not (ParseLine()) Then
                         .BufPos = p191
                         .ThunkPos = q191
                         Exit Do
@@ -1755,7 +1755,7 @@ Public Function ParseBlockQuoteRaw() As Boolean
                 Do
                     p197 = .BufPos
                     q197 = .ThunkPos
-                    If Not ParseBlankLine() Then
+                    If Not (ParseBlankLine()) Then
                         .BufPos = p197
                         .ThunkPos = q197
                         Exit Do
@@ -1789,7 +1789,7 @@ Public Function ParseNonblankIndentedLine() As Boolean
     With ctx
         p203 = .BufPos
         e203 = .LastExpected
-        If Not ParseBlankLine() Then
+        If Not (ParseBlankLine()) Then
             .BufPos = p203
             .LastExpected = e203
             If ParseIndentedLine() Then
@@ -1822,7 +1822,7 @@ Public Function ParseVerbatimChunk() As Boolean
             Do
                 p214 = .BufPos
                 q214 = .ThunkPos
-                If Not ParseBlankLine() Then
+                If Not (ParseBlankLine()) Then
                     .BufPos = p214
                     .ThunkPos = q214
                     Exit Do
@@ -1832,7 +1832,7 @@ Public Function ParseVerbatimChunk() As Boolean
             For i219 = 0 To LNG_MAXINT
                 p218 = .BufPos
                 q218 = .ThunkPos
-                If Not ParseNonblankIndentedLine() Then
+                If Not (ParseNonblankIndentedLine()) Then
                     .BufPos = p218
                     .ThunkPos = q218
                     Exit For
@@ -1860,7 +1860,7 @@ Public Function ParseBullet() As Boolean
         p270 = .BufPos
         q270 = .ThunkPos
         e270 = .LastExpected
-        If Not ParseHorizontalRule() Then
+        If Not (ParseHorizontalRule()) Then
             .BufPos = p270
             .ThunkPos = q270
             .LastExpected = e270
@@ -1870,7 +1870,7 @@ Public Function ParseBullet() As Boolean
                 For i279 = 0 To LNG_MAXINT
                     p278 = .BufPos
                     q278 = .ThunkPos
-                    If Not ParseSpacechar() Then
+                    If Not (ParseSpacechar()) Then
                         .BufPos = p278
                         .ThunkPos = q278
                         Exit For
@@ -1886,7 +1886,7 @@ Public Function ParseBullet() As Boolean
                 For i279 = 0 To LNG_MAXINT
                     p278 = .BufPos
                     q278 = .ThunkPos
-                    If Not ParseSpacechar() Then
+                    If Not (ParseSpacechar()) Then
                         .BufPos = p278
                         .ThunkPos = q278
                         Exit For
@@ -1902,7 +1902,7 @@ Public Function ParseBullet() As Boolean
                 For i279 = 0 To LNG_MAXINT
                     p278 = .BufPos
                     q278 = .ThunkPos
-                    If Not ParseSpacechar() Then
+                    If Not (ParseSpacechar()) Then
                         .BufPos = p278
                         .ThunkPos = q278
                         Exit For
@@ -1952,7 +1952,7 @@ Public Function ParseListTight() As Boolean
             For i297 = 0 To LNG_MAXINT
                 p296 = .BufPos
                 q296 = .ThunkPos
-                If Not ParseListItemTight() Then
+                If Not (ParseListItemTight()) Then
                     .BufPos = p296
                     .ThunkPos = q296
                     Exit For
@@ -1963,7 +1963,7 @@ Public Function ParseListTight() As Boolean
                 Do
                     p298 = .BufPos
                     q298 = .ThunkPos
-                    If Not ParseBlankLine() Then
+                    If Not (ParseBlankLine()) Then
                         .BufPos = p298
                         .ThunkPos = q298
                         Exit Do
@@ -1973,10 +1973,10 @@ Public Function ParseListTight() As Boolean
                 q304 = .ThunkPos
                 p303 = .BufPos
                 q303 = .ThunkPos
-                If Not ParseBullet() Then
+                If Not (ParseBullet()) Then
                     .BufPos = p303
                     .ThunkPos = q303
-                    If Not ParseEnumerator() Then
+                    If Not (ParseEnumerator()) Then
                         .BufPos = p303
                         .ThunkPos = q303
                         .BufPos = p304
@@ -2018,7 +2018,7 @@ Public Function ParseListLoose() As Boolean
                 Do
                     p315 = .BufPos
                     q315 = .ThunkPos
-                    If Not ParseBlankLine() Then
+                    If Not (ParseBlankLine()) Then
                         .BufPos = p315
                         .ThunkPos = q315
                         Exit Do
@@ -2072,7 +2072,7 @@ Public Function ParseListItemTight() As Boolean
                             .ThunkPos = q348
                             .LastExpected = e348
                         End If
-                        If Not ParseListContinuationBlock() Then
+                        If Not (ParseListContinuationBlock()) Then
                             .BufPos = p350
                             .ThunkPos = q350
                             Exit Do
@@ -2082,7 +2082,7 @@ Public Function ParseListItemTight() As Boolean
                     p354 = .BufPos
                     q354 = .ThunkPos
                     e354 = .LastExpected
-                    If Not ParseListContinuationBlock() Then
+                    If Not (ParseListContinuationBlock()) Then
                         .BufPos = p354
                         .ThunkPos = q354
                         .LastExpected = e354
@@ -2118,7 +2118,7 @@ Public Function ParseListItemTight() As Boolean
                             .ThunkPos = q348
                             .LastExpected = e348
                         End If
-                        If Not ParseListContinuationBlock() Then
+                        If Not (ParseListContinuationBlock()) Then
                             .BufPos = p350
                             .ThunkPos = q350
                             Exit Do
@@ -2128,7 +2128,7 @@ Public Function ParseListItemTight() As Boolean
                     p354 = .BufPos
                     q354 = .ThunkPos
                     e354 = .LastExpected
-                    If Not ParseListContinuationBlock() Then
+                    If Not (ParseListContinuationBlock()) Then
                         .BufPos = p354
                         .ThunkPos = q354
                         .LastExpected = e354
@@ -2166,7 +2166,7 @@ Public Function ParseEnumerator() As Boolean
                 .BufPos = .BufPos + 1
                 For i393 = 0 To LNG_MAXINT
                     p392 = .BufPos
-                    If Not ParseSpacechar() Then
+                    If Not (ParseSpacechar()) Then
                         .BufPos = p392
                         Exit For
                     End If
@@ -2199,7 +2199,7 @@ Public Function ParseListItem() As Boolean
                     Do
                         p334 = .BufPos
                         q334 = .ThunkPos
-                        If Not ParseListContinuationBlock() Then
+                        If Not (ParseListContinuationBlock()) Then
                             .BufPos = p334
                             .ThunkPos = q334
                             Exit Do
@@ -2225,7 +2225,7 @@ Public Function ParseListItem() As Boolean
                     Do
                         p334 = .BufPos
                         q334 = .ThunkPos
-                        If Not ParseListContinuationBlock() Then
+                        If Not (ParseListContinuationBlock()) Then
                             .BufPos = p334
                             .ThunkPos = q334
                             Exit Do
@@ -2260,7 +2260,7 @@ Public Function ParseListBlock() As Boolean
             p361 = .BufPos
             q361 = .ThunkPos
             e361 = .LastExpected
-            If Not ParseBlankLine() Then
+            If Not (ParseBlankLine()) Then
                 .BufPos = p361
                 .ThunkPos = q361
                 .LastExpected = e361
@@ -2269,7 +2269,7 @@ Public Function ParseListBlock() As Boolean
                     Do
                         p367 = .BufPos
                         q367 = .ThunkPos
-                        If Not ParseListBlockLine() Then
+                        If Not (ParseListBlockLine()) Then
                             .BufPos = p367
                             .ThunkPos = q367
                             Exit Do
@@ -2303,7 +2303,7 @@ Public Function ParseListContinuationBlock() As Boolean
             Do
                 p375 = .BufPos
                 q375 = .ThunkPos
-                If Not ParseBlankLine() Then
+                If Not (ParseBlankLine()) Then
                     .BufPos = p375
                     .ThunkPos = q375
                     Exit Do
@@ -2316,12 +2316,12 @@ Public Function ParseListContinuationBlock() As Boolean
             For i385 = 0 To LNG_MAXINT
                 p383 = .BufPos
                 q383 = .ThunkPos
-                If Not ParseIndent() Then
+                If Not (ParseIndent()) Then
                     .BufPos = p383
                     .ThunkPos = q383
                     Exit For
                 End If
-                If Not ParseListBlock() Then
+                If Not (ParseListBlock()) Then
                     .BufPos = p383
                     .ThunkPos = q383
                     Exit For
@@ -2356,21 +2356,21 @@ Public Function ParseListBlockLine() As Boolean
     With ctx
         p402 = .BufPos
         e402 = .LastExpected
-        If Not ParseBlankLine() Then
+        If Not (ParseBlankLine()) Then
             .BufPos = p402
             .LastExpected = e402
             p409 = .BufPos
             q409 = .ThunkPos
             p403 = .BufPos
-            If Not ParseIndent() Then
+            If Not (ParseIndent()) Then
                 .BufPos = p403
             End If
             p407 = .BufPos
             q407 = .ThunkPos
-            If Not ParseBullet() Then
+            If Not (ParseBullet()) Then
                 .BufPos = p407
                 .ThunkPos = q407
-                If Not ParseEnumerator() Then
+                If Not (ParseEnumerator()) Then
                     .BufPos = p407
                     .ThunkPos = q407
                     .BufPos = p409
@@ -2378,7 +2378,7 @@ Public Function ParseListBlockLine() As Boolean
                     p412 = .BufPos
                     q412 = .ThunkPos
                     e412 = .LastExpected
-                    If Not ParseHorizontalRule() Then
+                    If Not (ParseHorizontalRule()) Then
                         .BufPos = p412
                         .ThunkPos = q412
                         .LastExpected = e412
@@ -2414,7 +2414,7 @@ Public Function ParseOptionallyIndentedLine() As Boolean
 
     With ctx
         p2754 = .BufPos
-        If Not ParseIndent() Then
+        If Not (ParseIndent()) Then
             .BufPos = p2754
         End If
         If ParseLine() Then
@@ -2435,7 +2435,7 @@ Public Function ParseHtmlBlockOpenAddress() As Boolean
                 Call ParseSpnl
                 Do
                     p425 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p425
                         Exit Do
                     End If
@@ -2451,7 +2451,7 @@ Public Function ParseHtmlBlockOpenAddress() As Boolean
                 Call ParseSpnl
                 Do
                     p425 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p425
                         Exit Do
                     End If
@@ -2525,7 +2525,7 @@ Public Function ParseHtmlAttribute() As Boolean
                     Else
                         .BufPos = p2505
                     End If
-                    If Not ParseNonspacechar() Then
+                    If Not (ParseNonspacechar()) Then
                         .BufPos = p2507
                         Exit For
                     End If
@@ -2582,7 +2582,7 @@ Public Function ParseHtmlBlockAddress() As Boolean
         If ParseHtmlBlockOpenAddress() Then
             Do
                 p445 = .BufPos
-                If Not ParseHtmlBlockAddress() Then
+                If Not (ParseHtmlBlockAddress()) Then
                     .BufPos = p445
                     p442 = .BufPos
                     e442 = .LastExpected
@@ -2622,7 +2622,7 @@ Public Function ParseHtmlBlockOpenBlockquote() As Boolean
                 Call ParseSpnl
                 Do
                     p457 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p457
                         Exit Do
                     End If
@@ -2638,7 +2638,7 @@ Public Function ParseHtmlBlockOpenBlockquote() As Boolean
                 Call ParseSpnl
                 Do
                     p457 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p457
                         Exit Do
                     End If
@@ -2692,7 +2692,7 @@ Public Function ParseHtmlBlockBlockquote() As Boolean
         If ParseHtmlBlockOpenBlockquote() Then
             Do
                 p477 = .BufPos
-                If Not ParseHtmlBlockBlockquote() Then
+                If Not (ParseHtmlBlockBlockquote()) Then
                     .BufPos = p477
                     p474 = .BufPos
                     e474 = .LastExpected
@@ -2732,7 +2732,7 @@ Public Function ParseHtmlBlockOpenCenter() As Boolean
                 Call ParseSpnl
                 Do
                     p489 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p489
                         Exit Do
                     End If
@@ -2748,7 +2748,7 @@ Public Function ParseHtmlBlockOpenCenter() As Boolean
                 Call ParseSpnl
                 Do
                     p489 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p489
                         Exit Do
                     End If
@@ -2802,7 +2802,7 @@ Public Function ParseHtmlBlockCenter() As Boolean
         If ParseHtmlBlockOpenCenter() Then
             Do
                 p509 = .BufPos
-                If Not ParseHtmlBlockCenter() Then
+                If Not (ParseHtmlBlockCenter()) Then
                     .BufPos = p509
                     p506 = .BufPos
                     e506 = .LastExpected
@@ -2842,7 +2842,7 @@ Public Function ParseHtmlBlockOpenDir() As Boolean
                 Call ParseSpnl
                 Do
                     p521 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p521
                         Exit Do
                     End If
@@ -2858,7 +2858,7 @@ Public Function ParseHtmlBlockOpenDir() As Boolean
                 Call ParseSpnl
                 Do
                     p521 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p521
                         Exit Do
                     End If
@@ -2912,7 +2912,7 @@ Public Function ParseHtmlBlockDir() As Boolean
         If ParseHtmlBlockOpenDir() Then
             Do
                 p541 = .BufPos
-                If Not ParseHtmlBlockDir() Then
+                If Not (ParseHtmlBlockDir()) Then
                     .BufPos = p541
                     p538 = .BufPos
                     e538 = .LastExpected
@@ -2952,7 +2952,7 @@ Public Function ParseHtmlBlockOpenDiv() As Boolean
                 Call ParseSpnl
                 Do
                     p553 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p553
                         Exit Do
                     End If
@@ -2968,7 +2968,7 @@ Public Function ParseHtmlBlockOpenDiv() As Boolean
                 Call ParseSpnl
                 Do
                     p553 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p553
                         Exit Do
                     End If
@@ -3022,7 +3022,7 @@ Public Function ParseHtmlBlockDiv() As Boolean
         If ParseHtmlBlockOpenDiv() Then
             Do
                 p573 = .BufPos
-                If Not ParseHtmlBlockDiv() Then
+                If Not (ParseHtmlBlockDiv()) Then
                     .BufPos = p573
                     p570 = .BufPos
                     e570 = .LastExpected
@@ -3062,7 +3062,7 @@ Public Function ParseHtmlBlockOpenDl() As Boolean
                 Call ParseSpnl
                 Do
                     p585 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p585
                         Exit Do
                     End If
@@ -3078,7 +3078,7 @@ Public Function ParseHtmlBlockOpenDl() As Boolean
                 Call ParseSpnl
                 Do
                     p585 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p585
                         Exit Do
                     End If
@@ -3132,7 +3132,7 @@ Public Function ParseHtmlBlockDl() As Boolean
         If ParseHtmlBlockOpenDl() Then
             Do
                 p605 = .BufPos
-                If Not ParseHtmlBlockDl() Then
+                If Not (ParseHtmlBlockDl()) Then
                     .BufPos = p605
                     p602 = .BufPos
                     e602 = .LastExpected
@@ -3172,7 +3172,7 @@ Public Function ParseHtmlBlockOpenFieldset() As Boolean
                 Call ParseSpnl
                 Do
                     p617 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p617
                         Exit Do
                     End If
@@ -3188,7 +3188,7 @@ Public Function ParseHtmlBlockOpenFieldset() As Boolean
                 Call ParseSpnl
                 Do
                     p617 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p617
                         Exit Do
                     End If
@@ -3242,7 +3242,7 @@ Public Function ParseHtmlBlockFieldset() As Boolean
         If ParseHtmlBlockOpenFieldset() Then
             Do
                 p637 = .BufPos
-                If Not ParseHtmlBlockFieldset() Then
+                If Not (ParseHtmlBlockFieldset()) Then
                     .BufPos = p637
                     p634 = .BufPos
                     e634 = .LastExpected
@@ -3282,7 +3282,7 @@ Public Function ParseHtmlBlockOpenForm() As Boolean
                 Call ParseSpnl
                 Do
                     p649 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p649
                         Exit Do
                     End If
@@ -3298,7 +3298,7 @@ Public Function ParseHtmlBlockOpenForm() As Boolean
                 Call ParseSpnl
                 Do
                     p649 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p649
                         Exit Do
                     End If
@@ -3352,7 +3352,7 @@ Public Function ParseHtmlBlockForm() As Boolean
         If ParseHtmlBlockOpenForm() Then
             Do
                 p669 = .BufPos
-                If Not ParseHtmlBlockForm() Then
+                If Not (ParseHtmlBlockForm()) Then
                     .BufPos = p669
                     p666 = .BufPos
                     e666 = .LastExpected
@@ -3392,7 +3392,7 @@ Public Function ParseHtmlBlockOpenH1() As Boolean
                 Call ParseSpnl
                 Do
                     p681 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p681
                         Exit Do
                     End If
@@ -3408,7 +3408,7 @@ Public Function ParseHtmlBlockOpenH1() As Boolean
                 Call ParseSpnl
                 Do
                     p681 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p681
                         Exit Do
                     End If
@@ -3462,7 +3462,7 @@ Public Function ParseHtmlBlockH1() As Boolean
         If ParseHtmlBlockOpenH1() Then
             Do
                 p701 = .BufPos
-                If Not ParseHtmlBlockH1() Then
+                If Not (ParseHtmlBlockH1()) Then
                     .BufPos = p701
                     p698 = .BufPos
                     e698 = .LastExpected
@@ -3502,7 +3502,7 @@ Public Function ParseHtmlBlockOpenH2() As Boolean
                 Call ParseSpnl
                 Do
                     p713 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p713
                         Exit Do
                     End If
@@ -3518,7 +3518,7 @@ Public Function ParseHtmlBlockOpenH2() As Boolean
                 Call ParseSpnl
                 Do
                     p713 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p713
                         Exit Do
                     End If
@@ -3572,7 +3572,7 @@ Public Function ParseHtmlBlockH2() As Boolean
         If ParseHtmlBlockOpenH2() Then
             Do
                 p733 = .BufPos
-                If Not ParseHtmlBlockH2() Then
+                If Not (ParseHtmlBlockH2()) Then
                     .BufPos = p733
                     p730 = .BufPos
                     e730 = .LastExpected
@@ -3612,7 +3612,7 @@ Public Function ParseHtmlBlockOpenH3() As Boolean
                 Call ParseSpnl
                 Do
                     p745 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p745
                         Exit Do
                     End If
@@ -3628,7 +3628,7 @@ Public Function ParseHtmlBlockOpenH3() As Boolean
                 Call ParseSpnl
                 Do
                     p745 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p745
                         Exit Do
                     End If
@@ -3682,7 +3682,7 @@ Public Function ParseHtmlBlockH3() As Boolean
         If ParseHtmlBlockOpenH3() Then
             Do
                 p765 = .BufPos
-                If Not ParseHtmlBlockH3() Then
+                If Not (ParseHtmlBlockH3()) Then
                     .BufPos = p765
                     p762 = .BufPos
                     e762 = .LastExpected
@@ -3722,7 +3722,7 @@ Public Function ParseHtmlBlockOpenH4() As Boolean
                 Call ParseSpnl
                 Do
                     p777 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p777
                         Exit Do
                     End If
@@ -3738,7 +3738,7 @@ Public Function ParseHtmlBlockOpenH4() As Boolean
                 Call ParseSpnl
                 Do
                     p777 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p777
                         Exit Do
                     End If
@@ -3792,7 +3792,7 @@ Public Function ParseHtmlBlockH4() As Boolean
         If ParseHtmlBlockOpenH4() Then
             Do
                 p797 = .BufPos
-                If Not ParseHtmlBlockH4() Then
+                If Not (ParseHtmlBlockH4()) Then
                     .BufPos = p797
                     p794 = .BufPos
                     e794 = .LastExpected
@@ -3832,7 +3832,7 @@ Public Function ParseHtmlBlockOpenH5() As Boolean
                 Call ParseSpnl
                 Do
                     p809 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p809
                         Exit Do
                     End If
@@ -3848,7 +3848,7 @@ Public Function ParseHtmlBlockOpenH5() As Boolean
                 Call ParseSpnl
                 Do
                     p809 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p809
                         Exit Do
                     End If
@@ -3902,7 +3902,7 @@ Public Function ParseHtmlBlockH5() As Boolean
         If ParseHtmlBlockOpenH5() Then
             Do
                 p829 = .BufPos
-                If Not ParseHtmlBlockH5() Then
+                If Not (ParseHtmlBlockH5()) Then
                     .BufPos = p829
                     p826 = .BufPos
                     e826 = .LastExpected
@@ -3942,7 +3942,7 @@ Public Function ParseHtmlBlockOpenH6() As Boolean
                 Call ParseSpnl
                 Do
                     p841 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p841
                         Exit Do
                     End If
@@ -3958,7 +3958,7 @@ Public Function ParseHtmlBlockOpenH6() As Boolean
                 Call ParseSpnl
                 Do
                     p841 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p841
                         Exit Do
                     End If
@@ -4012,7 +4012,7 @@ Public Function ParseHtmlBlockH6() As Boolean
         If ParseHtmlBlockOpenH6() Then
             Do
                 p861 = .BufPos
-                If Not ParseHtmlBlockH6() Then
+                If Not (ParseHtmlBlockH6()) Then
                     .BufPos = p861
                     p858 = .BufPos
                     e858 = .LastExpected
@@ -4052,7 +4052,7 @@ Public Function ParseHtmlBlockOpenMenu() As Boolean
                 Call ParseSpnl
                 Do
                     p873 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p873
                         Exit Do
                     End If
@@ -4068,7 +4068,7 @@ Public Function ParseHtmlBlockOpenMenu() As Boolean
                 Call ParseSpnl
                 Do
                     p873 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p873
                         Exit Do
                     End If
@@ -4122,7 +4122,7 @@ Public Function ParseHtmlBlockMenu() As Boolean
         If ParseHtmlBlockOpenMenu() Then
             Do
                 p893 = .BufPos
-                If Not ParseHtmlBlockMenu() Then
+                If Not (ParseHtmlBlockMenu()) Then
                     .BufPos = p893
                     p890 = .BufPos
                     e890 = .LastExpected
@@ -4162,7 +4162,7 @@ Public Function ParseHtmlBlockOpenNoframes() As Boolean
                 Call ParseSpnl
                 Do
                     p905 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p905
                         Exit Do
                     End If
@@ -4178,7 +4178,7 @@ Public Function ParseHtmlBlockOpenNoframes() As Boolean
                 Call ParseSpnl
                 Do
                     p905 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p905
                         Exit Do
                     End If
@@ -4232,7 +4232,7 @@ Public Function ParseHtmlBlockNoframes() As Boolean
         If ParseHtmlBlockOpenNoframes() Then
             Do
                 p925 = .BufPos
-                If Not ParseHtmlBlockNoframes() Then
+                If Not (ParseHtmlBlockNoframes()) Then
                     .BufPos = p925
                     p922 = .BufPos
                     e922 = .LastExpected
@@ -4272,7 +4272,7 @@ Public Function ParseHtmlBlockOpenNoscript() As Boolean
                 Call ParseSpnl
                 Do
                     p937 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p937
                         Exit Do
                     End If
@@ -4288,7 +4288,7 @@ Public Function ParseHtmlBlockOpenNoscript() As Boolean
                 Call ParseSpnl
                 Do
                     p937 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p937
                         Exit Do
                     End If
@@ -4342,7 +4342,7 @@ Public Function ParseHtmlBlockNoscript() As Boolean
         If ParseHtmlBlockOpenNoscript() Then
             Do
                 p957 = .BufPos
-                If Not ParseHtmlBlockNoscript() Then
+                If Not (ParseHtmlBlockNoscript()) Then
                     .BufPos = p957
                     p954 = .BufPos
                     e954 = .LastExpected
@@ -4382,7 +4382,7 @@ Public Function ParseHtmlBlockOpenOl() As Boolean
                 Call ParseSpnl
                 Do
                     p969 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p969
                         Exit Do
                     End If
@@ -4398,7 +4398,7 @@ Public Function ParseHtmlBlockOpenOl() As Boolean
                 Call ParseSpnl
                 Do
                     p969 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p969
                         Exit Do
                     End If
@@ -4452,7 +4452,7 @@ Public Function ParseHtmlBlockOl() As Boolean
         If ParseHtmlBlockOpenOl() Then
             Do
                 p989 = .BufPos
-                If Not ParseHtmlBlockOl() Then
+                If Not (ParseHtmlBlockOl()) Then
                     .BufPos = p989
                     p986 = .BufPos
                     e986 = .LastExpected
@@ -4492,7 +4492,7 @@ Public Function ParseHtmlBlockOpenP() As Boolean
                 Call ParseSpnl
                 Do
                     p1001 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1001
                         Exit Do
                     End If
@@ -4508,7 +4508,7 @@ Public Function ParseHtmlBlockOpenP() As Boolean
                 Call ParseSpnl
                 Do
                     p1001 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1001
                         Exit Do
                     End If
@@ -4562,7 +4562,7 @@ Public Function ParseHtmlBlockP() As Boolean
         If ParseHtmlBlockOpenP() Then
             Do
                 p1021 = .BufPos
-                If Not ParseHtmlBlockP() Then
+                If Not (ParseHtmlBlockP()) Then
                     .BufPos = p1021
                     p1018 = .BufPos
                     e1018 = .LastExpected
@@ -4602,7 +4602,7 @@ Public Function ParseHtmlBlockOpenPre() As Boolean
                 Call ParseSpnl
                 Do
                     p1033 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1033
                         Exit Do
                     End If
@@ -4618,7 +4618,7 @@ Public Function ParseHtmlBlockOpenPre() As Boolean
                 Call ParseSpnl
                 Do
                     p1033 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1033
                         Exit Do
                     End If
@@ -4672,7 +4672,7 @@ Public Function ParseHtmlBlockPre() As Boolean
         If ParseHtmlBlockOpenPre() Then
             Do
                 p1053 = .BufPos
-                If Not ParseHtmlBlockPre() Then
+                If Not (ParseHtmlBlockPre()) Then
                     .BufPos = p1053
                     p1050 = .BufPos
                     e1050 = .LastExpected
@@ -4712,7 +4712,7 @@ Public Function ParseHtmlBlockOpenTable() As Boolean
                 Call ParseSpnl
                 Do
                     p1065 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1065
                         Exit Do
                     End If
@@ -4728,7 +4728,7 @@ Public Function ParseHtmlBlockOpenTable() As Boolean
                 Call ParseSpnl
                 Do
                     p1065 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1065
                         Exit Do
                     End If
@@ -4782,7 +4782,7 @@ Public Function ParseHtmlBlockTable() As Boolean
         If ParseHtmlBlockOpenTable() Then
             Do
                 p1085 = .BufPos
-                If Not ParseHtmlBlockTable() Then
+                If Not (ParseHtmlBlockTable()) Then
                     .BufPos = p1085
                     p1082 = .BufPos
                     e1082 = .LastExpected
@@ -4822,7 +4822,7 @@ Public Function ParseHtmlBlockOpenUl() As Boolean
                 Call ParseSpnl
                 Do
                     p1097 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1097
                         Exit Do
                     End If
@@ -4838,7 +4838,7 @@ Public Function ParseHtmlBlockOpenUl() As Boolean
                 Call ParseSpnl
                 Do
                     p1097 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1097
                         Exit Do
                     End If
@@ -4892,7 +4892,7 @@ Public Function ParseHtmlBlockUl() As Boolean
         If ParseHtmlBlockOpenUl() Then
             Do
                 p1117 = .BufPos
-                If Not ParseHtmlBlockUl() Then
+                If Not (ParseHtmlBlockUl()) Then
                     .BufPos = p1117
                     p1114 = .BufPos
                     e1114 = .LastExpected
@@ -4932,7 +4932,7 @@ Public Function ParseHtmlBlockOpenDd() As Boolean
                 Call ParseSpnl
                 Do
                     p1129 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1129
                         Exit Do
                     End If
@@ -4948,7 +4948,7 @@ Public Function ParseHtmlBlockOpenDd() As Boolean
                 Call ParseSpnl
                 Do
                     p1129 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1129
                         Exit Do
                     End If
@@ -5002,7 +5002,7 @@ Public Function ParseHtmlBlockDd() As Boolean
         If ParseHtmlBlockOpenDd() Then
             Do
                 p1149 = .BufPos
-                If Not ParseHtmlBlockDd() Then
+                If Not (ParseHtmlBlockDd()) Then
                     .BufPos = p1149
                     p1146 = .BufPos
                     e1146 = .LastExpected
@@ -5042,7 +5042,7 @@ Public Function ParseHtmlBlockOpenDt() As Boolean
                 Call ParseSpnl
                 Do
                     p1161 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1161
                         Exit Do
                     End If
@@ -5058,7 +5058,7 @@ Public Function ParseHtmlBlockOpenDt() As Boolean
                 Call ParseSpnl
                 Do
                     p1161 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1161
                         Exit Do
                     End If
@@ -5112,7 +5112,7 @@ Public Function ParseHtmlBlockDt() As Boolean
         If ParseHtmlBlockOpenDt() Then
             Do
                 p1181 = .BufPos
-                If Not ParseHtmlBlockDt() Then
+                If Not (ParseHtmlBlockDt()) Then
                     .BufPos = p1181
                     p1178 = .BufPos
                     e1178 = .LastExpected
@@ -5152,7 +5152,7 @@ Public Function ParseHtmlBlockOpenFrameset() As Boolean
                 Call ParseSpnl
                 Do
                     p1193 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1193
                         Exit Do
                     End If
@@ -5168,7 +5168,7 @@ Public Function ParseHtmlBlockOpenFrameset() As Boolean
                 Call ParseSpnl
                 Do
                     p1193 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1193
                         Exit Do
                     End If
@@ -5222,7 +5222,7 @@ Public Function ParseHtmlBlockFrameset() As Boolean
         If ParseHtmlBlockOpenFrameset() Then
             Do
                 p1213 = .BufPos
-                If Not ParseHtmlBlockFrameset() Then
+                If Not (ParseHtmlBlockFrameset()) Then
                     .BufPos = p1213
                     p1210 = .BufPos
                     e1210 = .LastExpected
@@ -5262,7 +5262,7 @@ Public Function ParseHtmlBlockOpenLi() As Boolean
                 Call ParseSpnl
                 Do
                     p1225 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1225
                         Exit Do
                     End If
@@ -5278,7 +5278,7 @@ Public Function ParseHtmlBlockOpenLi() As Boolean
                 Call ParseSpnl
                 Do
                     p1225 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1225
                         Exit Do
                     End If
@@ -5332,7 +5332,7 @@ Public Function ParseHtmlBlockLi() As Boolean
         If ParseHtmlBlockOpenLi() Then
             Do
                 p1245 = .BufPos
-                If Not ParseHtmlBlockLi() Then
+                If Not (ParseHtmlBlockLi()) Then
                     .BufPos = p1245
                     p1242 = .BufPos
                     e1242 = .LastExpected
@@ -5372,7 +5372,7 @@ Public Function ParseHtmlBlockOpenTbody() As Boolean
                 Call ParseSpnl
                 Do
                     p1257 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1257
                         Exit Do
                     End If
@@ -5388,7 +5388,7 @@ Public Function ParseHtmlBlockOpenTbody() As Boolean
                 Call ParseSpnl
                 Do
                     p1257 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1257
                         Exit Do
                     End If
@@ -5442,7 +5442,7 @@ Public Function ParseHtmlBlockTbody() As Boolean
         If ParseHtmlBlockOpenTbody() Then
             Do
                 p1277 = .BufPos
-                If Not ParseHtmlBlockTbody() Then
+                If Not (ParseHtmlBlockTbody()) Then
                     .BufPos = p1277
                     p1274 = .BufPos
                     e1274 = .LastExpected
@@ -5482,7 +5482,7 @@ Public Function ParseHtmlBlockOpenTd() As Boolean
                 Call ParseSpnl
                 Do
                     p1289 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1289
                         Exit Do
                     End If
@@ -5498,7 +5498,7 @@ Public Function ParseHtmlBlockOpenTd() As Boolean
                 Call ParseSpnl
                 Do
                     p1289 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1289
                         Exit Do
                     End If
@@ -5552,7 +5552,7 @@ Public Function ParseHtmlBlockTd() As Boolean
         If ParseHtmlBlockOpenTd() Then
             Do
                 p1309 = .BufPos
-                If Not ParseHtmlBlockTd() Then
+                If Not (ParseHtmlBlockTd()) Then
                     .BufPos = p1309
                     p1306 = .BufPos
                     e1306 = .LastExpected
@@ -5592,7 +5592,7 @@ Public Function ParseHtmlBlockOpenTfoot() As Boolean
                 Call ParseSpnl
                 Do
                     p1321 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1321
                         Exit Do
                     End If
@@ -5608,7 +5608,7 @@ Public Function ParseHtmlBlockOpenTfoot() As Boolean
                 Call ParseSpnl
                 Do
                     p1321 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1321
                         Exit Do
                     End If
@@ -5662,7 +5662,7 @@ Public Function ParseHtmlBlockTfoot() As Boolean
         If ParseHtmlBlockOpenTfoot() Then
             Do
                 p1341 = .BufPos
-                If Not ParseHtmlBlockTfoot() Then
+                If Not (ParseHtmlBlockTfoot()) Then
                     .BufPos = p1341
                     p1338 = .BufPos
                     e1338 = .LastExpected
@@ -5702,7 +5702,7 @@ Public Function ParseHtmlBlockOpenTh() As Boolean
                 Call ParseSpnl
                 Do
                     p1353 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1353
                         Exit Do
                     End If
@@ -5718,7 +5718,7 @@ Public Function ParseHtmlBlockOpenTh() As Boolean
                 Call ParseSpnl
                 Do
                     p1353 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1353
                         Exit Do
                     End If
@@ -5772,7 +5772,7 @@ Public Function ParseHtmlBlockTh() As Boolean
         If ParseHtmlBlockOpenTh() Then
             Do
                 p1373 = .BufPos
-                If Not ParseHtmlBlockTh() Then
+                If Not (ParseHtmlBlockTh()) Then
                     .BufPos = p1373
                     p1370 = .BufPos
                     e1370 = .LastExpected
@@ -5812,7 +5812,7 @@ Public Function ParseHtmlBlockOpenThead() As Boolean
                 Call ParseSpnl
                 Do
                     p1385 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1385
                         Exit Do
                     End If
@@ -5828,7 +5828,7 @@ Public Function ParseHtmlBlockOpenThead() As Boolean
                 Call ParseSpnl
                 Do
                     p1385 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1385
                         Exit Do
                     End If
@@ -5882,7 +5882,7 @@ Public Function ParseHtmlBlockThead() As Boolean
         If ParseHtmlBlockOpenThead() Then
             Do
                 p1405 = .BufPos
-                If Not ParseHtmlBlockThead() Then
+                If Not (ParseHtmlBlockThead()) Then
                     .BufPos = p1405
                     p1402 = .BufPos
                     e1402 = .LastExpected
@@ -5922,7 +5922,7 @@ Public Function ParseHtmlBlockOpenTr() As Boolean
                 Call ParseSpnl
                 Do
                     p1417 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1417
                         Exit Do
                     End If
@@ -5938,7 +5938,7 @@ Public Function ParseHtmlBlockOpenTr() As Boolean
                 Call ParseSpnl
                 Do
                     p1417 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1417
                         Exit Do
                     End If
@@ -5992,7 +5992,7 @@ Public Function ParseHtmlBlockTr() As Boolean
         If ParseHtmlBlockOpenTr() Then
             Do
                 p1437 = .BufPos
-                If Not ParseHtmlBlockTr() Then
+                If Not (ParseHtmlBlockTr()) Then
                     .BufPos = p1437
                     p1434 = .BufPos
                     e1434 = .LastExpected
@@ -6032,7 +6032,7 @@ Public Function ParseHtmlBlockOpenScript() As Boolean
                 Call ParseSpnl
                 Do
                     p1449 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1449
                         Exit Do
                     End If
@@ -6048,7 +6048,7 @@ Public Function ParseHtmlBlockOpenScript() As Boolean
                 Call ParseSpnl
                 Do
                     p1449 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1449
                         Exit Do
                     End If
@@ -6137,7 +6137,7 @@ Public Function ParseHtmlBlockOpenHead() As Boolean
                 Call ParseSpnl
                 Do
                     p1479 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1479
                         Exit Do
                     End If
@@ -6153,7 +6153,7 @@ Public Function ParseHtmlBlockOpenHead() As Boolean
                 Call ParseSpnl
                 Do
                     p1479 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1479
                         Exit Do
                     End If
@@ -6485,7 +6485,7 @@ Public Function ParseHtmlBlockSelfClosing() As Boolean
                 Call ParseSpnl
                 Do
                     p1555 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1555
                         Exit Do
                     End If
@@ -6940,7 +6940,7 @@ Public Function ParseStyleOpen() As Boolean
                 Call ParseSpnl
                 Do
                     p1639 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1639
                         Exit Do
                     End If
@@ -6956,7 +6956,7 @@ Public Function ParseStyleOpen() As Boolean
                 Call ParseSpnl
                 Do
                     p1639 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p1639
                         Exit Do
                     End If
@@ -7051,7 +7051,7 @@ Public Function ParseStr() As Boolean
             For i1734 = 0 To LNG_MAXINT
                 p1733 = .BufPos
                 q1733 = .ThunkPos
-                If Not ParseNormalChar() Then
+                If Not (ParseNormalChar()) Then
                     .BufPos = p1733
                     .ThunkPos = q1733
                     Exit For
@@ -7065,7 +7065,7 @@ Public Function ParseStr() As Boolean
                 Do
                     p1740 = .BufPos
                     q1740 = .ThunkPos
-                    If Not ParseStrChunk() Then
+                    If Not (ParseStrChunk()) Then
                         .BufPos = p1740
                         .ThunkPos = q1740
                         Exit Do
@@ -7113,7 +7113,7 @@ Public Function ParseSpace() As Boolean
     With ctx
         For i1724 = 0 To LNG_MAXINT
             p1723 = .BufPos
-            If Not ParseSpacechar() Then
+            If Not (ParseSpacechar()) Then
                 .BufPos = p1723
                 Exit For
             End If
@@ -7189,7 +7189,7 @@ Public Function ParseStrike() As Boolean
                 .BufPos = .BufPos + 2
                 p1965 = .BufPos
                 e1965 = .LastExpected
-                If Not ParseWhitespace() Then
+                If Not (ParseWhitespace()) Then
                     .BufPos = p1965
                     .LastExpected = e1965
                     pvPushThunk ucsActResultClear
@@ -7339,7 +7339,7 @@ Public Function ParseInlineNote() As Boolean
                             .BufPos = p2952
                             .ThunkPos = q2952
                         End If
-                        If Not ParseInline() Then
+                        If Not (ParseInline()) Then
                             .BufPos = p2954
                             .ThunkPos = q2954
                             Exit For
@@ -7442,7 +7442,7 @@ Public Function ParseCode() As Boolean
                     Else
                         .BufPos = p2315
                     End If
-                    If Not ParseNonspacechar() Then
+                    If Not (ParseNonspacechar()) Then
                         .BufPos = p2317
                         Exit For
                     End If
@@ -7566,7 +7566,7 @@ L48:
                     Else
                         .BufPos = p2345
                     End If
-                    If Not ParseNonspacechar() Then
+                    If Not (ParseNonspacechar()) Then
                         .BufPos = p2347
                         Exit For
                     End If
@@ -7690,7 +7690,7 @@ L49:
                     Else
                         .BufPos = p2376
                     End If
-                    If Not ParseNonspacechar() Then
+                    If Not (ParseNonspacechar()) Then
                         .BufPos = p2378
                         Exit For
                     End If
@@ -7814,7 +7814,7 @@ L50:
                     Else
                         .BufPos = p2406
                     End If
-                    If Not ParseNonspacechar() Then
+                    If Not (ParseNonspacechar()) Then
                         .BufPos = p2408
                         Exit For
                     End If
@@ -7938,7 +7938,7 @@ L51:
                     Else
                         .BufPos = p2436
                     End If
-                    If Not ParseNonspacechar() Then
+                    If Not (ParseNonspacechar()) Then
                         .BufPos = p2438
                         Exit For
                     End If
@@ -8132,7 +8132,7 @@ Public Function ParseEscapedChar() As Boolean
             .BufPos = .BufPos + 1
             p1767 = .BufPos
             e1767 = .LastExpected
-            If Not ParseNewline() Then
+            If Not (ParseNewline()) Then
                 .BufPos = p1767
                 .LastExpected = e1767
                 lCaptureBegin = .BufPos
@@ -8221,11 +8221,11 @@ Public Function ParseNormalChar() As Boolean
     With ctx
         p2581 = .BufPos
         p2579 = .BufPos
-        If Not ParseSpecialChar() Then
+        If Not (ParseSpecialChar()) Then
             .BufPos = p2579
-            If Not ParseSpacechar() Then
+            If Not (ParseSpacechar()) Then
                 .BufPos = p2579
-                If Not ParseNewline() Then
+                If Not (ParseNewline()) Then
                     .BufPos = p2579
                     .BufPos = p2581
                     If .BufPos < .BufSize Then
@@ -8255,7 +8255,7 @@ Public Function ParseStrChunk() As Boolean
         lCaptureBegin = .BufPos
         For i1752 = 0 To LNG_MAXINT
             p1751 = .BufPos
-            If Not ParseNormalChar() Then
+            If Not (ParseNormalChar()) Then
                 .BufPos = p1751
                 For i1746 = 0 To LNG_MAXINT
                     If .BufData(.BufPos) = 95 Then  ' "_"
@@ -9247,22 +9247,22 @@ Public Function ParseNormalEndline() As Boolean
         If ParseNewline() Then
             p1793 = .BufPos
             e1793 = .LastExpected
-            If Not ParseBlankLine() Then
+            If Not (ParseBlankLine()) Then
                 .BufPos = p1793
                 .LastExpected = e1793
                 p1795 = .BufPos
-                If Not .BufData(.BufPos) = 62 Then  ' ">"
+                If Not (.BufData(.BufPos) = 62) Then ' ">"
                     .BufPos = p1795
                     p1797 = .BufPos
                     q1797 = .ThunkPos
                     e1797 = .LastExpected
-                    If Not ParseAtxStart() Then
+                    If Not (ParseAtxStart()) Then
                         .BufPos = p1797
                         .ThunkPos = q1797
                         .LastExpected = e1797
                         p1806 = .BufPos
                         q1806 = .ThunkPos
-                        If Not ParseLine() Then
+                        If Not (ParseLine()) Then
                             .BufPos = p1806
                             .ThunkPos = q1806
                             pvPushThunk ucsAct_1_NormalEndline, .CaptureBegin, .CaptureEnd
@@ -9296,7 +9296,7 @@ Public Function ParseNormalEndline() As Boolean
                                 Exit Function
                             End If
                         End If
-                        If Not ParseNewline() Then
+                        If Not (ParseNewline()) Then
                             .BufPos = p1806
                             .ThunkPos = q1806
                             pvPushThunk ucsAct_1_NormalEndline, .CaptureBegin, .CaptureEnd
@@ -9315,7 +9315,7 @@ Public Function ParseEof() As Boolean
 
     With ctx
         p2535 = .BufPos
-        If Not .BufPos < .BufSize Then
+        If Not (.BufPos < .BufSize) Then
             .BufPos = p2535
             ParseEof = True
         End If
@@ -9556,7 +9556,7 @@ Public Function ParseEmphStar() As Boolean
             .BufPos = .BufPos + 1
             p1872 = .BufPos
             e1872 = .LastExpected
-            If Not ParseWhitespace() Then
+            If Not (ParseWhitespace()) Then
                 .BufPos = p1872
                 .LastExpected = e1872
                 pvPushThunk ucsActResultClear
@@ -9635,7 +9635,7 @@ Public Function ParseEmphUl() As Boolean
             .BufPos = .BufPos + 1
             p1897 = .BufPos
             e1897 = .LastExpected
-            If Not ParseWhitespace() Then
+            If Not (ParseWhitespace()) Then
                 .BufPos = p1897
                 .LastExpected = e1897
                 pvPushThunk ucsActResultClear
@@ -9734,7 +9734,7 @@ Public Function ParseStrongStar() As Boolean
             .BufPos = .BufPos + 2
             p1925 = .BufPos
             e1925 = .LastExpected
-            If Not ParseWhitespace() Then
+            If Not (ParseWhitespace()) Then
                 .BufPos = p1925
                 .LastExpected = e1925
                 pvPushThunk ucsActResultClear
@@ -9793,7 +9793,7 @@ Public Function ParseStrongUl() As Boolean
             .BufPos = .BufPos + 2
             p1944 = .BufPos
             e1944 = .LastExpected
-            If Not ParseWhitespace() Then
+            If Not (ParseWhitespace()) Then
                 .BufPos = p1944
                 .LastExpected = e1944
                 pvPushThunk ucsActResultClear
@@ -9930,7 +9930,7 @@ Public Function ParseReferenceLinkDouble() As Boolean
             lCaptureEnd = .BufPos
             p2008 = .BufPos
             q2008 = .ThunkPos
-            If Not .BufData(.BufPos) = 91 And .BufData(.BufPos + 1) = 93 Then ' "[]"
+            If Not (.BufData(.BufPos) = 91 And .BufData(.BufPos + 1) = 93) Then ' "[]"
                 .BufPos = p2008
                 .ThunkPos = q2008
                 pvPushThunk ucsActResultClear
@@ -10016,7 +10016,7 @@ Public Function ParseLabel() As Boolean
                                 .BufPos = p2194
                                 .ThunkPos = q2194
                             End If
-                            If Not ParseInline() Then
+                            If Not (ParseInline()) Then
                                 .BufPos = p2196
                                 .ThunkPos = q2196
                                 Exit Do
@@ -10056,7 +10056,7 @@ Public Function ParseLabel() As Boolean
                                 .BufPos = p2194
                                 .ThunkPos = q2194
                             End If
-                            If Not ParseInline() Then
+                            If Not (ParseInline()) Then
                                 .BufPos = p2196
                                 .ThunkPos = q2196
                                 Exit Do
@@ -10121,9 +10121,9 @@ Public Sub ParseTitle()
 
     With ctx
         p2079 = .BufPos
-        If Not ParseTitleSingle() Then
+        If Not (ParseTitleSingle()) Then
             .BufPos = p2079
-            If Not ParseTitleDouble() Then
+            If Not (ParseTitleDouble()) Then
                 .BufPos = p2079
                 lCaptureBegin = .BufPos
                 lCaptureEnd = .BufPos
@@ -10169,7 +10169,7 @@ Public Sub ParseSourceContents()
                 Else
                     .BufPos = p2065
                 End If
-                If Not ParseNonspacechar() Then
+                If Not (ParseNonspacechar()) Then
                     .BufPos = p2063
                     Exit For
                 End If
@@ -10205,12 +10205,12 @@ Public Function ParseNonspacechar() As Boolean
     With ctx
         p2540 = .BufPos
         e2540 = .LastExpected
-        If Not ParseSpacechar() Then
+        If Not (ParseSpacechar()) Then
             .BufPos = p2540
             .LastExpected = e2540
             p2542 = .BufPos
             e2542 = .LastExpected
-            If Not ParseNewline() Then
+            If Not (ParseNewline()) Then
                 .BufPos = p2542
                 .LastExpected = e2542
                 If .BufPos < .BufSize Then
@@ -10473,7 +10473,7 @@ Public Function ParseRefSrc() As Boolean
         lCaptureBegin = .BufPos
         For i2203 = 0 To LNG_MAXINT
             p2202 = .BufPos
-            If Not ParseNonspacechar() Then
+            If Not (ParseNonspacechar()) Then
                 .BufPos = p2202
                 Exit For
             End If
@@ -10493,11 +10493,11 @@ Public Sub ParseRefTitle()
 
     With ctx
         p2211 = .BufPos
-        If Not ParseRefTitleSingle() Then
+        If Not (ParseRefTitleSingle()) Then
             .BufPos = p2211
-            If Not ParseRefTitleDouble() Then
+            If Not (ParseRefTitleDouble()) Then
                 .BufPos = p2211
-                If Not ParseRefTitleParens() Then
+                If Not (ParseRefTitleParens()) Then
                     .BufPos = p2211
                     Call ParseEmptyTitle
                 End If
@@ -10758,7 +10758,7 @@ Public Function ParseSkipBlock() As Boolean
                 .ThunkPos = q2792
                 .LastExpected = e2792
             End If
-            If Not ParseRawLine() Then
+            If Not (ParseRawLine()) Then
                 .BufPos = p2788
                 .ThunkPos = q2788
                 Exit For
@@ -10768,7 +10768,7 @@ Public Function ParseSkipBlock() As Boolean
             Do
                 p2795 = .BufPos
                 q2795 = .ThunkPos
-                If Not ParseBlankLine() Then
+                If Not (ParseBlankLine()) Then
                     .BufPos = p2795
                     .ThunkPos = q2795
                     Exit Do
@@ -10784,7 +10784,7 @@ Public Function ParseSkipBlock() As Boolean
         For i2800 = 0 To LNG_MAXINT
             p2799 = .BufPos
             q2799 = .ThunkPos
-            If Not ParseBlankLine() Then
+            If Not (ParseBlankLine()) Then
                 .BufPos = p2799
                 .ThunkPos = q2799
                 Exit For
@@ -10813,7 +10813,7 @@ Public Function ParseTicks1() As Boolean
         If .BufData(.BufPos) = 96 Then              ' "`"
             .BufPos = .BufPos + 1
             p2288 = .BufPos
-            If Not .BufData(.BufPos) = 96 Then      ' "`"
+            If Not (.BufData(.BufPos) = 96) Then    ' "`"
                 .BufPos = p2288
                 Call pvSetAdvance
                 ParseTicks1 = True
@@ -10829,7 +10829,7 @@ Public Function ParseTicks2() As Boolean
         If .BufData(.BufPos) = 96 And .BufData(.BufPos + 1) = 96 Then ' "``"
             .BufPos = .BufPos + 2
             p2293 = .BufPos
-            If Not .BufData(.BufPos) = 96 Then      ' "`"
+            If Not (.BufData(.BufPos) = 96) Then    ' "`"
                 .BufPos = p2293
                 Call pvSetAdvance
                 ParseTicks2 = True
@@ -10845,7 +10845,7 @@ Public Function ParseTicks3() As Boolean
         If pvMatchString("```") Then                ' "```"
             .BufPos = .BufPos + 3
             p2298 = .BufPos
-            If Not .BufData(.BufPos) = 96 Then      ' "`"
+            If Not (.BufData(.BufPos) = 96) Then    ' "`"
                 .BufPos = p2298
                 Call pvSetAdvance
                 ParseTicks3 = True
@@ -10861,7 +10861,7 @@ Public Function ParseTicks4() As Boolean
         If pvMatchString("````") Then               ' "````"
             .BufPos = .BufPos + 4
             p2303 = .BufPos
-            If Not .BufData(.BufPos) = 96 Then      ' "`"
+            If Not (.BufData(.BufPos) = 96) Then    ' "`"
                 .BufPos = p2303
                 Call pvSetAdvance
                 ParseTicks4 = True
@@ -10877,7 +10877,7 @@ Public Function ParseTicks5() As Boolean
         If pvMatchString("`````") Then              ' "`````"
             .BufPos = .BufPos + 5
             p2308 = .BufPos
-            If Not .BufData(.BufPos) = 96 Then      ' "`"
+            If Not (.BufData(.BufPos) = 96) Then    ' "`"
                 .BufPos = p2308
                 Call pvSetAdvance
                 ParseTicks5 = True
@@ -10909,7 +10909,7 @@ Public Function ParseHtmlTag() As Boolean
                 Call ParseSpnl
                 Do
                     p2528 = .BufPos
-                    If Not ParseHtmlAttribute() Then
+                    If Not (ParseHtmlAttribute()) Then
                         .BufPos = p2528
                         Exit Do
                     End If
@@ -11231,9 +11231,9 @@ Public Function ParseSingleQuoteStart() As Boolean
             .BufPos = .BufPos + 1
             p2854 = .BufPos
             p2853 = .BufPos
-            If Not ParseSpacechar() Then
+            If Not (ParseSpacechar()) Then
                 .BufPos = p2853
-                If Not ParseNewline() Then
+                If Not (ParseNewline()) Then
                     .BufPos = p2853
                     .BufPos = p2854
                     Call pvSetAdvance
@@ -11254,7 +11254,7 @@ Public Function ParseSingleQuoteEnd() As Boolean
             .BufPos = .BufPos + 1
             p2859 = .BufPos
             e2859 = .LastExpected
-            If Not ParseAlphanumeric() Then
+            If Not (ParseAlphanumeric()) Then
                 .BufPos = p2859
                 .LastExpected = e2859
                 Call pvSetAdvance
@@ -11349,7 +11349,7 @@ Public Function ParseRawNoteBlock() As Boolean
                     .ThunkPos = q2978
                     .LastExpected = e2978
                 End If
-                If Not ParseOptionallyIndentedLine() Then
+                If Not (ParseOptionallyIndentedLine()) Then
                     .BufPos = p2980
                     .ThunkPos = q2980
                     Exit For
@@ -11363,7 +11363,7 @@ Public Function ParseRawNoteBlock() As Boolean
                 Do
                     p2984 = .BufPos
                     q2984 = .ThunkPos
-                    If Not ParseBlankLine() Then
+                    If Not (ParseBlankLine()) Then
                         .BufPos = p2984
                         .ThunkPos = q2984
                         Exit Do

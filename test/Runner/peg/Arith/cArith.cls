@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 24.7.2018 14:17:08
+' Auto-generated on 25.7.2018 18:55:45
 Option Explicit
 DefObj A-Z
 
@@ -83,7 +83,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "24.7.2018 14:17:08"
+    ParserVersion = "25.7.2018 18:55:45"
 End Property
 
 '=========================================================================
@@ -218,38 +218,58 @@ End Sub
 '= generated functions ===================================================
 
 Public Function ParseExpression() As Boolean
-    Dim p35 As Long
-    Dim q35 As Long
-    Dim p23 As Long
-    Dim q23 As Long
+    Dim p44 As Long
+    Dim q44 As Long
+    Dim p32 As Long
+    Dim q32 As Long
     Dim lCaptureBegin As Long
+    Dim p19 As Long
+    Dim q19 As Long
+    Dim p25 As Long
+    Dim q25 As Long
     Dim lCaptureEnd As Long
 
     With ctx
         pvPushThunk ucsActVarAlloc, 3
-        p35 = .BufPos
-        q35 = .ThunkPos
+        p44 = .BufPos
+        q44 = .ThunkPos
         Call ConsoleTrace(ctx.BufPos + 1, "Expression", 1, ctx.UserData)
         pvPushThunk ucsActResultClear
         If ParseTerm() Then
             pvPushThunk ucsActVarSet, 1
             Do
-                p23 = .BufPos
-                q23 = .ThunkPos
+                p32 = .BufPos
+                q32 = .ThunkPos
                 Call Parse_
                 pvPushThunk ucsActResultClear
                 lCaptureBegin = .BufPos
+                p19 = .BufPos
+                q19 = .ThunkPos
+                Call ConsoleTrace(ctx.BufPos + 1, """+""", 0, ctx.UserData)
                 If .BufData(.BufPos) = 43 Then      ' "+"
                     .BufPos = .BufPos + 1
+                    Call ConsoleTrace(ctx.BufPos + 1, """+""", 2, ctx.UserData)
                 Else
-                    If .BufData(.BufPos) = 45 Then  ' "-"
-                        .BufPos = .BufPos + 1
-                    Else
-                        .BufPos = p23
-                        .ThunkPos = q23
+                    If Not (ConsoleTrace(ctx.BufPos + 1, """+""", 3, ctx.UserData) And False) Then
+                        p25 = .BufPos
+                        q25 = .ThunkPos
+                        Call ConsoleTrace(ctx.BufPos + 1, """-""", 0, ctx.UserData)
+                        If .BufData(.BufPos) = 45 Then ' "-"
+                            .BufPos = .BufPos + 1
+                            Call ConsoleTrace(ctx.BufPos + 1, """-""", 2, ctx.UserData)
+                            GoTo L1
+                        End If
+                        If ConsoleTrace(ctx.BufPos + 1, """-""", 3, ctx.UserData) And False Then
+                            '--- do nothing
+                        End If
+                        .BufPos = p19
+                        .ThunkPos = q19
+                        .BufPos = p32
+                        .ThunkPos = q32
                         Exit Do
                     End If
                 End If
+L1:
                 lCaptureEnd = .BufPos
                 pvPushThunk ucsActResultSet, lCaptureBegin, lCaptureEnd
                 pvPushThunk ucsActVarSet, 2
@@ -258,8 +278,8 @@ Public Function ParseExpression() As Boolean
                 If ParseTerm() Then
                     pvPushThunk ucsActVarSet, 3
                 Else
-                    .BufPos = p23
-                    .ThunkPos = q23
+                    .BufPos = p32
+                    .ThunkPos = q32
                     Exit Do
                 End If
                 .CaptureBegin = lCaptureBegin
@@ -275,8 +295,8 @@ Public Function ParseExpression() As Boolean
             ParseExpression = True
             Exit Function
         Else
-            .BufPos = p35
-            .ThunkPos = q35
+            .BufPos = p44
+            .ThunkPos = q44
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Expression", 3, ctx.UserData) And False Then
             '--- do nothing
@@ -285,38 +305,58 @@ Public Function ParseExpression() As Boolean
 End Function
 
 Public Function ParseTerm() As Boolean
-    Dim p65 As Long
-    Dim q65 As Long
-    Dim p53 As Long
-    Dim q53 As Long
+    Dim p83 As Long
+    Dim q83 As Long
+    Dim p71 As Long
+    Dim q71 As Long
     Dim lCaptureBegin As Long
+    Dim p58 As Long
+    Dim q58 As Long
+    Dim p64 As Long
+    Dim q64 As Long
     Dim lCaptureEnd As Long
 
     With ctx
         pvPushThunk ucsActVarAlloc, 3
-        p65 = .BufPos
-        q65 = .ThunkPos
+        p83 = .BufPos
+        q83 = .ThunkPos
         Call ConsoleTrace(ctx.BufPos + 1, "Term", 1, ctx.UserData)
         pvPushThunk ucsActResultClear
         If ParseFactor() Then
             pvPushThunk ucsActVarSet, 1
             Do
-                p53 = .BufPos
-                q53 = .ThunkPos
+                p71 = .BufPos
+                q71 = .ThunkPos
                 Call Parse_
                 pvPushThunk ucsActResultClear
                 lCaptureBegin = .BufPos
+                p58 = .BufPos
+                q58 = .ThunkPos
+                Call ConsoleTrace(ctx.BufPos + 1, """*""i", 0, ctx.UserData)
                 If .BufData(.BufPos) = 42 Then      ' "*"i
                     .BufPos = .BufPos + 1
+                    Call ConsoleTrace(ctx.BufPos + 1, """*""i", 2, ctx.UserData)
                 Else
-                    If .BufData(.BufPos) = 47 Then  ' "/"
-                        .BufPos = .BufPos + 1
-                    Else
-                        .BufPos = p53
-                        .ThunkPos = q53
+                    If Not (ConsoleTrace(ctx.BufPos + 1, """*""i", 3, ctx.UserData) And False) Then
+                        p64 = .BufPos
+                        q64 = .ThunkPos
+                        Call ConsoleTrace(ctx.BufPos + 1, """/""", 0, ctx.UserData)
+                        If .BufData(.BufPos) = 47 Then ' "/"
+                            .BufPos = .BufPos + 1
+                            Call ConsoleTrace(ctx.BufPos + 1, """/""", 2, ctx.UserData)
+                            GoTo L2
+                        End If
+                        If ConsoleTrace(ctx.BufPos + 1, """/""", 3, ctx.UserData) And False Then
+                            '--- do nothing
+                        End If
+                        .BufPos = p58
+                        .ThunkPos = q58
+                        .BufPos = p71
+                        .ThunkPos = q71
                         Exit Do
                     End If
                 End If
+L2:
                 lCaptureEnd = .BufPos
                 pvPushThunk ucsActResultSet, lCaptureBegin, lCaptureEnd
                 pvPushThunk ucsActVarSet, 2
@@ -325,8 +365,8 @@ Public Function ParseTerm() As Boolean
                 If ParseFactor() Then
                     pvPushThunk ucsActVarSet, 3
                 Else
-                    .BufPos = p53
-                    .ThunkPos = q53
+                    .BufPos = p71
+                    .ThunkPos = q71
                     Exit Do
                 End If
                 .CaptureBegin = lCaptureBegin
@@ -342,8 +382,8 @@ Public Function ParseTerm() As Boolean
             ParseTerm = True
             Exit Function
         Else
-            .BufPos = p65
-            .ThunkPos = q65
+            .BufPos = p83
+            .ThunkPos = q83
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Term", 3, ctx.UserData) And False Then
             '--- do nothing
@@ -352,14 +392,22 @@ Public Function ParseTerm() As Boolean
 End Function
 
 Private Sub Parse_()
+    Dim p149 As Long
+
     With ctx
         Call ConsoleTrace(ctx.BufPos + 1, "_", 1, ctx.UserData)
         Do
+            p149 = .BufPos
+            Call ConsoleTrace(ctx.BufPos + 1, "[ \t\n\r]i", 0, ctx.UserData)
             Select Case .BufData(.BufPos)
             Case 32, 9, 10, 13                      ' [ \t\n\r]i
                 .BufPos = .BufPos + 1
+                Call ConsoleTrace(ctx.BufPos + 1, "[ \t\n\r]i", 2, ctx.UserData)
             Case Else
-                Exit Do
+                If Not (ConsoleTrace(ctx.BufPos + 1, "[ \t\n\r]i", 3, ctx.UserData) And False) Then
+                    .BufPos = p149
+                    Exit Do
+                End If
             End Select
         Loop
         Call ConsoleTrace(ctx.BufPos + 1, "_", 2, ctx.UserData)
@@ -368,46 +416,67 @@ Private Sub Parse_()
 End Sub
 
 Public Function ParseFactor() As Boolean
-    Dim p86 As Long
-    Dim q86 As Long
-    Dim p82 As Long
-    Dim q82 As Long
-    Dim p79 As Long
-    Dim q79 As Long
+    Dim p114 As Long
+    Dim q114 As Long
+    Dim p110 As Long
+    Dim q110 As Long
+    Dim p89 As Long
+    Dim q89 As Long
+    Dim p102 As Long
+    Dim q102 As Long
+    Dim p107 As Long
+    Dim q107 As Long
 
     With ctx
         pvPushThunk ucsActVarAlloc, 1
-        p86 = .BufPos
-        q86 = .ThunkPos
+        p114 = .BufPos
+        q114 = .ThunkPos
         Call ConsoleTrace(ctx.BufPos + 1, "Factor", 1, ctx.UserData)
-        p82 = .BufPos
-        q82 = .ThunkPos
+        p110 = .BufPos
+        q110 = .ThunkPos
+        p89 = .BufPos
+        q89 = .ThunkPos
+        Call ConsoleTrace(ctx.BufPos + 1, """(""", 0, ctx.UserData)
         If .BufData(.BufPos) = 40 Then              ' "("
             .BufPos = .BufPos + 1
+            Call ConsoleTrace(ctx.BufPos + 1, """(""", 2, ctx.UserData)
             Call Parse_
             pvPushThunk ucsActResultClear
             If ParseExpression() Then
                 pvPushThunk ucsActVarSet, 1
                 Call Parse_
+                p102 = .BufPos
+                q102 = .ThunkPos
+                Call ConsoleTrace(ctx.BufPos + 1, """)""", 0, ctx.UserData)
                 If .BufData(.BufPos) = 41 Then      ' ")"
                     .BufPos = .BufPos + 1
+                    Call ConsoleTrace(ctx.BufPos + 1, """)""", 2, ctx.UserData)
                     pvPushThunk ucsAct_1_Factor, .CaptureBegin, .CaptureEnd
                     Call ConsoleTrace(ctx.BufPos + 1, "Factor", 2, ctx.UserData)
                     pvPushThunk ucsActVarAlloc, -1
                     Call pvSetAdvance
                     ParseFactor = True
                     Exit Function
-                Else
-                    .BufPos = p82
-                    .ThunkPos = q82
                 End If
+                If ConsoleTrace(ctx.BufPos + 1, """)""", 3, ctx.UserData) And False Then
+                    '--- do nothing
+                End If
+                .BufPos = p110
+                .ThunkPos = q110
             Else
-                .BufPos = p82
-                .ThunkPos = q82
+                .BufPos = p110
+                .ThunkPos = q110
             End If
+            GoTo L5
         End If
-        p79 = .BufPos
-        q79 = .ThunkPos
+        If ConsoleTrace(ctx.BufPos + 1, """(""", 3, ctx.UserData) And False Then
+            '--- do nothing
+        End If
+        .BufPos = p110
+        .ThunkPos = q110
+L5:
+        p107 = .BufPos
+        q107 = .ThunkPos
         If ParseInteger() Then
             Call ConsoleTrace(ctx.BufPos + 1, "Factor", 2, ctx.UserData)
             pvPushThunk ucsActVarAlloc, -1
@@ -415,8 +484,8 @@ Public Function ParseFactor() As Boolean
             ParseFactor = True
             Exit Function
         Else
-            .BufPos = p79
-            .ThunkPos = q79
+            .BufPos = p107
+            .ThunkPos = q107
         End If
         If ParseErrInteger() Then
             Call ConsoleTrace(ctx.BufPos + 1, "Factor", 2, ctx.UserData)
@@ -425,13 +494,13 @@ Public Function ParseFactor() As Boolean
             ParseFactor = True
             Exit Function
         Else
-            .BufPos = p79
-            .ThunkPos = q79
+            .BufPos = p107
+            .ThunkPos = q107
         End If
-        .BufPos = p82
-        .ThunkPos = q82
-        .BufPos = p86
-        .ThunkPos = q86
+        .BufPos = p110
+        .ThunkPos = q110
+        .BufPos = p114
+        .ThunkPos = q114
         If ConsoleTrace(ctx.BufPos + 1, "Factor", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -439,27 +508,34 @@ Public Function ParseFactor() As Boolean
 End Function
 
 Public Function ParseInteger() As Boolean
-    Dim p98 As Long
-    Dim q98 As Long
+    Dim p131 As Long
+    Dim q131 As Long
     Dim lCaptureBegin As Long
-    Dim i92 As Long
+    Dim i125 As Long
+    Dim p123 As Long
     Dim lCaptureEnd As Long
 
     With ctx
-        p98 = .BufPos
-        q98 = .ThunkPos
+        p131 = .BufPos
+        q131 = .ThunkPos
         Call ConsoleTrace(ctx.BufPos + 1, "Integer", 1, ctx.UserData)
         Call Parse_
         lCaptureBegin = .BufPos
-        For i92 = 0 To LNG_MAXINT
+        For i125 = 0 To LNG_MAXINT
+            p123 = .BufPos
+            Call ConsoleTrace(ctx.BufPos + 1, "[0-9]", 0, ctx.UserData)
             Select Case .BufData(.BufPos)
             Case 48 To 57                           ' [0-9]
                 .BufPos = .BufPos + 1
+                Call ConsoleTrace(ctx.BufPos + 1, "[0-9]", 2, ctx.UserData)
             Case Else
-                Exit For
+                If Not (ConsoleTrace(ctx.BufPos + 1, "[0-9]", 3, ctx.UserData) And False) Then
+                    .BufPos = p123
+                    Exit For
+                End If
             End Select
         Next
-        If i92 <> 0 Then
+        If i125 <> 0 Then
             lCaptureEnd = .BufPos
             .CaptureBegin = lCaptureBegin
             .CaptureEnd = lCaptureEnd
@@ -469,8 +545,8 @@ Public Function ParseInteger() As Boolean
             ParseInteger = True
             Exit Function
         Else
-            .BufPos = p98
-            .ThunkPos = q98
+            .BufPos = p131
+            .ThunkPos = q131
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Integer", 3, ctx.UserData) And False Then
             '--- do nothing
@@ -480,54 +556,54 @@ Public Function ParseInteger() As Boolean
 End Function
 
 Public Function ParseErrInteger() As Boolean
-    Dim p110 As Long
-    Dim q110 As Long
-    Dim i104 As Long
-    Dim p103 As Long
-    Dim q103 As Long
-    Dim p101 As Long
-    Dim q101 As Long
-    Dim e101 As String
+    Dim p143 As Long
+    Dim q143 As Long
+    Dim i137 As Long
+    Dim p136 As Long
+    Dim q136 As Long
+    Dim p134 As Long
+    Dim q134 As Long
+    Dim e134 As String
 
     With ctx
-        p110 = .BufPos
-        q110 = .ThunkPos
+        p143 = .BufPos
+        q143 = .ThunkPos
         Call ConsoleTrace(ctx.BufPos + 1, "ErrInteger", 1, ctx.UserData)
-        For i104 = 0 To LNG_MAXINT
-            p103 = .BufPos
-            q103 = .ThunkPos
-            p101 = .BufPos
-            q101 = .ThunkPos
-            e101 = .LastExpected
+        For i137 = 0 To LNG_MAXINT
+            p136 = .BufPos
+            q136 = .ThunkPos
+            p134 = .BufPos
+            q134 = .ThunkPos
+            e134 = .LastExpected
             If ParseInteger() Then
-                .BufPos = p103
-                .ThunkPos = q103
+                .BufPos = p136
+                .ThunkPos = q136
                 Exit For
             Else
-                .BufPos = p101
-                .ThunkPos = q101
-                .LastExpected = e101
+                .BufPos = p134
+                .ThunkPos = q134
+                .LastExpected = e134
             End If
             If .BufPos < .BufSize Then
                 .BufPos = .BufPos + 1
             Else
-                .BufPos = p103
-                .ThunkPos = q103
+                .BufPos = p136
+                .ThunkPos = q136
                 Exit For
             End If
         Next
-        If i104 <> 0 Then
+        If i137 <> 0 Then
             If ParseInteger() Then
                 Call ConsoleTrace(ctx.BufPos + 1, "ErrInteger", 2, ctx.UserData)
                 ParseErrInteger = True
                 Exit Function
             Else
-                .BufPos = p110
-                .ThunkPos = q110
+                .BufPos = p143
+                .ThunkPos = q143
             End If
         Else
-            .BufPos = p110
-            .ThunkPos = q110
+            .BufPos = p143
+            .ThunkPos = q143
         End If
         If ConsoleTrace(ctx.BufPos + 1, "ErrInteger", 3, ctx.UserData) And False Then
             '--- do nothing

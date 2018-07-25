@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 24.7.2018 14:17:08
+' Auto-generated on 25.7.2018 18:55:46
 Option Explicit
 DefObj A-Z
 
@@ -71,7 +71,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "24.7.2018 14:17:08"
+    ParserVersion = "25.7.2018 18:55:46"
 End Property
 
 '=========================================================================
@@ -357,7 +357,7 @@ Public Function ParseBlockStmt() As Boolean
         If ParseLCUR() Then
             Do
                 p35 = .BufPos
-                If Not ParseStmt() Then
+                If Not (ParseStmt()) Then
                     .BufPos = p35
                     Exit Do
                 End If
@@ -722,12 +722,12 @@ Public Function ParseExp() As Boolean
         If ParseRelExp() Then
             Do
                 p165 = .BufPos
-                If Not ParseEQ() Then
+                If Not (ParseEQ()) Then
                     .BufPos = p165
                     Exit Do
                 End If
                 p162 = .BufPos
-                If Not ParseRelExp() Then
+                If Not (ParseRelExp()) Then
                     .BufPos = p162
                     Call pvSetError("ErrRelexp")
                     .BufPos = p162
@@ -831,12 +831,12 @@ Public Function ParseRelExp() As Boolean
         If ParseAddExp() Then
             Do
                 p176 = .BufPos
-                If Not ParseLT() Then
+                If Not (ParseLT()) Then
                     .BufPos = p176
                     Exit Do
                 End If
                 p173 = .BufPos
-                If Not ParseAddExp() Then
+                If Not (ParseAddExp()) Then
                     .BufPos = p173
                     Call pvSetError("ErrAddexp")
                     .BufPos = p173
@@ -870,16 +870,16 @@ Public Function ParseAddExp() As Boolean
             Do
                 p190 = .BufPos
                 p185 = .BufPos
-                If Not ParsePLUS() Then
+                If Not (ParsePLUS()) Then
                     .BufPos = p185
-                    If Not ParseMINUS() Then
+                    If Not (ParseMINUS()) Then
                         .BufPos = p185
                         .BufPos = p190
                         Exit Do
                     End If
                 End If
                 p187 = .BufPos
-                If Not ParseMulExp() Then
+                If Not (ParseMulExp()) Then
                     .BufPos = p187
                     Call pvSetError("ErrMulexp")
                     .BufPos = p187
@@ -913,16 +913,16 @@ Public Function ParseMulExp() As Boolean
             Do
                 p204 = .BufPos
                 p199 = .BufPos
-                If Not ParseTIMES() Then
+                If Not (ParseTIMES()) Then
                     .BufPos = p199
-                    If Not ParseDIV() Then
+                    If Not (ParseDIV()) Then
                         .BufPos = p199
                         .BufPos = p204
                         Exit Do
                     End If
                 End If
                 p201 = .BufPos
-                If Not ParseAtomExp() Then
+                If Not (ParseAtomExp()) Then
                     .BufPos = p201
                     Call pvSetError("ErrAtomexp")
                     .BufPos = p201

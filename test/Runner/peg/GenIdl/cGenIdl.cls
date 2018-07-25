@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 24.7.2018 14:17:08
+' Auto-generated on 25.7.2018 18:55:45
 Option Explicit
 DefObj A-Z
 
@@ -107,7 +107,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "24.7.2018 14:17:08"
+    ParserVersion = "25.7.2018 18:55:45"
 End Property
 
 '=========================================================================
@@ -351,7 +351,7 @@ Public Function ParseTypedefCallback() As Boolean
                                         pvPushThunk ucsActResultClear
                                         p66 = .BufPos
                                         q66 = .ThunkPos
-                                        If Not ParseParams() Then
+                                        If Not (ParseParams()) Then
                                             .BufPos = p66
                                             .ThunkPos = q66
                                         End If
@@ -391,14 +391,14 @@ Public Function ParseEnumDecl() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 4
         p73 = .BufPos
-        If Not ParseTYPEDEF() Then
+        If Not (ParseTYPEDEF()) Then
             .BufPos = p73
         End If
         If ParseENUM() Then
             pvPushThunk ucsActResultClear
             p79 = .BufPos
             q79 = .ThunkPos
-            If Not ParseID() Then
+            If Not (ParseID()) Then
                 .BufPos = p79
                 .ThunkPos = q79
             End If
@@ -432,7 +432,7 @@ Public Function ParseEnumDecl() As Boolean
                     End If
                     p105 = .BufPos
                     q105 = .ThunkPos
-                    If Not ParseCOMMA() Then
+                    If Not (ParseCOMMA()) Then
                         .BufPos = p105
                         .ThunkPos = q105
                     End If
@@ -474,14 +474,14 @@ Public Function ParseStructDecl() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 4
         p117 = .BufPos
-        If Not ParseTYPEDEF() Then
+        If Not (ParseTYPEDEF()) Then
             .BufPos = p117
         End If
         If ParseSTRUCT() Then
             pvPushThunk ucsActResultClear
             p123 = .BufPos
             q123 = .ThunkPos
-            If Not ParseID() Then
+            If Not (ParseID()) Then
                 .BufPos = p123
                 .ThunkPos = q123
             End If
@@ -509,7 +509,7 @@ Public Function ParseStructDecl() As Boolean
                         .ThunkPos = q136
                         Exit For
                     End If
-                    If Not ParseSEMI() Then
+                    If Not (ParseSEMI()) Then
                         .BufPos = p136
                         .ThunkPos = q136
                         Exit For
@@ -549,7 +549,7 @@ Public Function ParseFunDecl() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 3
         p152 = .BufPos
-        If Not ParseLinkage() Then
+        If Not (ParseLinkage()) Then
             .BufPos = p152
         End If
         pvPushThunk ucsActResultClear
@@ -627,11 +627,11 @@ Public Function ParseSkipStmt() As Boolean
             End If
             .BufPos = p180
             p185 = .BufPos
-            If Not ParseBLOCKCOMMENT() Then
+            If Not (ParseBLOCKCOMMENT()) Then
                 .BufPos = p185
-                If Not ParseLINECOMMENT() Then
+                If Not (ParseLINECOMMENT()) Then
                     .BufPos = p185
-                    If Not ParseWS() Then
+                    If Not (ParseWS()) Then
                         .BufPos = p185
                         If .BufPos < .BufSize Then
                             .BufPos = .BufPos + 1
@@ -674,7 +674,7 @@ Private Function ParseEOL() As Boolean
 
     With ctx
         p551 = .BufPos
-        If Not .BufPos < .BufSize Then
+        If Not (.BufPos < .BufSize) Then
             .BufPos = p551
             ParseEOL = True
         End If
@@ -958,7 +958,7 @@ Public Function ParseParams() As Boolean
             Do
                 p287 = .BufPos
                 q287 = .ThunkPos
-                If Not ParseCOMMA() Then
+                If Not (ParseCOMMA()) Then
                     .BufPos = p287
                     .ThunkPos = q287
                     Exit Do
@@ -1110,7 +1110,7 @@ Public Function ParseLinkage() As Boolean
         p359 = .BufPos
         If ParseEXTERN() Then
             p361 = .BufPos
-            If Not ParseINLINE() Then
+            If Not (ParseINLINE()) Then
                 .BufPos = p361
             End If
             ParseLinkage = True
@@ -1120,7 +1120,7 @@ Public Function ParseLinkage() As Boolean
         End If
         If ParseSTATIC() Then
             p361 = .BufPos
-            If Not ParseINLINE() Then
+            If Not (ParseINLINE()) Then
                 .BufPos = p361
             End If
             ParseLinkage = True
@@ -1141,7 +1141,7 @@ Private Function ParseNL() As Boolean
         If .BufData(.BufPos) = 10 Then              ' "\n"
             .BufPos = .BufPos + 1
             p520 = .BufPos
-            If Not ParsePREPRO() Then
+            If Not (ParsePREPRO()) Then
                 .BufPos = p520
             End If
             Call pvSetAdvance
@@ -1172,7 +1172,7 @@ Private Function ParseBLOCKCOMMENT() As Boolean
                 p531 = .BufPos
                 If .BufData(.BufPos) = 47 And .BufData(.BufPos + 1) = 42 Then ' "/*"
                     .BufPos = p531
-                    If Not ParseBLOCKCOMMENT() Then
+                    If Not (ParseBLOCKCOMMENT()) Then
                         .BufPos = p535
                         If .BufPos < .BufSize Then
                             .BufPos = .BufPos + 1
@@ -1235,7 +1235,7 @@ Private Function ParseWS() As Boolean
             Case 32, 9                              ' [ \t]
                 .BufPos = .BufPos + 1
             Case Else
-                If Not ParseNL() Then
+                If Not (ParseNL()) Then
                     .BufPos = p513
                     .BufPos = p513
                     Exit For
@@ -1255,11 +1255,11 @@ Private Sub Parse_()
     With ctx
         Do
             p508 = .BufPos
-            If Not ParseBLOCKCOMMENT() Then
+            If Not (ParseBLOCKCOMMENT()) Then
                 .BufPos = p508
-                If Not ParseLINECOMMENT() Then
+                If Not (ParseLINECOMMENT()) Then
                     .BufPos = p508
-                    If Not ParseWS() Then
+                    If Not (ParseWS()) Then
                         .BufPos = p508
                         .BufPos = p508
                         Exit Do
@@ -1411,10 +1411,10 @@ Public Sub ParseTypeSuffix()
         Do
             p269 = .BufPos
             p266 = .BufPos
-            If Not ParseCONST() Then
+            If Not (ParseCONST()) Then
                 .BufPos = p266
             End If
-            If Not ParseSTAR() Then
+            If Not (ParseSTAR()) Then
                 .BufPos = p269
                 Exit Do
             End If
@@ -1689,7 +1689,7 @@ Public Function ParseRefType() As Boolean
     With ctx
         p272 = .BufPos
         e272 = .LastExpected
-        If Not ParseLLVM_STDCALL() Then
+        If Not (ParseLLVM_STDCALL()) Then
             .BufPos = p272
             .LastExpected = e272
             If ParseID() Then
@@ -1715,7 +1715,7 @@ Public Function ParseParam() As Boolean
             pvPushThunk ucsActResultClear
             p296 = .BufPos
             q296 = .ThunkPos
-            If Not ParseID() Then
+            If Not (ParseID()) Then
                 .BufPos = p296
                 .ThunkPos = q296
             End If
@@ -1723,7 +1723,7 @@ Public Function ParseParam() As Boolean
             pvPushThunk ucsActResultClear
             p302 = .BufPos
             q302 = .ThunkPos
-            If Not ParseArraySuffix() Then
+            If Not (ParseArraySuffix()) Then
                 .BufPos = p302
                 .ThunkPos = q302
             End If

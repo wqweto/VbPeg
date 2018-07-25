@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 24.7.2018 14:17:09
+' Auto-generated on 25.7.2018 18:55:46
 Option Explicit
 DefObj A-Z
 
@@ -66,7 +66,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "24.7.2018 14:17:09"
+    ParserVersion = "25.7.2018 18:55:46"
 End Property
 
 '=========================================================================
@@ -162,15 +162,16 @@ End Sub
 '= generated functions ===================================================
 
 Public Function Parsestart() As Boolean
-    Dim p20 As Long
+    Dim p25 As Long
     Dim i14 As Long
     Dim p13 As Long
     Dim p5 As Long
     Dim e5 As String
     Dim p11 As Long
+    Dim p19 As Long
 
     With ctx
-        p20 = .BufPos
+        p25 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "start", 1, ctx.UserData)
         For i14 = 0 To LNG_MAXINT
             p13 = .BufPos
@@ -195,7 +196,7 @@ Public Function Parsestart() As Boolean
             Else
                 .BufPos = p5
                 .LastExpected = e5
-                If Not ParseInline() Then
+                If Not (ParseInline()) Then
                     .BufPos = p13
                     If ParseEndline() Then
                         p11 = .BufPos
@@ -215,17 +216,22 @@ Public Function Parsestart() As Boolean
             End If
         Next
         If i14 <> 0 Then
+            p19 = .BufPos
+            Call ConsoleTrace(ctx.BufPos + 1, """!""", 0, ctx.UserData)
             If .BufData(.BufPos) = 33 Then          ' "!"
                 .BufPos = .BufPos + 1
+                Call ConsoleTrace(ctx.BufPos + 1, """!""", 2, ctx.UserData)
                 Call ConsoleTrace(ctx.BufPos + 1, "start", 2, ctx.UserData)
                 Call pvSetAdvance
                 Parsestart = True
                 Exit Function
-            Else
-                .BufPos = p20
             End If
+            If ConsoleTrace(ctx.BufPos + 1, """!""", 3, ctx.UserData) And False Then
+                '--- do nothing
+            End If
+            .BufPos = p25
         Else
-            .BufPos = p20
+            .BufPos = p25
         End If
         If ConsoleTrace(ctx.BufPos + 1, "start", 3, ctx.UserData) And False Then
             '--- do nothing
@@ -234,19 +240,27 @@ Public Function Parsestart() As Boolean
 End Function
 
 Public Function ParseEndline() As Boolean
-    Dim p26 As Long
+    Dim p36 As Long
+    Dim p31 As Long
 
     With ctx
-        p26 = .BufPos
+        p36 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "Endline", 1, ctx.UserData)
+        p31 = .BufPos
+        Call ConsoleTrace(ctx.BufPos + 1, "[ \r\n]", 0, ctx.UserData)
         Select Case .BufData(.BufPos)
         Case 32, 13, 10                             ' [ \r\n]
             .BufPos = .BufPos + 1
+            Call ConsoleTrace(ctx.BufPos + 1, "[ \r\n]", 2, ctx.UserData)
             Call ConsoleTrace(ctx.BufPos + 1, "Endline", 2, ctx.UserData)
             Call pvSetAdvance
             ParseEndline = True
             Exit Function
         End Select
+        If ConsoleTrace(ctx.BufPos + 1, "[ \r\n]", 3, ctx.UserData) And False Then
+            '--- do nothing
+        End If
+        .BufPos = p36
         If ConsoleTrace(ctx.BufPos + 1, "Endline", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
@@ -255,27 +269,34 @@ Public Function ParseEndline() As Boolean
 End Function
 
 Public Function ParseInline() As Boolean
-    Dim p33 As Long
-    Dim i29 As Long
+    Dim p48 As Long
+    Dim i44 As Long
+    Dim p42 As Long
 
     With ctx
-        p33 = .BufPos
+        p48 = .BufPos
         Call ConsoleTrace(ctx.BufPos + 1, "Inline", 1, ctx.UserData)
-        For i29 = 0 To LNG_MAXINT
+        For i44 = 0 To LNG_MAXINT
+            p42 = .BufPos
+            Call ConsoleTrace(ctx.BufPos + 1, "[a-z]", 0, ctx.UserData)
             Select Case .BufData(.BufPos)
             Case 97 To 122                          ' [a-z]
                 .BufPos = .BufPos + 1
+                Call ConsoleTrace(ctx.BufPos + 1, "[a-z]", 2, ctx.UserData)
             Case Else
-                Exit For
+                If Not (ConsoleTrace(ctx.BufPos + 1, "[a-z]", 3, ctx.UserData) And False) Then
+                    .BufPos = p42
+                    Exit For
+                End If
             End Select
         Next
-        If i29 <> 0 Then
+        If i44 <> 0 Then
             Call ConsoleTrace(ctx.BufPos + 1, "Inline", 2, ctx.UserData)
             Call pvSetAdvance
             ParseInline = True
             Exit Function
         Else
-            .BufPos = p33
+            .BufPos = p48
         End If
         If ConsoleTrace(ctx.BufPos + 1, "Inline", 3, ctx.UserData) And False Then
             '--- do nothing

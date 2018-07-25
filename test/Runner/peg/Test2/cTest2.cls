@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 24.7.2018 14:17:09
+' Auto-generated on 25.7.2018 18:55:46
 Option Explicit
 DefObj A-Z
 
@@ -71,7 +71,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "24.7.2018 14:17:09"
+    ParserVersion = "25.7.2018 18:55:46"
 End Property
 
 '=========================================================================
@@ -168,15 +168,15 @@ Public Function ParsePreprocessor() As Boolean
     With ctx
         For i15 = 0 To LNG_MAXINT
             p6 = .BufPos
-            If Not ParseLineComment() Then
+            If Not (ParseLineComment()) Then
                 .BufPos = p6
-                If Not ParseBlockComment() Then
+                If Not (ParseBlockComment()) Then
                     .BufPos = p6
-                    If Not Parsetext() Then
+                    If Not (Parsetext()) Then
                         .BufPos = p6
-                        If Not ParseScope() Then
+                        If Not (ParseScope()) Then
                             .BufPos = p6
-                            If Not Parsejunk() Then
+                            If Not (Parsejunk()) Then
                                 .BufPos = p6
                                 If .BufPos < .BufSize Then
                                     .BufPos = .BufPos + 1
@@ -345,7 +345,7 @@ Public Function Parsejunk() As Boolean
         If i134 <> 0 Then
             Do
                 p135 = .BufPos
-                If Not ParseSpacing() Then
+                If Not (ParseSpacing()) Then
                     .BufPos = p135
                     Exit Do
                 End If
@@ -363,9 +363,9 @@ Public Function ParseFile() As Boolean
     With ctx
         For i21 = 0 To LNG_MAXINT
             p19 = .BufPos
-            If Not ParseScope() Then
+            If Not (ParseScope()) Then
                 .BufPos = p19
-                If Not Parsejunk() Then
+                If Not (Parsejunk()) Then
                     .BufPos = p19
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
@@ -416,7 +416,7 @@ Public Function ParseEndOfFile() As Boolean
 
     With ctx
         p140 = .BufPos
-        If Not .BufPos < .BufSize Then
+        If Not (.BufPos < .BufSize) Then
             .BufPos = p140
             ParseEndOfFile = True
         End If
@@ -430,15 +430,15 @@ Public Function ParseSpacing() As Boolean
     With ctx
         For i118 = 0 To LNG_MAXINT
             p115 = .BufPos
-            If Not ParseLineComment() Then
+            If Not (ParseLineComment()) Then
                 .BufPos = p115
-                If Not ParseBlockComment() Then
+                If Not (ParseBlockComment()) Then
                     .BufPos = p115
                     Select Case .BufData(.BufPos)
                     Case 32, 9, 10, 13              ' [ \t\n\r]
                         .BufPos = .BufPos + 1
                     Case Else
-                        If Not ParseEndOfLine() Then
+                        If Not (ParseEndOfLine()) Then
                             .BufPos = p115
                             .BufPos = p115
                             Exit For
@@ -467,7 +467,7 @@ Public Function ParseEndOfLine() As Boolean
 
     With ctx
         p120 = .BufPos
-        If Not .BufData(.BufPos) = 92 Then          ' "\\"
+        If Not (.BufData(.BufPos) = 92) Then        ' "\\"
             .BufPos = p120
             If .BufData(.BufPos) = 13 And .BufData(.BufPos + 1) = 10 Then ' "\r\n"
                 .BufPos = .BufPos + 2
@@ -495,7 +495,7 @@ Public Function Parsequote() As Boolean
 
     With ctx
         p127 = .BufPos
-        If Not .BufData(.BufPos) = 92 Then          ' "\\"
+        If Not (.BufData(.BufPos) = 92) Then        ' "\\"
             .BufPos = p127
             If .BufData(.BufPos) = 34 Then          ' """
                 .BufPos = .BufPos + 1
@@ -548,7 +548,7 @@ Public Function ParseType() As Boolean
             If ParseSpacing() Then
                 If pvMatchString("const") Then      ' "const"
                     .BufPos = .BufPos + 5
-                    If Not ParseSpacing() Then
+                    If Not (ParseSpacing()) Then
                         .BufPos = p84
                     End If
                 Else
@@ -557,20 +557,20 @@ Public Function ParseType() As Boolean
             Else
                 .BufPos = p84
             End If
-            If Not ParseIdentifier() Then
+            If Not (ParseIdentifier()) Then
                 .BufPos = p88
                 Exit For
             End If
             p91 = .BufPos
             If .BufData(.BufPos) = 58 And .BufData(.BufPos + 1) = 58 Then ' "::"
                 .BufPos = .BufPos + 2
-                If Not ParseIdentifier() Then
+                If Not (ParseIdentifier()) Then
                     .BufPos = p91
                 End If
             End If
             For i101 = 0 To LNG_MAXINT
                 p95 = .BufPos
-                If Not ParseSpacing() Then
+                If Not (ParseSpacing()) Then
                     .BufPos = p95
                     If .BufData(.BufPos) = 42 Then  ' "*"
                         .BufPos = .BufPos + 1
@@ -581,7 +581,7 @@ Public Function ParseType() As Boolean
                             If ParseSpacing() Then
                                 If pvMatchString("const") Then ' "const"
                                     .BufPos = .BufPos + 5
-                                    If Not ParseSpacing() Then
+                                    If Not (ParseSpacing()) Then
                                         .BufPos = p95
                                         .BufPos = p95
                                         Exit For
@@ -629,7 +629,7 @@ Public Function ParseIdentifier() As Boolean
             Loop
             Do
                 p111 = .BufPos
-                If Not ParseSpacing() Then
+                If Not (ParseSpacing()) Then
                     .BufPos = p111
                     Exit Do
                 End If

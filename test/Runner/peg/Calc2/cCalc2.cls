@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 24.7.2018 14:17:08
+' Auto-generated on 25.7.2018 18:55:45
 Option Explicit
 DefObj A-Z
 
@@ -85,7 +85,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "24.7.2018 14:17:08"
+    ParserVersion = "25.7.2018 18:55:45"
 End Property
 
 '=========================================================================
@@ -372,7 +372,7 @@ Private Function ParseEOL() As Boolean
 
     With ctx
         p119 = .BufPos
-        If Not .BufPos < .BufSize Then
+        If Not (.BufPos < .BufSize) Then
             .BufPos = p119
             ParseEOL = True
         End If

@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 24.7.2018 14:17:09
+' Auto-generated on 25.7.2018 18:55:47
 Option Explicit
 DefObj A-Z
 
@@ -71,7 +71,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "24.7.2018 14:17:09"
+    ParserVersion = "25.7.2018 18:55:47"
 End Property
 
 '=========================================================================
@@ -168,7 +168,7 @@ Public Function Parsestart() As Boolean
     With ctx
         For i6 = 0 To LNG_MAXINT
             p5 = .BufPos
-            If Not ParseLocationPath() Then
+            If Not (ParseLocationPath()) Then
                 .BufPos = p5
                 Exit For
             End If
@@ -205,7 +205,7 @@ Private Sub Parse_()
     With ctx
         Do
             p9 = .BufPos
-            If Not ParseS() Then
+            If Not (ParseS()) Then
                 .BufPos = p9
                 Exit Do
             End If
@@ -232,7 +232,7 @@ Public Function ParseRelativeLocationPath() As Boolean
                     End If
                 End If
                 Call Parse_
-                If Not ParseStep() Then
+                If Not (ParseStep()) Then
                     .BufPos = p30
                     Exit Do
                 End If
@@ -260,7 +260,7 @@ Public Function ParseAbsoluteLocationPath() As Boolean
             .BufPos = .BufPos + 1
             Call Parse_
             p21 = .BufPos
-            If Not ParseRelativeLocationPath() Then
+            If Not (ParseRelativeLocationPath()) Then
                 .BufPos = p21
             End If
             Call pvSetAdvance
@@ -294,7 +294,7 @@ Public Function ParseStep() As Boolean
             Do
                 p44 = .BufPos
                 Call Parse_
-                If Not ParsePredicate() Then
+                If Not (ParsePredicate()) Then
                     .BufPos = p44
                     Exit Do
                 End If
@@ -635,7 +635,7 @@ Public Function ParseOrExpr() As Boolean
                     Exit Do
                 End If
                 Call Parse_
-                If Not ParseAndExpr() Then
+                If Not (ParseAndExpr()) Then
                     .BufPos = p177
                     Exit Do
                 End If
@@ -723,7 +723,7 @@ Public Function ParseNumber() As Boolean
             If .BufData(.BufPos) = 46 Then          ' "."
                 .BufPos = .BufPos + 1
                 p277 = .BufPos
-                If Not ParseDigits() Then
+                If Not (ParseDigits()) Then
                     .BufPos = p277
                 End If
             End If
@@ -768,7 +768,7 @@ Public Function ParseFunctionCall() As Boolean
                             Exit Do
                         End If
                         Call Parse_
-                        If Not ParseOrExpr() Then
+                        If Not (ParseOrExpr()) Then
                             .BufPos = p136
                             Exit Do
                         End If
@@ -794,7 +794,7 @@ Public Function ParseFunctionName() As Boolean
     With ctx
         p310 = .BufPos
         e310 = .LastExpected
-        If Not ParseNodeType() Then
+        If Not (ParseNodeType()) Then
             .BufPos = p310
             .LastExpected = e310
             If ParseQName() Then
@@ -819,7 +819,7 @@ Public Function ParseUnionExpr() As Boolean
                     Exit Do
                 End If
                 Call Parse_
-                If Not ParsePathExpr() Then
+                If Not (ParsePathExpr()) Then
                     .BufPos = p149
                     Exit Do
                 End If
@@ -886,7 +886,7 @@ Public Function ParseFilterExpr() As Boolean
             Do
                 p170 = .BufPos
                 Call Parse_
-                If Not ParsePredicate() Then
+                If Not (ParsePredicate()) Then
                     .BufPos = p170
                     Exit Do
                 End If
@@ -911,7 +911,7 @@ Public Function ParseAndExpr() As Boolean
                     Exit Do
                 End If
                 Call Parse_
-                If Not ParseEqualityExpr() Then
+                If Not (ParseEqualityExpr()) Then
                     .BufPos = p186
                     Exit Do
                 End If
@@ -941,7 +941,7 @@ Public Function ParseEqualityExpr() As Boolean
                     End If
                 End If
                 Call Parse_
-                If Not ParseRelationalExpr() Then
+                If Not (ParseRelationalExpr()) Then
                     .BufPos = p197
                     Exit Do
                 End If
@@ -979,7 +979,7 @@ Public Function ParseRelationalExpr() As Boolean
                     End If
                 End If
                 Call Parse_
-                If Not ParseAdditiveExpr() Then
+                If Not (ParseAdditiveExpr()) Then
                     .BufPos = p210
                     Exit Do
                 End If
@@ -1007,7 +1007,7 @@ Public Function ParseAdditiveExpr() As Boolean
                         Exit Do
                     End If
                 End If
-                If Not ParseMultiplicativeExpr() Then
+                If Not (ParseMultiplicativeExpr()) Then
                     .BufPos = p221
                     Exit Do
                 End If
@@ -1041,7 +1041,7 @@ Public Function ParseMultiplicativeExpr() As Boolean
                     End If
                 End If
                 Call Parse_
-                If Not ParseUnaryExpr() Then
+                If Not (ParseUnaryExpr()) Then
                     .BufPos = p232
                     Exit Do
                 End If
@@ -1271,7 +1271,7 @@ Public Function ParseName() As Boolean
         If ParseNameStartChar() Then
             Do
                 p353 = .BufPos
-                If Not ParseNameChar() Then
+                If Not (ParseNameChar()) Then
                     .BufPos = p353
                     Exit Do
                 End If
