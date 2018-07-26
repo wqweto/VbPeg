@@ -789,11 +789,15 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
         Case ucsNdtSequence, ucsNdtRule
             If UBound(.Children) >= 0 Then
                 lFlags = .Flags Or ucsNdfAlwaysTrue
-                For Each vElem In .Children
-                    If (m_uTree.Nodes(vElem).Flags And ucsNdfAlwaysTrue) = 0 Then
-                        lFlags = lFlags And Not ucsNdfAlwaysTrue
-                    End If
-                Next
+                If lNode = m_uTree.StartRule Then
+                    lFlags = lFlags And Not ucsNdfAlwaysTrue
+                Else
+                    For Each vElem In .Children
+                        If (m_uTree.Nodes(vElem).Flags And ucsNdfAlwaysTrue) = 0 Then
+                            lFlags = lFlags And Not ucsNdfAlwaysTrue
+                        End If
+                    Next
+                End If
                 If .Flags <> lFlags Then
                     .Flags = lFlags
                     pvOptimizePass1 = True
