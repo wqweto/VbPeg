@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 25.7.2018 18:55:46
+' Auto-generated on 26.7.2018 19:36:22
 Option Explicit
 DefObj A-Z
 
@@ -75,7 +75,15 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "25.7.2018 18:55:46"
+    ParserVersion = "26.7.2018 19:36:22"
+End Property
+
+Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = -1) As String
+    If lSize < 0 Then
+        Contents = Mid$(ctx.Contents, lOffset)
+    Else
+        Contents = Mid$(ctx.Contents, lOffset, lSize)
+    End If
 End Property
 
 '=========================================================================
