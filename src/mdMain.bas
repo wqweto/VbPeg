@@ -37,7 +37,6 @@ Private Declare Sub ExitProcess Lib "kernel32" (ByVal uExitCode As Long)
 ' Constants and member variables
 '=========================================================================
 
-Private Const STR_VERSION           As String = "0.3.11"
 Private Const STR_VERSION           As String = "0.3.12"
 
 Private m_oParser               As cParser
@@ -83,14 +82,14 @@ Private Function Process(vArgs As Variant) As Long
         ConsoleError "Usage: %1.exe [options] <in_file.peg>" & vbCrLf & vbCrLf, App.EXEName
         ConsoleError "Options:" & vbCrLf & _
             "  -o OUTFILE      write result to OUTFILE [default: stdout]" & vbCrLf & _
-            "  -tree           output parse tree" & vbCrLf & _
-            "  -ir             output intermediate represetation" & vbCrLf & _
-            "  -set NAME=VALUE set or modify grammar settings" & vbCrLf & _
+            "  -emit-tree      output parse tree" & vbCrLf & _
+            "  -emit-ir        output intermediate represetation" & vbCrLf & _
+            "  -set NAME=VALUE set or modify grammar setting NAME to VALUE" & vbCrLf & _
             "  -q              in quiet operation outputs only errors" & vbCrLf & _
             "  -nologo         suppress startup banner" & vbCrLf & _
             "  -allrules       output all rules (don't skip unused)" & vbCrLf & _
             "  -trace          trace in_file.peg parsing as performed by %1.exe" & vbCrLf & vbCrLf & _
-            "If no -tree/-ir is used emits VB6 code. If no -o is used writes result to console." & vbCrLf
+            "If no -emit-xxx is used emits VB6 code. If no -o is used writes result to console." & vbCrLf
         If m_oOpt.Item("numarg") = 0 Then
             Process = 100
         End If
@@ -150,7 +149,7 @@ Private Function Process(vArgs As Variant) As Long
     If LenB(oTree.SettingValue(STR_SETTING_MODULENAME)) = 0 And LenB(sOutFile) <> 0 Then
         oTree.SettingValue(STR_SETTING_MODULENAME) = GetFilePart(sOutFile)
     End If
-    If m_oOpt.Item("-tree") Then
+    If m_oOpt.Item("-emit-tree") Then
         sOutput = oTree.DumpParseTree
     Else
         Set oIR = New cIR
@@ -159,7 +158,7 @@ Private Function Process(vArgs As Variant) As Long
             Process = 4
             Exit Function
         End If
-        If m_oOpt.Item("-ir") Then
+        If m_oOpt.Item("-emit-ir") Then
             sOutput = oIR.DumpIrTree
         Else
             If Not oIR.EmitCode(sOutput) Then
