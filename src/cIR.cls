@@ -1433,12 +1433,8 @@ Public Function EmitCode(sOutput As String) As Boolean
 "    " & .OutModulePrefix & "ParserVersion = """ & Now & """" & vbCrLf & _
 "End Property" & vbCrLf
         pvOutput _
-"Property Get " & .OutModulePrefix & "Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = -1) As String" & vbCrLf & _
-"    If lSize < 0 Then" & vbCrLf & _
-"        Contents = Mid$(" & STR_CTX_VAR_NAME & ".Contents, lOffset)" & vbCrLf & _
-"    Else" & vbCrLf & _
-"        Contents = Mid$(" & STR_CTX_VAR_NAME & ".Contents, lOffset, lSize)" & vbCrLf & _
-"    End If" & vbCrLf & _
+"Property Get " & .OutModulePrefix & "Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String" & vbCrLf & _
+"    " & .OutModulePrefix & "Contents = Mid$(" & STR_CTX_VAR_NAME & ".Contents, lOffset, lSize)" & vbCrLf & _
 "End Property" & vbCrLf
         pvOutput _
 "'=========================================================================" & vbCrLf & _
