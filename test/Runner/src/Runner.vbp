@@ -3,6 +3,7 @@ Reference=*\G{00020430-0000-0000-C000-000000000046}#2.0#0#..\..\..\..\..\..\Wind
 Module=mdMain; mdMain.bas
 Module=mdJson; mdJson.bas
 Module=NameBasedObjectFactory; mdObjectFactory.bas
+Module=mdConsole; mdConsole.bas
 Class=cArith; ..\peg\Arith\cArith.cls
 Class=cArith2; ..\peg\Arith2\cArith2.cls
 Class=cCalc; ..\peg\Calc\cCalc.cls
