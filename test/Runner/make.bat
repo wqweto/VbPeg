@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 set peg_dir=%~dp0peg
 set runner_dir=%~dp0src
 set runner_exe=%~dp0src\Runner.exe
@@ -101,9 +101,9 @@ echo   %nameext%
 
 :: run tests from *.in and diff *.out vs *.expect
 for /f %%j in ('dir /b *.in') do (
-    set /a count_run=%count_run% + 1
+    set /a count_run=!count_run! + 1
     call :diff_test "%runner_exe%" "c%nameext%" "%%j"
-    if errorlevel 1 set /a count_fail=%count_fail% + 1
+    if errorlevel 1 set /a count_fail=!count_fail! + 1
 )
 popd
 goto :eof
@@ -112,7 +112,7 @@ goto :eof
 set diff_out_file=%~dpn3.out
 set diff_expect_file=%~dpn3.expect
 del /q /s "%diff_out_file%" >nul 2>&1
-%* >"%diff_out_file%"
+%* >"%diff_out_file%" 2>&1
 if errorlevel 1 (
     if [%upd_expect%]==[1] copy /y "%diff_out_file%" "%diff_expect_file%" >nul
     exit /b !errorlevel!
