@@ -38,6 +38,7 @@ Private Declare Sub ExitProcess Lib "kernel32" (ByVal uExitCode As Long)
 '=========================================================================
 
 Private Const STR_VERSION           As String = "0.3.11"
+Private Const STR_VERSION           As String = "0.3.12"
 
 Private m_oParser               As cParser
 Private m_oOpt                  As Object
