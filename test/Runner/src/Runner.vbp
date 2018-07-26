@@ -11,6 +11,7 @@ Class=cCalc2; ..\peg\Calc2\cCalc2.cls
 Class=cCalc3; ..\peg\Calc3\cCalc3.cls
 Class=cGenIdl; ..\peg\GenIdl\cGenIdl.cls
 Class=cJava; ..\peg\Java\cJava.cls
+Class=cKscope; ..\peg\Kscope\cKscope.cls
 Class=cMarkdown; ..\peg\Markdown\cMarkdown.cls
 Class=cTest2; ..\peg\Test2\cTest2.cls
 Class=cTest3; ..\peg\Test3\cTest3.cls

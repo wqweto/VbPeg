@@ -1,0 +1,200 @@
+Pos: 2085, Result: [
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "UnOpProto", "Oper": "!", "Params": [ "v" ] },
+        "Body": { "Tag": "IfExpr", "Cond": "v", "Then": 0, "Else": 1 }
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "BinOpProto", "Oper": "|", "Precedence": 5, "Params": [ "LHS", "RHS" ] },
+        "Body": {
+            "Tag": "IfExpr",
+            "Cond": "LHS",
+            "Then": 1,
+            "Else": { "Tag": "IfExpr", "Cond": "RHS", "Then": 1, "Else": 0 }
+        }
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "BinOpProto", "Oper": "&", "Precedence": 6, "Params": [ "LHS", "RHS" ] },
+        "Body": {
+            "Tag": "IfExpr",
+            "Cond": { "Tag": "UnOp", "Oper": "!", "Expr": "LHS" },
+            "Then": 0,
+            "Else": { "Tag": "UnOp", "Oper": "!", "Expr": { "Tag": "UnOp", "Oper": "!", "Expr": "RHS" } }
+        }
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "BinOpProto", "Oper": "=", "Precedence": 9, "Params": [ "LHS", "RHS" ] },
+        "Body": {
+            "Tag": "UnOp",
+            "Oper": "!",
+            "Expr": {
+                "Tag": "BinOp",
+                "Left": {
+                    "Tag": "BinOp",
+                    "Left": { "Tag": "BinOp", "Left": "LHS", "Oper": "<", "Right": "RHS" },
+                    "Oper": "|",
+                    "Right": "LHS"
+                },
+                "Oper": ">",
+                "Right": "RHS"
+            }
+        }
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "BinOpProto", "Oper": ":", "Precedence": 1, "Params": [ "x", "y" ] },
+        "Body": "y"
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "FuncProto", "Name": "printdensity", "Params": [ "d" ] },
+        "Body": {
+            "Tag": "IfExpr",
+            "Cond": { "Tag": "BinOp", "Left": "d", "Oper": ">", "Right": 8 },
+            "Then": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 32 ] },
+            "Else": {
+                "Tag": "IfExpr",
+                "Cond": { "Tag": "BinOp", "Left": "d", "Oper": ">", "Right": 4 },
+                "Then": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 46 ] },
+                "Else": {
+                    "Tag": "IfExpr",
+                    "Cond": { "Tag": "BinOp", "Left": "d", "Oper": ">", "Right": 2 },
+                    "Then": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 43 ] },
+                    "Else": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 42 ] }
+                }
+            }
+        }
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "FuncProto", "Name": "mandleconverger", "Params": [ "real", "imag", "iters", "creal", "cimag" ] },
+        "Body": {
+            "Tag": "IfExpr",
+            "Cond": {
+                "Tag": "BinOp",
+                "Left": { "Tag": "BinOp", "Left": "iters", "Oper": ">", "Right": 255 },
+                "Oper": "|",
+                "Right": {
+                    "Tag": "BinOp",
+                    "Left": {
+                        "Tag": "BinOp",
+                        "Left": {
+                            "Tag": "BinOp",
+                            "Left": { "Tag": "BinOp", "Left": "real", "Oper": "*", "Right": "real" },
+                            "Oper": "+",
+                            "Right": "imag"
+                        },
+                        "Oper": "*",
+                        "Right": "imag"
+                    },
+                    "Oper": ">",
+                    "Right": 4
+                }
+            },
+            "Then": "iters",
+            "Else": {
+                "Tag": "InvokeExpr",
+                "Func": "mandleconverger",
+                "Args": [
+                    {
+                        "Tag": "BinOp",
+                        "Left": {
+                            "Tag": "BinOp",
+                            "Left": {
+                                "Tag": "BinOp",
+                                "Left": { "Tag": "BinOp", "Left": "real", "Oper": "*", "Right": "real" },
+                                "Oper": "-",
+                                "Right": "imag"
+                            },
+                            "Oper": "*",
+                            "Right": "imag"
+                        },
+                        "Oper": "+",
+                        "Right": "creal"
+                    },
+                    {
+                        "Tag": "BinOp",
+                        "Left": {
+                            "Tag": "BinOp",
+                            "Left": { "Tag": "BinOp", "Left": 2, "Oper": "*", "Right": "real" },
+                            "Oper": "*",
+                            "Right": "imag"
+                        },
+                        "Oper": "+",
+                        "Right": "cimag"
+                    },
+                    { "Tag": "BinOp", "Left": "iters", "Oper": "+", "Right": 1 },
+                    "creal",
+                    "cimag"
+                ]
+            }
+        }
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "FuncProto", "Name": "mandleconverge", "Params": [ "real", "imag" ] },
+        "Body": { "Tag": "InvokeExpr", "Func": "mandleconverger", "Args": [ "real", "imag", 0, "real", "imag" ] }
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "FuncProto", "Name": "mandelhelp", "Params": [ "xmin", "xmax", "xstep", "ymin", "ymax", "ystep" ] },
+        "Body": {
+            "Tag": "ForExpr",
+            "Var": "y",
+            "Init": "ymin",
+            "Last": { "Tag": "BinOp", "Left": "y", "Oper": "<", "Right": "ymax" },
+            "Step": "ystep",
+            "Body": {
+                "Tag": "BinOp",
+                "Left": {
+                    "Tag": "ForExpr",
+                    "Var": "x",
+                    "Init": "xmin",
+                    "Last": { "Tag": "BinOp", "Left": "x", "Oper": "<", "Right": "xmax" },
+                    "Step": "xstep",
+                    "Body": {
+                        "Tag": "InvokeExpr",
+                        "Func": "printdensity",
+                        "Args": [ { "Tag": "InvokeExpr", "Func": "mandleconverge", "Args": [ "x", "y" ] } ]
+                    }
+                },
+                "Oper": ":",
+                "Right": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 10 ] }
+            }
+        }
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "FuncProto", "Name": "mandel", "Params": [ "realstart", "imagstart", "realmag", "imagmag" ] },
+        "Body": {
+            "Tag": "InvokeExpr",
+            "Func": "mandelhelp",
+            "Args": [
+                "realstart",
+                {
+                    "Tag": "BinOp",
+                    "Left": { "Tag": "BinOp", "Left": "realstart", "Oper": "+", "Right": "realmag" },
+                    "Oper": "*",
+                    "Right": 78
+                },
+                "realmag",
+                "imagstart",
+                {
+                    "Tag": "BinOp",
+                    "Left": { "Tag": "BinOp", "Left": "imagstart", "Oper": "+", "Right": "imagmag" },
+                    "Oper": "*",
+                    "Right": 40
+                },
+                "imagmag"
+            ]
+        }
+    },
+    {
+        "Tag": "InvokeExpr",
+        "Func": "mandel",
+        "Args": [ { "Tag": "UnOp", "Oper": "-", "Expr": 2.3 }, { "Tag": "UnOp", "Oper": "-", "Expr": 1.3 }, 0.05, 0.07 ]
+    }
+]
