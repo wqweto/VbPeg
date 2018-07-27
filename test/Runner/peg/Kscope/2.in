@@ -6,12 +6,12 @@ def unary!(v)
     1;
 
 # Unary negate.
-#def unary-(v)
-#  0-v;
+def unary-(v)
+  0-v;
 
 # Define > with the same precedence as <.
-#def binary> 10 (LHS RHS)
-#  RHS < LHS;
+def binary> 10 (LHS RHS)
+  RHS < LHS;
 
 # Binary logical or, which does not short circuit.
 def binary| 5 (LHS RHS)

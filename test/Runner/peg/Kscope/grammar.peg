@@ -1,87 +1,107 @@
 start
-    = - f:EMPTY                                                         {   JsonItem(oJson, -1) = Empty
+    = f:-                                                               {   JsonItem(oJson, -1) = Empty
                                                                             Set $f = oJson }
-                (n:stmt                                                 {   Set oJson = $f
+          (n:stmt                                                       {   Set oJson = $f
                                                                             JsonItem(oJson, -1) = $n }
-                       )+                                               {   Set $$ = $f }
-    
+                 )+                                                     {   Set $$ = $f }
+
 stmt
     = definition SEMI?
     | extern SEMI?
     | expr SEMI?
     | SEMI
-    
+
 definition
-    = K_DEF ns p:prototype e:expr                                       {   JsonItem(oJson, "Tag") = "Def" 
+    = K_DEF ns p:prototype e:expr                                       {   JsonItem(oJson, "Tag") = "Def"
                                                                             JsonItem(oJson, "Proto") = $p
                                                                             JsonItem(oJson, "Body") = $e
                                                                             Set $$ = oJson }
-    
+
 extern
-    = K_EXTERN ns p:prototype                                           {   JsonItem(oJson, "Tag") = "Extern" 
+    = K_EXTERN ns p:prototype                                           {   JsonItem(oJson, "Tag") = "Extern"
                                                                             JsonItem(oJson, "Proto") = $p
                                                                             Set $$ = oJson }
-    
+
 prototype
-    = r:EMPTY (K_BINARY ns op:BINOP p:NUMBER LPAREN                     {   JsonItem(oJson, "Tag") = "BinOpProto" 
+    =                                                                  &{   Dim sBinOp As String
+                                                                            Dim lOpPrec As Long
+                                                                            Dim lOpAssoc As Long }
+      r:EMPTY ( K_BINARY ns op:BINOP                                   &{   '-- save oper
+                                                                            sBinOp = $$text }
+                                     p:NUMBER                          &{   lOpPrec = C_Lng($$text)
+                                                                            lOpAssoc = 1 }
+                                              LPAREN                    {   JsonItem(oJson, "Tag") = "BinOpProto"
                                                                             JsonItem(oJson, "Oper") = $op
                                                                             JsonItem(oJson, "Precedence") = $p
                                                                             Set $r = oJson }
-    | K_UNARY ns op:UNOP LPAREN                                         {   JsonItem(oJson, "Tag") = "UnOpProto" 
+              | K_UNARY ns op:UNOP LPAREN                               {   JsonItem(oJson, "Tag") = "UnOpProto"
                                                                             JsonItem(oJson, "Oper") = $op
                                                                             Set $r = oJson }
-    | !KEYWORD n:IDENT LPAREN                                           {   JsonItem(oJson, "Tag") = "FuncProto" 
+              | !KEYWORD n:IDENT LPAREN                                 {   JsonItem(oJson, "Tag") = "FuncProto"
                                                                             JsonItem(oJson, "Name") = $n
                                                                             Set $r = oJson }
-    ) p:param_list RPAREN                                               {   Set oJson = $r
+              ) p:param_list RPAREN                                     {   Set oJson = $r
                                                                             JsonItem(oJson, "Params") = $p
                                                                             Set $$ = oJson }
-    
+                                                                       &{   If LenB(sBinOp) <> 0 Then
+                                                                                SetBinopInfo sBinOp, lOpPrec, lOpAssoc
+                                                                            End If }
+
 expr
-    = l:unary (op:BINOP r:unary                                         {   JsonItem(oJson, "Tag") = "BinOp" 
+    =                                                                  &{   '--- clear min precedence
+                                                                            m_lBinopMinPrec = 0 }
+      binexpr
+
+binexpr
+    =                                                                  &{   Dim lMinPrec        As Long
+                                                                            Dim vOpInfo         As Variant
+                                                                            
+                                                                            lMinPrec = m_lBinopMinPrec }
+      l:unexpr (op:BINOP                                               &{   '--- get current binop prec & assoc
+                                                                            vOpInfo = GetBinopInfo($$text) }
+                                                                       &{   vOpInfo(0) >= lMinPrec }
+                                                                       &{   '--- set next min precedence based on binop prec & assoc
+                                                                            m_lBinopMinPrec = vOpInfo(0) + vOpInfo(1) }
+                         r:binexpr                                      {   JsonItem(oJson, "Tag") = "BinOp"
                                                                             JsonItem(oJson, "Left") = $l
                                                                             JsonItem(oJson, "Oper") = $op
                                                                             JsonItem(oJson, "Right") = $r
+                                                                            JsonItem(oJson, "BinopInfo") = GetBinopInfo(C_Str($op))
                                                                             Set $l = oJson }
-                               )*                                       {   AssignVariant $$, $l }
+                                  )*                                    {   AssignVariant $$, $l }
 
-unary
-    = op:UNOP e:unary                                                   {   JsonItem(oJson, "Tag") = "UnOp" 
+unexpr
+    = op:UNOP e:unexpr                                                  {   JsonItem(oJson, "Tag") = "UnOp"
                                                                             JsonItem(oJson, "Oper") = $op
                                                                             JsonItem(oJson, "Expr") = $e
                                                                             Set $$ = oJson }
     | primary
-    
+
 primary
-    = DOUBLE /*v:DOUBLE                                                 {   JsonItem(oJson, "Tag") = "DoubleLiteral" 
-                                                                            JsonItem(oJson, "Value") = $v
-                                                                            Set $$ = oJson }*/
+    = DOUBLE
     | LPAREN expr RPAREN
     | invokeexpr
     | ifexpr
     | forexpr
     | varexpr
-    | IDENT /*v:IDENT                                                   {   JsonItem(oJson, "Tag") = "Ident" 
-                                                                            JsonItem(oJson, "Name") = $v
-                                                                            Set $$ = oJson }*/
-    
-    
+    | IDENT
+
 invokeexpr
-    = n:IDENT LPAREN a:arg_list RPAREN                                  {   JsonItem(oJson, "Tag") = "InvokeExpr" 
+    = n:IDENT LPAREN a:arg_list RPAREN                                  {   JsonItem(oJson, "Tag") = "InvokeExpr"
                                                                             JsonItem(oJson, "Func") = $n
                                                                             JsonItem(oJson, "Args") = $a
                                                                             Set $$ = oJson }
 
 ifexpr
-    = K_IF ns c:expr K_THEN ns t:expr (K_ELSE ns e:expr)?               {   JsonItem(oJson, "Tag") = "IfExpr" 
+    = K_IF ns c:expr K_THEN ns t:expr (K_ELSE ns e:expr)?               {   JsonItem(oJson, "Tag") = "IfExpr"
                                                                             JsonItem(oJson, "Cond") = $c
                                                                             JsonItem(oJson, "Then") = $t
                                                                             JsonItem(oJson, "Else") = $e
                                                                             Set $$ = oJson }
 
 forexpr
-    = K_FOR ns n:IDENT EQ i:expr COMMA l:expr (COMMA s:expr)? K_IN ns
-        e:expr                                                          {   JsonItem(oJson, "Tag") = "ForExpr" 
+    = K_FOR ns n:IDENT EQ i:expr COMMA l:expr (COMMA s:expr)?
+      K_IN ns e:expr                                                    {   JsonItem(oJson, "Tag") = "ForExpr"
                                                                             JsonItem(oJson, "Var") = $n
                                                                             JsonItem(oJson, "Init") = $i
                                                                             JsonItem(oJson, "Last") = $l
@@ -90,18 +110,18 @@ forexpr
                                                                             Set $$ = oJson }
 
 varexpr
-    = K_VAR ns v:var_list K_IN ns e:expr                                {   JsonItem(oJson, "Tag") = "VarExpr" 
+    = K_VAR ns v:var_list K_IN ns e:expr                                {   JsonItem(oJson, "Tag") = "VarExpr"
                                                                             JsonItem(oJson, "Vars") = $v
                                                                             JsonItem(oJson, "Body") = $e
                                                                             Set $$ = oJson }
 
 param_list
     = f:IDENT                                                           {   JsonItem(oJson, -1) = $f
-                                                                            Set $f = oJson } 
+                                                                            Set $f = oJson }
               (COMMA? n:IDENT                                           {   Set oJson = $f
                                                                             JsonItem(oJson, -1) = $n }
                              )*                                         {   Set $$ = $f }
-    
+
 arg_list
     = f:expr                                                            {   JsonItem(oJson, -1) = $f
                                                                             Set $f = oJson }
@@ -117,23 +137,24 @@ var_list
                                     )*                                  {   Set $$ = $f }
 
 var_decl
-    = n:IDENT (EQ e:expr | e:EMPTY)                                     {   JsonItem(oJson, "Tag") = "VarDecl" 
+    = n:IDENT (EQ e:expr | e:EMPTY)                                     {   JsonItem(oJson, "Tag") = "VarDecl"
                                                                             JsonItem(oJson, "Name") = $n
                                                                             JsonItem(oJson, "Expr") = $e }
 
 KEYWORD
-    = (K_DEF
-    | K_EXTERN
-    | K_IF
-    | K_THEN
-    | K_ELSE
-    | K_UNARY
-    | K_FOR
-    | K_BINARY
-    | K_IN
-    | K_VAR) !ALPHANUM
-    
-    
+    = ( K_DEF
+      | K_EXTERN
+      | K_IF
+      | K_THEN
+      | K_ELSE
+      | K_UNARY
+      | K_FOR
+      | K_BINARY
+      | K_IN
+      | K_VAR
+      ) !ALPHANUM
+
+
 # Lexical rules
 
 LPAREN      = '(' -
@@ -165,12 +186,43 @@ EMPTY       = < '' >
 ns          = !ALPHANUM -
 LineComment = '#' [^\r\n]*
 
+@declares {
+Private m_oBinopInfo        As Scripting.Dictionary
+Private m_lBinopMinPrec     As Long
+}
+
 @prolog {
     Dim oJson As Object
-    
+
     With ctx
 }
 
 @epilog {
     End With
+}
+
+@{
+Public Function GetBinopInfo(sOp As String) As Variant
+    If m_oBinopInfo Is Nothing Then
+        Set m_oBinopInfo = New Scripting.Dictionary
+        m_oBinopInfo.Item("<") = Array(10, 1)
+        m_oBinopInfo.Item("+") = Array(20, 1)
+        m_oBinopInfo.Item("-") = Array(20, 1)
+        m_oBinopInfo.Item("*") = Array(40, 1)
+'        m_oBinopInfo.Item("/") = Array(40, 1)
+'        m_oBinopInfo.Item("^") = Array(50, 0)
+    End If
+    If m_oBinopInfo.Exists(sOp) Then
+        GetBinopInfo = m_oBinopInfo.Item(sOp)
+    Else
+        GetBinopInfo = Array(0, 0)
+    End If
+End Function
+
+Public Function SetBinopInfo(sOp As String, ByVal lPrec As Long,  ByVal lAssoc As Long) As Variant
+    If m_oBinopInfo Is Nothing Then
+        GetBinopInfo vbNullString
+    End If
+    m_oBinopInfo.Item(sOp) = Array(lPrec, lAssoc, "Override")
+End Function
 }

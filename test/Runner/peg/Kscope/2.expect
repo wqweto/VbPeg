@@ -1,8 +1,18 @@
-Pos: 2085, Result: [
+Pos: 2081, Result: [
     {
         "Tag": "Def",
         "Proto": { "Tag": "UnOpProto", "Oper": "!", "Params": [ "v" ] },
         "Body": { "Tag": "IfExpr", "Cond": "v", "Then": 0, "Else": 1 }
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "UnOpProto", "Oper": "-", "Params": [ "v" ] },
+        "Body": { "Tag": "BinOp", "Left": 0, "Oper": "-", "Right": "v", "BinopInfo": [ 20, 1 ] }
+    },
+    {
+        "Tag": "Def",
+        "Proto": { "Tag": "BinOpProto", "Oper": ">", "Precedence": 10, "Params": [ "LHS", "RHS" ] },
+        "Body": { "Tag": "BinOp", "Left": "RHS", "Oper": "<", "Right": "LHS", "BinopInfo": [ 10, 1 ] }
     },
     {
         "Tag": "Def",
@@ -32,14 +42,10 @@ Pos: 2085, Result: [
             "Oper": "!",
             "Expr": {
                 "Tag": "BinOp",
-                "Left": {
-                    "Tag": "BinOp",
-                    "Left": { "Tag": "BinOp", "Left": "LHS", "Oper": "<", "Right": "RHS" },
-                    "Oper": "|",
-                    "Right": "LHS"
-                },
-                "Oper": ">",
-                "Right": "RHS"
+                "Left": { "Tag": "BinOp", "Left": "LHS", "Oper": "<", "Right": "RHS", "BinopInfo": [ 10, 1 ] },
+                "Oper": "|",
+                "Right": { "Tag": "BinOp", "Left": "LHS", "Oper": ">", "Right": "RHS", "BinopInfo": [ 10, 1, "Override" ] },
+                "BinopInfo": [ 5, 1, "Override" ]
             }
         }
     },
@@ -53,15 +59,15 @@ Pos: 2085, Result: [
         "Proto": { "Tag": "FuncProto", "Name": "printdensity", "Params": [ "d" ] },
         "Body": {
             "Tag": "IfExpr",
-            "Cond": { "Tag": "BinOp", "Left": "d", "Oper": ">", "Right": 8 },
+            "Cond": { "Tag": "BinOp", "Left": "d", "Oper": ">", "Right": 8, "BinopInfo": [ 10, 1, "Override" ] },
             "Then": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 32 ] },
             "Else": {
                 "Tag": "IfExpr",
-                "Cond": { "Tag": "BinOp", "Left": "d", "Oper": ">", "Right": 4 },
+                "Cond": { "Tag": "BinOp", "Left": "d", "Oper": ">", "Right": 4, "BinopInfo": [ 10, 1, "Override" ] },
                 "Then": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 46 ] },
                 "Else": {
                     "Tag": "IfExpr",
-                    "Cond": { "Tag": "BinOp", "Left": "d", "Oper": ">", "Right": 2 },
+                    "Cond": { "Tag": "BinOp", "Left": "d", "Oper": ">", "Right": 2, "BinopInfo": [ 10, 1, "Override" ] },
                     "Then": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 43 ] },
                     "Else": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 42 ] }
                 }
@@ -75,24 +81,22 @@ Pos: 2085, Result: [
             "Tag": "IfExpr",
             "Cond": {
                 "Tag": "BinOp",
-                "Left": { "Tag": "BinOp", "Left": "iters", "Oper": ">", "Right": 255 },
+                "Left": { "Tag": "BinOp", "Left": "iters", "Oper": ">", "Right": 255, "BinopInfo": [ 10, 1, "Override" ] },
                 "Oper": "|",
                 "Right": {
                     "Tag": "BinOp",
                     "Left": {
                         "Tag": "BinOp",
-                        "Left": {
-                            "Tag": "BinOp",
-                            "Left": { "Tag": "BinOp", "Left": "real", "Oper": "*", "Right": "real" },
-                            "Oper": "+",
-                            "Right": "imag"
-                        },
-                        "Oper": "*",
-                        "Right": "imag"
+                        "Left": { "Tag": "BinOp", "Left": "real", "Oper": "*", "Right": "real", "BinopInfo": [ 40, 1 ] },
+                        "Oper": "+",
+                        "Right": { "Tag": "BinOp", "Left": "imag", "Oper": "*", "Right": "imag", "BinopInfo": [ 40, 1 ] },
+                        "BinopInfo": [ 20, 1 ]
                     },
                     "Oper": ">",
-                    "Right": 4
-                }
+                    "Right": 4,
+                    "BinopInfo": [ 10, 1, "Override" ]
+                },
+                "BinopInfo": [ 5, 1, "Override" ]
             },
             "Then": "iters",
             "Else": {
@@ -103,30 +107,29 @@ Pos: 2085, Result: [
                         "Tag": "BinOp",
                         "Left": {
                             "Tag": "BinOp",
-                            "Left": {
-                                "Tag": "BinOp",
-                                "Left": { "Tag": "BinOp", "Left": "real", "Oper": "*", "Right": "real" },
-                                "Oper": "-",
-                                "Right": "imag"
-                            },
-                            "Oper": "*",
-                            "Right": "imag"
+                            "Left": { "Tag": "BinOp", "Left": "real", "Oper": "*", "Right": "real", "BinopInfo": [ 40, 1 ] },
+                            "Oper": "-",
+                            "Right": { "Tag": "BinOp", "Left": "imag", "Oper": "*", "Right": "imag", "BinopInfo": [ 40, 1 ] },
+                            "BinopInfo": [ 20, 1 ]
                         },
                         "Oper": "+",
-                        "Right": "creal"
+                        "Right": "creal",
+                        "BinopInfo": [ 20, 1 ]
                     },
                     {
                         "Tag": "BinOp",
                         "Left": {
                             "Tag": "BinOp",
-                            "Left": { "Tag": "BinOp", "Left": 2, "Oper": "*", "Right": "real" },
+                            "Left": { "Tag": "BinOp", "Left": 2, "Oper": "*", "Right": "real", "BinopInfo": [ 40, 1 ] },
                             "Oper": "*",
-                            "Right": "imag"
+                            "Right": "imag",
+                            "BinopInfo": [ 40, 1 ]
                         },
                         "Oper": "+",
-                        "Right": "cimag"
+                        "Right": "cimag",
+                        "BinopInfo": [ 20, 1 ]
                     },
-                    { "Tag": "BinOp", "Left": "iters", "Oper": "+", "Right": 1 },
+                    { "Tag": "BinOp", "Left": "iters", "Oper": "+", "Right": 1, "BinopInfo": [ 20, 1 ] },
                     "creal",
                     "cimag"
                 ]
@@ -145,7 +148,7 @@ Pos: 2085, Result: [
             "Tag": "ForExpr",
             "Var": "y",
             "Init": "ymin",
-            "Last": { "Tag": "BinOp", "Left": "y", "Oper": "<", "Right": "ymax" },
+            "Last": { "Tag": "BinOp", "Left": "y", "Oper": "<", "Right": "ymax", "BinopInfo": [ 10, 1 ] },
             "Step": "ystep",
             "Body": {
                 "Tag": "BinOp",
@@ -153,7 +156,7 @@ Pos: 2085, Result: [
                     "Tag": "ForExpr",
                     "Var": "x",
                     "Init": "xmin",
-                    "Last": { "Tag": "BinOp", "Left": "x", "Oper": "<", "Right": "xmax" },
+                    "Last": { "Tag": "BinOp", "Left": "x", "Oper": "<", "Right": "xmax", "BinopInfo": [ 10, 1 ] },
                     "Step": "xstep",
                     "Body": {
                         "Tag": "InvokeExpr",
@@ -162,7 +165,8 @@ Pos: 2085, Result: [
                     }
                 },
                 "Oper": ":",
-                "Right": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 10 ] }
+                "Right": { "Tag": "InvokeExpr", "Func": "putchard", "Args": [ 10 ] },
+                "BinopInfo": [ 1, 1, "Override" ]
             }
         }
     },
@@ -176,17 +180,19 @@ Pos: 2085, Result: [
                 "realstart",
                 {
                     "Tag": "BinOp",
-                    "Left": { "Tag": "BinOp", "Left": "realstart", "Oper": "+", "Right": "realmag" },
-                    "Oper": "*",
-                    "Right": 78
+                    "Left": "realstart",
+                    "Oper": "+",
+                    "Right": { "Tag": "BinOp", "Left": "realmag", "Oper": "*", "Right": 78, "BinopInfo": [ 40, 1 ] },
+                    "BinopInfo": [ 20, 1 ]
                 },
                 "realmag",
                 "imagstart",
                 {
                     "Tag": "BinOp",
-                    "Left": { "Tag": "BinOp", "Left": "imagstart", "Oper": "+", "Right": "imagmag" },
-                    "Oper": "*",
-                    "Right": 40
+                    "Left": "imagstart",
+                    "Oper": "+",
+                    "Right": { "Tag": "BinOp", "Left": "imagmag", "Oper": "*", "Right": 40, "BinopInfo": [ 40, 1 ] },
+                    "BinopInfo": [ 20, 1 ]
                 },
                 "imagmag"
             ]

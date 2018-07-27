@@ -6,27 +6,20 @@ Pos: 129, Result: [
             "Tag": "BinOp",
             "Left": {
                 "Tag": "BinOp",
-                "Left": {
-                    "Tag": "BinOp",
-                    "Left": {
-                        "Tag": "BinOp",
-                        "Left": {
-                            "Tag": "BinOp",
-                            "Left": { "Tag": "BinOp", "Left": "a", "Oper": "*", "Right": "a" },
-                            "Oper": "+",
-                            "Right": 2
-                        },
-                        "Oper": "*",
-                        "Right": "a"
-                    },
-                    "Oper": "*",
-                    "Right": "b"
-                },
+                "Left": { "Tag": "BinOp", "Left": "a", "Oper": "*", "Right": "a", "BinopInfo": [ 40, 1 ] },
                 "Oper": "+",
-                "Right": "b"
+                "Right": {
+                    "Tag": "BinOp",
+                    "Left": { "Tag": "BinOp", "Left": 2, "Oper": "*", "Right": "a", "BinopInfo": [ 40, 1 ] },
+                    "Oper": "*",
+                    "Right": "b",
+                    "BinopInfo": [ 40, 1 ]
+                },
+                "BinopInfo": [ 20, 1 ]
             },
-            "Oper": "*",
-            "Right": "b"
+            "Oper": "+",
+            "Right": { "Tag": "BinOp", "Left": "b", "Oper": "*", "Right": "b", "BinopInfo": [ 40, 1 ] },
+            "BinopInfo": [ 20, 1 ]
         }
     },
     {
@@ -36,7 +29,8 @@ Pos: 129, Result: [
             "Tag": "BinOp",
             "Left": { "Tag": "InvokeExpr", "Func": "foo", "Args": [ "a", 4 ] },
             "Oper": "+",
-            "Right": { "Tag": "InvokeExpr", "Func": "bar", "Args": [ 31337 ] }
+            "Right": { "Tag": "InvokeExpr", "Func": "bar", "Args": [ 31337 ] },
+            "BinopInfo": [ 20, 1 ]
         }
     },
     { "Tag": "Extern", "Proto": { "Tag": "FuncProto", "Name": "cos", "Params": [ "x" ] } },
@@ -44,7 +38,7 @@ Pos: 129, Result: [
         "Tag": "ForExpr",
         "Var": "y",
         "Init": "ymin",
-        "Last": { "Tag": "BinOp", "Left": "y", "Oper": "<", "Right": "ymax" },
+        "Last": { "Tag": "BinOp", "Left": "y", "Oper": "<", "Right": "ymax", "BinopInfo": [ 10, 1 ] },
         "Step": "ystep",
         "Body": 1
     }
