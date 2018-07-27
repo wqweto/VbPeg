@@ -371,6 +371,7 @@ Private Function pvCodeGenNode( _
     Dim lIrNode         As Long
     Dim sText           As String
     Dim bIgnoreCase     As Boolean
+    Dim vElem           As Variant
     
     On Error GoTo EH
     With m_uIr.CodeGenTree
@@ -782,24 +783,42 @@ EmitStmtIfOnIrNode:
                 AddChild pvCodeGenNode, lSuccess
             Case Else
                 sText = Trim$(pvCodeGenAction(.NodeText(lNode), .NodeRefRule(lNode), IsImmediate:=True))
-                If LenB(sText) = 0 Then
-                    pvCodeGenNode = lSuccess
-                ElseIf .NodeFlag(lNode, ucsNdfAlwaysTrue) Then
-                    pvCodeGenNode = AddNode(ucsIrtBlock)
-                    AddChild pvCodeGenNode, AddNode(ucsIrtStmtEmit, "Call " & sText)
-                    AddChild pvCodeGenNode, lSuccess
-                Else
-                    If Not .NodeFlag(lNode, ucsNdfIsNot) Then
-                        lIrNode = AddNode(ucsIrtExprEmit, sText)
+                If InStr(sText, vbCrLf) = 0 Then
+                    '--- single-line predicate -> if expr then success else failure end if
+                    If LenB(sText) = 0 Then
+                        pvCodeGenNode = lSuccess
+                    ElseIf .NodeFlag(lNode, ucsNdfAlwaysTrue) Then
+                        pvCodeGenNode = AddNode(ucsIrtBlock)
+                        AddChild pvCodeGenNode, AddNode(ucsIrtStmtEmit, "Call " & sText)
+                        If Not .NodeFlag(lNode, ucsNdfIsNot) Then
+                            AddChild pvCodeGenNode, lSuccess
+                        Else
+                            AddChild pvCodeGenNode, lFailure
+                        End If
                     Else
-                        lIrNode = AddNode(ucsIrtExprEmit, "Not (" & sText & ")")
+                        If Not .NodeFlag(lNode, ucsNdfIsNot) Then
+                            lIrNode = AddNode(ucsIrtExprEmit, sText)
+                        Else
+                            lIrNode = AddNode(ucsIrtExprEmit, "Not (" & sText & ")")
+                        End If
+                        If Right$(sText, 10) = " And False" Then
+                            lSuccess = IR_CONTINUE
+                        ElseIf Right$(sText, 8) = " Or True" Then
+                            lFailure = IR_CONTINUE
+                        End If
+                        GoTo EmitStmtIfOnIrNode
                     End If
-                    If Right$(sText, 10) = " And False" Then
-                        lSuccess = IR_CONTINUE
-                    ElseIf Right$(sText, 8) = " Or True" Then
-                        lFailure = IR_CONTINUE
+                Else
+                    '--- multi-line "predicate" -> emit stmt1 : stmt2 ...
+                    pvCodeGenNode = AddNode(ucsIrtBlock)
+                    For Each vElem In Split(sText, vbCrLf)
+                        AddChild pvCodeGenNode, AddNode(ucsIrtStmtEmit, Trim$(vElem))
+                    Next
+                    If Not .NodeFlag(lNode, ucsNdfIsNot) Then
+                        AddChild pvCodeGenNode, lSuccess
+                    Else
+                        AddChild pvCodeGenNode, lFailure
                     End If
-                    GoTo EmitStmtIfOnIrNode
                 End If
             End Select
         Case ucsNdtClass
