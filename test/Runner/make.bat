@@ -12,6 +12,7 @@ set count_fail=0
 set upd_expect=
 set test_modules=
 set run_mode=
+set has_test_param=
 
 :main_param_loop
 if [%1]==[expect] (
@@ -30,11 +31,12 @@ goto :main_%run_mode%
 
 :main_make_mode
 if not [%1]==[] (
+    set has_test_param=1
     for /f "usebackq delims=" %%i in (`for /f %%k in ^('dir /b /s /on "%peg_dir%\%1\*.peg"'^) do @if [%%~xk]^=^=[.peg] echo %%k`) do call :make_test "%%i"
     shift /1
     goto :main_param_loop
 )
-if "%test_modules%"=="" (
+if [%has_test_param%]==[] (
     for /f "usebackq delims=" %%i in (`for /f %%k in ^('dir /b /s /on "%peg_dir%\*.peg"'^) do @if [%%~xk]^=^=[.peg] echo %%k`) do call :make_test "%%i"
 )
 %replace_vbs% "/f:%runner_dir%\Runner.vbp.template" "/d:%runner_dir%\Runner.vbp" "/s:{test_modules}" "/r:%test_modules%"
@@ -48,12 +50,12 @@ goto :eof
 
 :main_test_mode
 if not [%1]==[] (
-    set test_modules=1
+    set has_test_param=1
     for /f "usebackq delims=" %%i in (`for /f %%k in ^('dir /b /s /on "%peg_dir%\%1\*.peg"'^) do @if [%%~xk]^=^=[.peg] echo %%k`) do call :run_test "%%i"
     shift /1
     goto :main_param_loop
 )
-if [%test_modules%]==[] (
+if [%has_test_param%]==[] (
     for /f "usebackq delims=" %%i in (`for /f %%k in ^('dir /b /s /on "%peg_dir%\*.peg"'^) do @if [%%~xk]^=^=[.peg] echo %%k`) do call :run_test "%%i"
 )
 echo %count_run% tests run, %count_fail% tests failed
