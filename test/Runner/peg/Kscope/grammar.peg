@@ -23,29 +23,31 @@ extern
                                                                             Set $$ = oJson }
 
 prototype
-    =                                                                  &{   Dim sBinOp As String
-                                                                            Dim lOpPrec As Long
-                                                                            Dim lOpAssoc As Long }
-      r:EMPTY ( K_BINARY ns op:BINOP                                   &{   '-- save oper
-                                                                            sBinOp = $$text }
-                                     p:NUMBER                          &{   lOpPrec = C_Lng($$text)
-                                                                            lOpAssoc = 1 }
-                                              LPAREN                    {   JsonItem(oJson, "Tag") = "BinOpProto"
-                                                                            JsonItem(oJson, "Oper") = $op
-                                                                            JsonItem(oJson, "Precedence") = $p
-                                                                            Set $r = oJson }
-              | K_UNARY ns op:UNOP LPAREN                               {   JsonItem(oJson, "Tag") = "UnOpProto"
-                                                                            JsonItem(oJson, "Oper") = $op
-                                                                            Set $r = oJson }
-              | !KEYWORD n:IDENT LPAREN                                 {   JsonItem(oJson, "Tag") = "FuncProto"
-                                                                            JsonItem(oJson, "Name") = $n
-                                                                            Set $r = oJson }
-              ) p:param_list RPAREN                                     {   Set oJson = $r
+    = binopproto
+    | K_UNARY ns n:UNOP LPAREN p:param_list RPAREN                      {   JsonItem(oJson, "Tag") = "UnOpProto"
+                                                                            JsonItem(oJson, "Oper") = $n
                                                                             JsonItem(oJson, "Params") = $p
                                                                             Set $$ = oJson }
-                                                                       &{   If LenB(sBinOp) <> 0 Then
-                                                                                SetBinopInfo sBinOp, lOpPrec, lOpAssoc
-                                                                            End If }
+    | !KEYWORD n:IDENT LPAREN p:param_list RPAREN                       {   JsonItem(oJson, "Tag") = "FuncProto"
+                                                                            JsonItem(oJson, "Name") = $n
+                                                                            JsonItem(oJson, "Params") = $p
+                                                                            Set $$ = oJson }
+
+binopproto
+    =                                                                  &{   Dim sBinOp          As String
+                                                                            Dim lOpPrec         As Long
+                                                                            Dim lOpAssoc        As Long }
+      K_BINARY ns n:BINOP                                              &{   '-- collect local binop info for use on success
+                                                                            sBinOp = $$text }
+                          pr:NUMBER                                    &{   lOpPrec = C_Lng($$text)
+                                                                            lOpAssoc = 1 }
+                                    LPAREN p:param_list RPAREN         &{   '--- on match immediately update parser binop info
+                                                                            SetBinopInfo sBinOp, lOpPrec, lOpAssoc }
+                                                                        {   JsonItem(oJson, "Tag") = "BinOpProto"
+                                                                            JsonItem(oJson, "Oper") = $n
+                                                                            JsonItem(oJson, "Precedence") = $pr
+                                                                            JsonItem(oJson, "Params") = $p
+                                                                            Set $$ = oJson }
 
 expr
     =                                                                  &{   '--- clear min precedence
@@ -55,7 +57,6 @@ expr
 binexpr
     =                                                                  &{   Dim lMinPrec        As Long
                                                                             Dim vOpInfo         As Variant
-                                                                            
                                                                             lMinPrec = m_lBinopMinPrec }
       l:unexpr (op:BINOP                                               &{   '--- get current binop prec & assoc
                                                                             vOpInfo = GetBinopInfo($$text) }
