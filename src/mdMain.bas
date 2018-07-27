@@ -109,8 +109,8 @@ Private Function Process(vArgs As Variant) As Long
         If LenB(m_oParser.LastError) Then
             ConsoleError "%2: %3: %1" & vbCrLf, m_oParser.LastError, Join(oTree.CalcLine(m_oParser.LastOffset + 1), ":"), IIf(lOffset = 0, "error", "warning")
         End If
-        If Not m_oParser.VbPegGetParseErrors() Is Nothing Then
-            For Each vElem In m_oParser.VbPegGetParseErrors()
+        If Not m_oParser.GetParseErrors() Is Nothing Then
+            For Each vElem In m_oParser.GetParseErrors()
                 ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
             Next
         End If
@@ -208,7 +208,7 @@ Public Function ConsoleTrace(ByVal lOffset As Long, sRule As String, ByVal lActi
         If lAction = 0 Then
             lLevel = lLevel + 1
         Else
-            sText = Mid$(m_oParser.VbPegGetContents(), lOffset, TEXT_LEN)
+            sText = m_oParser.Contents(lOffset, TEXT_LEN)
             If InStr(sText, vbCr) > 0 Then
                 sText = Left$(sText, InStr(sText, vbCr) - 1)
             End If

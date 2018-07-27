@@ -178,12 +178,8 @@ Private Function SetUserDataTag(sText As String) As Boolean
     SetUserDataTag = True
 End Function
 
-Public Function VbPegGetParseErrors() As Collection
-    Set VbPegGetParseErrors = ctx.ParseErrors
-End Function
-
-Public Function VbPegGetContents() As String
-    VbPegGetContents = ctx.Contents
+Public Function GetParseErrors() As Collection
+    Set GetParseErrors = ctx.ParseErrors
 End Function
 
 Private Function CheckSettingName(sName As String) As Boolean
