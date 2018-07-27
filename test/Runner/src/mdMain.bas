@@ -11,6 +11,8 @@ Attribute VB_Name = "mdMain"
 Option Explicit
 DefObj A-Z
 
+#Const HasIVbCollection = False
+
 '=========================================================================
 ' API
 '=========================================================================
@@ -312,4 +314,17 @@ Public Sub AssignVariant(vDest As Variant, vSrc As Variant)
         vDest = vSrc
     End If
 End Sub
+
+#If HasIVbCollection Then
+    Public Function SearchCollection(oCol As IVbCollection, Index As Variant) As Boolean
+        SearchCollection = (oCol.Item(Index) >= 0)
+    End Function
+#Else
+    Public Function SearchCollection(oCol As Collection, Index As Variant) As Boolean
+        On Error GoTo QH
+        oCol.Item Index
+        SearchCollection = True
+QH:
+    End Function
+#End If
 

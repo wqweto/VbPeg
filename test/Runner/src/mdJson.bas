@@ -14,7 +14,7 @@ Private Const MODULE_NAME As String = "mdJson"
 
 #Const ImplCollection = JSON_USE_COLLECTION <> 0
 #Const ImplRichClient = JSON_USE_RICHCLIENT <> 0
-#Const ImplScripting = False
+#Const ImplScripting = JSON_HAS_SCRIPTING_RUNTIME <> 0
 #Const ImplUseShared = DebugMode <> 0
 
 '=========================================================================

@@ -1,5 +1,6 @@
 Type=Exe
 Reference=*\G{00020430-0000-0000-C000-000000000046}#2.0#0#..\..\..\..\..\..\Windows\SysWOW64\stdole2.tlb#OLE Automation
+Reference=*\G{420B2830-E718-11CF-893D-00A0C9054228}#1.0#0#..\..\..\..\..\..\Windows\SysWOW64\scrrun.dll#Microsoft Scripting Runtime
 Module=mdMain; mdMain.bas
 Module=mdJson; mdJson.bas
 Module=NameBasedObjectFactory; mdObjectFactory.bas
@@ -33,6 +34,7 @@ RevisionVer=1
 AutoIncrementVer=1
 ServerSupportFiles=0
 VersionCompanyName="Unicontsoft"
+CondComp="JSON_HAS_SCRIPTING_RUNTIME = 1"
 CompilationType=0
 OptimizationType=0
 FavorPentiumPro(tm)=0
