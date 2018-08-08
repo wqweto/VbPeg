@@ -70,7 +70,7 @@ Private Function Process(vArgs As Variant) As Long
     Set m_oParser = New cParser
     Set m_oOpt = GetOpt(vArgs, "o:set")
     If Not m_oOpt.Item("-nologo") And Not m_oOpt.Item("-q") Then
-        ConsoleError "VbPeg " & STR_VERSION & " (c) 2018 by wqweto@gmail.com (" & m_oParser.ParserVersion & ")" & vbCrLf & vbCrLf
+        ConsoleError App.ProductName & " " & STR_VERSION & " (c) 2018 by wqweto@gmail.com (" & m_oParser.ParserVersion & ")" & vbCrLf & vbCrLf
     End If
     If LenB(m_oOpt.Item("error")) <> 0 Then
         ConsoleError "Error in command line: " & m_oOpt.Item("error") & vbCrLf & vbCrLf
@@ -88,7 +88,7 @@ Private Function Process(vArgs As Variant) As Long
             "  -q              in quiet operation outputs only errors" & vbCrLf & _
             "  -nologo         suppress startup banner" & vbCrLf & _
             "  -allrules       output all rules (don't skip unused)" & vbCrLf & _
-            "  -trace          trace in_file.peg parsing as performed by %1.exe" & vbCrLf & vbCrLf & _
+            "  -trace          trace in_file.peg parsing as performed by generator" & vbCrLf & vbCrLf & _
             "If no -emit-xxx is used emits VB6 code. If no -o is used writes result to console." & vbCrLf
         If m_oOpt.Item("numarg") = 0 Then
             Process = 100
@@ -106,7 +106,7 @@ Private Function Process(vArgs As Variant) As Long
             ConsoleError "%1" & vbCrLf, PathDifference(CurDir$, oTree.FileQueue.Item(lIdx))
         End If
         lOffset = m_oParser.Match(oTree.ReadFile(oTree.FileQueue.Item(lIdx)), UserData:=oTree)
-        If LenB(m_oParser.LastError) Then
+        If LenB(m_oParser.LastError) <> 0 Then
             ConsoleError "%2: %3: %1" & vbCrLf, m_oParser.LastError, Join(oTree.CalcLine(m_oParser.LastOffset + 1), ":"), IIf(lOffset = 0, "error", "warning")
         End If
         If Not m_oParser.GetParseErrors() Is Nothing Then
