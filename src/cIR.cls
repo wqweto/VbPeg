@@ -998,7 +998,7 @@ Private Function pvCodeGenFindCtxUse(ByVal lNode As Long) As Boolean
     With m_uIr.Nodes(lNode)
         '--- note: euristic for emitted VB6 code that uses context member var
         Select Case .NodeType
-        Case ucsIrtStmtSavePos, ucsIrtStmtRestorePos, ucsIrtStmtCapture, ucsIrtStmtPushAction
+        Case ucsIrtStmtSavePos, ucsIrtStmtRestorePos, ucsIrtStmtCapture, ucsIrtStmtPushAction, ucsIrtExprEmit, ucsIrtStmtEmit
             pvCodeGenFindCtxUse = True
             Exit Function
         End Select

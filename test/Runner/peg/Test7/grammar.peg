@@ -1,0 +1,6 @@
+// @trace ConsoleTrace
+
+Root = Char+
+
+Char = 'a'? 'b'
+     | 'ac'

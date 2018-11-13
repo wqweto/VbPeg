@@ -1036,6 +1036,8 @@ Private Function pvSetSequenceRestoreFlag( _
                 End If
                 .RestoreFrom = IIf((.Flags And ucsNdfRestorePos) <> 0, lRestoreFrom, 0)
                 bChildSavePos = True
+            Case ucsNdtStar, ucsNdtQuery
+                bChildSavePos = True
             End Select
         End With
     Next
