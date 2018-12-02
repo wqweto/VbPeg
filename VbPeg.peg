@@ -19,7 +19,9 @@
 
 # Syntax rules
 
-Grammar         <- Spacing (Setting / Rule)+ 
+Grammar         <- Preprocess?                                         &{ '-- rewind position
+                                                                          ctx.BufPos = 0 }
+                   Spacing (Setting / Rule)+ 
                                              (EndOfFile /              &{ AppendError("Expected rule or setting", ctx.BufPos + 1) }
                                              )
 
@@ -29,6 +31,8 @@ Rule            <- Identifier                                           {   lNod
                                                                             End If
                                                                             .Push lNode }
                                                                        &{ ClearErrors(ctx.BufPos + 1) And SetUserDataTag($$text) }
+                   (CodeBlock                                           { .RuleParams(.Top) = $$text }
+                   )?
                               (Literal                                  { .RuleDescription(.Top) = $$text }
                               )?       AssignLiteral 
                                                      (Expression        { lNode = .Pop: .SetExpression .Pop, lNode }
@@ -56,7 +60,9 @@ SuffixExpr      <- PrimaryExpr (QUESTION                                { .Push 
                                 / STAR                                  { .Push .MakeStar(lOffset, .Pop) }
                                 / PLUS                                  { .Push .MakePlus(lOffset, .Pop) }
                                )?
-PrimaryExpr     <- Identifier !(LiteralNC? AssignLiteral)               { .Push .MakeReference(lOffset, $$text) }
+PrimaryExpr     <- Identifier                                           { .Push .MakeReference(lOffset, $$text) }
+                              (&{ IsParamRule($$text) } CodeBlock       { .NodeParams(.Top) = $$text } 
+                              )? !(CodeNC? LiteralNC? AssignLiteral)
                  / OPEN                                                &{ ClearErrors(ctx.BufPos + 1) }
                         (Expression CLOSE
                          /                                             &{ AppendError("Invalid expression", ctx.BufPos + 1) }
@@ -92,6 +98,7 @@ LiteralNoSpace  <- ['] < (!['] Char )* > [']
 LiteralNC       <- ['] (!['] Char )* ['] Spacing                        # Non-capture version
                  / ["] (!["] Char )* ["] Spacing
 IgnoreCase      <- < [si] >
+Class           <- ClassNoSpace Spacing
 ClassNoSpace    <- '[' < (!']' Range)* > ']'
 Range           <- Char '-' !']' Char / Char
 Char "char"     <- '\\' [abefnrtv'"\[\]\\]
@@ -119,7 +126,7 @@ Space           <- ' ' / '\t' / EndOfLine
 EndOfLine       <- '\r\n' / '\n' / '\r'
 EndOfFile       <- !.
 
-CodeBlock       <- '{' EndOfLine* < ([^{}] / CodeNC)* > '}' Spacing
+CodeBlock       <- '{' ([ \t]* EndOfLine)* < ([^{}] / CodeNC)* > '}' Spacing
 CodeNC          <- '{' ([^{}] / CodeNC)* '}' Spacing                    # Non-capture version
 BEGIN           <- '<' Spacing
 END             <- '>' Spacing
@@ -133,8 +140,20 @@ SEMI            <- ';' Spacing
 AT              <- '@' Spacing
 CARET           <- '^' Spacing
 
+Preprocess      <- Spacing (Identifier CodeNC Literal? AssignLiteral   &{ '--- this might be premature
+                                                                          AddParamRule($$text) }
+                            / OPEN PrepExpr* CLOSE
+                            / PrepExpr
+                            / . Spacing                                 # DOT BEGIN END CARET COLON ChoiceLiteral
+                           )+
+PrepExpr        <- Identifier !(CodeNC? LiteralNC? AssignLiteral)
+                 / Literal
+                 / Class
+                 / CodeNC
+
 @members {
     ParseErrors         As Collection
+    ParamRules          As Collection
 }
 
 @prolog {
@@ -188,5 +207,18 @@ Private Function CheckSettingName(sName As String) As Boolean
         AppendError "Setting '" & sName & "' is unrecognized", ctx.CaptureBegin + 1, "warning"
     End If
     CheckSettingName = True
+End Function
+
+Public Sub AddParamRule(sRule As String)
+    If ctx.ParamRules Is Nothing Then
+        Set ctx.ParamRules = New Collection
+    End If
+    If Not SearchCollection(ctx.ParamRules, sRule) Then
+        ctx.ParamRules.Add sRule, sRule
+    End If
+End Sub
+
+Private Function IsParamRule(sRule As String) As Boolean
+    IsParamRule = SearchCollection(ctx.ParamRules, sRule)
 End Function
 }

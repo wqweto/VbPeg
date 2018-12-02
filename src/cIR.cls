@@ -245,7 +245,8 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
             Next
             For Each vElem In .NodeChildren(NODE_ROOT)
                 If .NodeFlag(vElem, ucsNdfUsed) Or bAllRules Then
-                    lBody = AddNode(ucsIrtDeclFunc, STR_FUNC_PREFIX & .NodeText(vElem))
+                    lBody = AddNode(ucsIrtDeclFunc, STR_FUNC_PREFIX & .NodeText(vElem) & _
+                        IIf(LenB(.NodeParams(vElem)) <> 0, "(" & .NodeParams(vElem) & ")", vbNullString))
                     If vElem = .StartRule Then
                         m_uIr.CodeGenStartFunc = m_uIr.Nodes(lBody).Text
                     End If
@@ -500,20 +501,22 @@ Private Function pvCodeGenNode( _
                     AddChild pvCodeGenNode, AddNode(ucsIrtStmtSavePos, STR_THUNKPOS_PREFIX & lNode)
                 End If
             End If
+            sText = STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)) & _
+                IIf(LenB(.NodeParams(lNode)) <> 0, "(" & .NodeParams(lNode) & ")", vbNullString)
             If .NodeFlag(lNode, ucsNdfAlwaysTrue) Or _
                     lSuccess = IR_CONTINUE And lFailure = IR_CONTINUE Then
-                AddChild pvCodeGenNode, AddNode(ucsIrtStmtCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))
+                AddChild pvCodeGenNode, AddNode(ucsIrtStmtCall, sText)
                 AddChild pvCodeGenNode, lSuccess
             ElseIf lSuccess = IR_CONTINUE Then
                 AddChild pvCodeGenNode, AddChild(AddChild( _
                     AddNode(ucsIrtStmtIf), AddChild( _
                         AddNode(ucsIrtExprNot), _
-                            AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode))))), _
+                            AddNode(ucsIrtExprCall, sText))), _
                         lFailure)
             Else
                 AddChild pvCodeGenNode, AddChild(AddChild(AddChild( _
                     AddNode(ucsIrtStmtIf), _
-                        AddNode(ucsIrtExprCall, STR_FUNC_PREFIX & .NodeText(.NodeRefRule(lNode)))), _
+                        AddNode(ucsIrtExprCall, sText)), _
                         lSuccess), _
                         lFailure)
             End If
@@ -1681,7 +1684,11 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
                 pvOutput m_uIr.OutFuncScope & " Sub " & m_uIr.OutFuncName & IIf(Right$(.Text, 1) <> ")", "()", vbNullString)
             Else
                 m_uIr.OutFuncType = "Function"
-                pvOutput m_uIr.OutFuncScope & " Function " & m_uIr.OutFuncName & "() As Boolean"
+                pvOutput m_uIr.OutFuncScope & " Function " & m_uIr.OutFuncName & IIf(Right$(.Text, 1) <> ")", "()", vbNullString) & " As Boolean"
+            End If
+            lIdx = InStr(m_uIr.OutFuncName, "(")
+            If lIdx > 0 Then
+                m_uIr.OutFuncName = Left$(m_uIr.OutFuncName, lIdx - 1)
             End If
             m_uIr.OutDictionary.RemoveAll
             pvEmitCollectDeclVar lNode
@@ -1858,9 +1865,9 @@ Private Function pvEmitExpr(ByVal lNode As Long) As String
         Select Case .NodeType
         Case ucsIrtExprCall
             If pvEmitIsPublic(.Text) Then
-                pvEmitExpr = m_uIr.OutModulePrefix & .Text & "()"
+                pvEmitExpr = m_uIr.OutModulePrefix & .Text & IIf(Right$(.Text, 1) <> ")", "()", vbNullString)
             Else
-                pvEmitExpr = .Text & "()"
+                pvEmitExpr = .Text & IIf(Right$(.Text, 1) <> ")", "()", vbNullString)
             End If
         Case ucsIrtExprNot
             pvEmitExpr = "Not (" & pvEmitExpr(.Children(0)) & ")"

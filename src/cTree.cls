@@ -74,6 +74,7 @@ Private Type UcsTreeNodeType
     Offset              As Long
     Text                As String
     Description         As String
+    Params              As String
     Children()          As Long
     Variables()         As Long
     Id                  As Long
@@ -149,6 +150,21 @@ Property Let RuleDescription(ByVal lRule As Long, sValue As String)
     End With
 End Property
 
+Property Get RuleParams(ByVal lRule As Long) As String
+    With m_uTree.Nodes(lRule)
+        If .NodeType = ucsNdtRule Then
+            RuleParams = .Params
+        End If
+    End With
+End Property
+
+Property Let RuleParams(ByVal lRule As Long, sValue As String)
+    With m_uTree
+        Debug.Assert .Nodes(lRule).NodeType = ucsNdtRule
+        .Nodes(lRule).Params = Trim$(sValue)
+    End With
+End Property
+
 Property Get NodeType(ByVal lNode As Long) As UcsTreeNodeTypeEnum
     NodeType = m_uTree.Nodes(lNode).NodeType
 End Property
@@ -209,6 +225,14 @@ End Property
 
 Property Get NodeNumVariables(ByVal lNode As Long) As Long
     NodeNumVariables = UBound(m_uTree.Nodes(lNode).Variables) + 1
+End Property
+
+Public Property Get NodeParams(ByVal lNode As Long) As String
+    NodeParams = m_uTree.Nodes(lNode).Params
+End Property
+
+Public Property Let NodeParams(ByVal lNode As Long, ByVal sValue As String)
+    m_uTree.Nodes(lNode).Params = Trim$(sValue)
 End Property
 
 Property Get StartRule() As Long
