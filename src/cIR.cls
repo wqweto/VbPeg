@@ -1383,7 +1383,18 @@ Public Function EmitCode(sOutput As String) As Boolean
 "Private Declare Function CompareStringW Lib ""kernel32"" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long"
         End If
         pvOutput _
-"Private Declare Sub CopyMemory Lib ""kernel32"" Alias ""RtlMoveMemory"" (Destination As Any, Source As Any, ByVal Length As Long)" & vbCrLf
+"Private Declare Sub CopyMemory Lib ""kernel32"" Alias ""RtlMoveMemory"" (Destination As Any, Source As Any, ByVal Length As Long)" & vbCrLf & _
+"Private Declare Function ArrPtr Lib ""msvbvm60"" Alias ""VarPtr"" (Ptr() As Any) As Long" & vbCrLf
+        pvOutput _
+"Private Type SAFEARRAY1D" & vbCrLf & _
+"    cDims               As Integer" & vbCrLf & _
+"    fFeatures           As Integer" & vbCrLf & _
+"    cbElements          As Long" & vbCrLf & _
+"    cLocks              As Long" & vbCrLf & _
+"    pvData              As Long" & vbCrLf & _
+"    cElements           As Long" & vbCrLf & _
+"    lLbound             As Long" & vbCrLf & _
+"End Type" & vbCrLf
         pvOutput _
 "'=========================================================================" & vbCrLf & _
 "' Constants and member variables" & vbCrLf & _
@@ -1409,6 +1420,7 @@ Public Function EmitCode(sOutput As String) As Boolean
         pvOutput _
 "Private Type UcsParserType" & vbCrLf & _
 "    Contents            As String" & vbCrLf & _
+"    BufArray            As SAFEARRAY1D" & vbCrLf & _
 "    BufData()           As Integer" & vbCrLf & _
 "    BufPos              As Long" & vbCrLf & _
 "    BufSize             As Long" & vbCrLf & _
@@ -1490,12 +1502,17 @@ Public Function EmitCode(sOutput As String) As Boolean
 "            .LastError = ""Cannot match empty input""" & vbCrLf & _
 "            Exit Function" & vbCrLf & _
 "        End If" & vbCrLf & _
-"        .Contents = sSubject" & vbCrLf & _
-"        ReDim .BufData(0 To Len(sSubject) + 3) As Integer" & vbCrLf & _
-"        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))" & vbCrLf & _
+"        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)" & vbCrLf & _
+"        With .BufArray" & vbCrLf & _
+"            .cDims = 1" & vbCrLf & _
+"            .cbElements = 2" & vbCrLf & _
+"            .fFeatures = 1 ' FADF_AUTO" & vbCrLf & _
+"            .pvData = StrPtr(sSubject)" & vbCrLf & _
+"            .cElements = Len(sSubject) + 2 '-- look-ahead chars" & vbCrLf & _
+"        End With" & vbCrLf & _
+"        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)" & vbCrLf & _
 "        .BufPos = StartPos" & vbCrLf & _
 "        .BufSize = Len(sSubject)" & vbCrLf & _
-"        .BufData(.BufSize) = -1 '-- EOF anchor" & vbCrLf & _
 "        ReDim .ThunkData(0 To 4) As UcsParserThunkType" & vbCrLf & _
 "        .ThunkPos = 0" & vbCrLf & _
 "        .CaptureBegin = 0" & vbCrLf & _
@@ -1562,8 +1579,8 @@ Public Function EmitCode(sOutput As String) As Boolean
 "        End If"
         pvOutput _
 "        " & .OutModulePrefix & "EndMatch = .BufPos + 1" & vbCrLf & _
-"        .Contents = vbNullString" & vbCrLf & _
-"        Erase .BufData" & vbCrLf & _
+"        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)" & vbCrLf & _
+"        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)" & vbCrLf & _
 "        .BufPos = 0" & vbCrLf & _
 "        .BufSize = 0" & vbCrLf & _
 "        Erase .ThunkData" & vbCrLf & _
