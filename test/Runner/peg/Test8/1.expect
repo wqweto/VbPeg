@@ -1,0 +1,27 @@
+Pos: 20, Result: [
+    {
+        "Tag": "BinOp",
+        "Left": {
+            "Tag": "BinOp",
+            "Left": {
+                "Tag": "BinOp",
+                "Left": {
+                    "Tag": "BinOp",
+                    "Left": { "Tag": "BinOp", "Left": 1, "Oper": "+", "Right": 2, "BinopInfo": [ 20, 1 ] },
+                    "Oper": "+",
+                    "Right": 3,
+                    "BinopInfo": [ 20, 1 ]
+                },
+                "Oper": "-",
+                "Right": 4,
+                "BinopInfo": [ 20, 1 ]
+            },
+            "Oper": "*",
+            "Right": 5,
+            "BinopInfo": [ 40, 1 ]
+        },
+        "Oper": "/",
+        "Right": 2,
+        "BinopInfo": [ 40, 1 ]
+    }
+]

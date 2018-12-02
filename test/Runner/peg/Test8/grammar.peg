@@ -1,0 +1,88 @@
+@members {
+    BinopInfo           As Dictionary
+}
+
+start
+    = f:-                                                               {   JsonItem(oJson, -1) = Empty
+                                                                            Set $f = oJson }
+          (n:stmt                                                       {   Set oJson = $f
+                                                                            JsonItem(oJson, -1) = $n }
+                 )+                                                     {   Set $$ = $f }
+
+stmt
+    = expr SEMI?
+    
+expr
+    = binexpr{ 0 }
+
+binexpr{ ByVal lMinPrec As Long }
+    = l:unexpr (op:BINOP                                               &{   Dim vOpInfo         As Variant
+                                                                            vOpInfo = GetBinopInfo($$text) }
+                                                                       &{   vOpInfo(0) >= lMinPrec }
+                         r:binexpr{ vOpInfo(0) + vOpInfo(1) }           {   JsonItem(oJson, "Tag") = "BinOp"
+                                                                            JsonItem(oJson, "Left") = $l
+                                                                            JsonItem(oJson, "Oper") = $op
+                                                                            JsonItem(oJson, "Right") = $r
+                                                                            JsonItem(oJson, "BinopInfo") = GetBinopInfo(C_Str($op))
+                                                                            Set $l = oJson }
+               )*                                                       {   AssignVariant $$, $l }
+    
+unexpr
+    = op:UNOP e:unexpr                                                  {   JsonItem(oJson, "Tag") = "UnOp"
+                                                                            JsonItem(oJson, "Oper") = $op
+                                                                            JsonItem(oJson, "Expr") = $e
+                                                                            Set $$ = oJson }
+    | primary
+
+primary
+    = DOUBLE
+    | LPAREN expr RPAREN
+    | IDENT
+    
+LPAREN      = '(' -
+RPAREN      = ')' -
+SEMI        = ';' -
+DOUBLE      = < ([0-9]+ '.'? [0-9]* | [0-9]* '.' [0-9]+) > -            { $$ = C_Dbl($$text) }
+IDENT       = < [a-zA-Z_] ALPHANUM* > -                                 { $$ = $$text }
+BINOP       = < [-+*/<>=:|&^] [=]? > -                                  { $$ = $$text }
+UNOP        = < [-+!~] >                                                { $$ = $$text }
+ALPHANUM    = [a-zA-Z_0-9]
+
+-           = (LineComment | [ \t\r\n])*
+LineComment = '#' [^\r\n]*
+
+@prolog {
+    Dim oJson As Object
+
+    With ctx
+}
+
+@epilog {
+    End With
+}
+
+@{
+Public Function GetBinopInfo(sOp As String) As Variant
+    If ctx.BinopInfo Is Nothing Then
+        Set ctx.BinopInfo = New Scripting.Dictionary
+        ctx.BinopInfo.Item("<") = Array(10, 1)
+        ctx.BinopInfo.Item("+") = Array(20, 1)
+        ctx.BinopInfo.Item("-") = Array(20, 1)
+        ctx.BinopInfo.Item("*") = Array(40, 1)
+        ctx.BinopInfo.Item("/") = Array(40, 1)
+        ctx.BinopInfo.Item("^") = Array(50, 0)
+    End If
+    If ctx.BinopInfo.Exists(sOp) Then
+        GetBinopInfo = ctx.BinopInfo.Item(sOp)
+    Else
+        GetBinopInfo = Array(0, 0)
+    End If
+End Function
+
+Public Function SetBinopInfo(sOp As String, ByVal lPrec As Long,  ByVal lAssoc As Long) As Variant
+    If ctx.BinopInfo Is Nothing Then
+        GetBinopInfo vbNullString
+    End If
+    ctx.BinopInfo.Item(sOp) = Array(lPrec, lAssoc, "Override")
+End Function
+}
