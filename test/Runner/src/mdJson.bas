@@ -23,12 +23,13 @@ Private Const MODULE_NAME As String = "mdJson"
 
 #If VBA7 Then
 Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As LongPtr
 #Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
+Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
 #End If
 
 Private Const PROGID_DICTIONARY     As String = "Scripting.Dictionary"
-Private Const TEXT_COMPARE          As Long = 1
 Private Const STR_PREFIX            As String = "__json__"
 Private Const STR_COL_KEYS          As String = STR_PREFIX & "keys"
 Private Const STR_ATTR_EMPTY        As String = STR_PREFIX & "empty"
@@ -48,12 +49,23 @@ Private Const ERR_MISSING_KEY       As String = "Missing key at position %1"
 Private Const ERR_EXPECTED_SYMBOL   As String = "Expected '%1' at position %2"
 Private Const ERR_EXPECTED_TWO      As String = "Expected '%1' or '%2' at position %3"
 
+Private Type SAFEARRAY1D
+    cDims               As Integer      '--- usually 1
+    fFeatures           As Integer      '--- leave 0
+    cbElements          As Long         '--- bytes per element (2-int, 4-long)
+    cLocks              As Long         '--- leave 0
+    pvData              As Long         '--- ptr to data
+    cElements           As Long         '--- UBound + 1
+    lLbound             As Long         '--- LBound
+End Type
+
 Private Type JsonContext
     StrictMode          As Boolean
     Text()              As Integer
     Pos                 As Long
     Error               As String
     LastChar            As Integer
+    TextArray           As SAFEARRAY1D
 End Type
 
 '=========================================================================
@@ -104,9 +116,15 @@ Public Function JsonParse( _
     On Error GoTo EH
     With uCtx
         .StrictMode = StrictMode
-        '--- include 4 extra null chars (max look-ahead)
-        ReDim .Text(0 To Len(sText) + 3) As Integer
-        Call CopyMemory(.Text(0), ByVal StrPtr(sText), LenB(sText))
+        '--- map array over input string
+        With .TextArray
+            .cDims = 1
+            .cbElements = 2
+            .fFeatures = 1 ' FADF_AUTO
+            .pvData = StrPtr(sText)
+            .cElements = Len(sText)
+        End With
+        Call CopyMemory(ByVal ArrPtr(.Text), VarPtr(.TextArray), 4)
         AssignVariant RetVal, pvJsonParse(uCtx)
         If LenB(.Error) Then
             Error = .Error
@@ -116,10 +134,11 @@ Public Function JsonParse( _
             Error = Printf(ERR_EXTRA_SYMBOL, ChrW$(.LastChar), .Pos)
             GoTo QH
         End If
-    End With
-    '--- success
-    JsonParse = True
+        '--- success
+        JsonParse = True
 QH:
+        Call CopyMemory(ByVal ArrPtr(.Text), 0&, 4)
+    End With
     Exit Function
 EH:
     If PrintError(FUNC_NAME) = vbRetry Then
@@ -155,7 +174,7 @@ Private Function pvJsonParse(uCtx As JsonContext) As Variant
                 GoTo QH
             End If
         Case 91 '--- [
-            Set oRetVal = pvJsonCreateObject()
+            Set oRetVal = pvJsonCreateObject(vbTextCompare)
             Do
                 AssignVariant vValue, pvJsonParse(uCtx)
                 If LenB(.Error) <> 0 Then
@@ -192,7 +211,7 @@ Private Function pvJsonParse(uCtx As JsonContext) As Variant
             .Error = vbNullString
             Set pvJsonParse = oRetVal
         Case 123 '--- {
-            Set oRetVal = pvJsonCreateObject(TEXT_COMPARE)
+            Set oRetVal = pvJsonCreateObject(vbBinaryCompare)
             Do
                 If pvJsonGetChar(uCtx) <> 34 Then '--- "
                     If .LastChar = 125 Then '--- }
@@ -250,19 +269,40 @@ Private Function pvJsonParse(uCtx As JsonContext) As Variant
             .Error = vbNullString
             Set pvJsonParse = oRetVal
         Case 116, 84  '--- "t", "T"
-            If Not ((.Text(.Pos + 0) Or &H20) = 114 And (.Text(.Pos + 1) Or &H20) = 117 And (.Text(.Pos + 2) Or &H20) = 101) Then
+            If (.Text(.Pos + 0) Or &H20) <> 114 Then    '--- r
+                GoTo UnexpectedSymbol
+            End If
+            If (.Text(.Pos + 1) Or &H20) <> 117 Then    '--- u
+                GoTo UnexpectedSymbol
+            End If
+            If (.Text(.Pos + 2) Or &H20) <> 101 Then    '--- e
                 GoTo UnexpectedSymbol
             End If
             .Pos = .Pos + 3
             pvJsonParse = True
         Case 102, 70 '--- "f", "F"
-            If Not ((.Text(.Pos + 0) Or &H20) = 97 And (.Text(.Pos + 1) Or &H20) = 108 And (.Text(.Pos + 2) Or &H20) = 115 And (.Text(.Pos + 3) Or &H20) = 101) Then
+            If (.Text(.Pos + 0) Or &H20) <> 97 Then     '--- a
+                GoTo UnexpectedSymbol
+            End If
+            If (.Text(.Pos + 1) Or &H20) <> 108 Then    '--- l
+                GoTo UnexpectedSymbol
+            End If
+            If (.Text(.Pos + 2) Or &H20) <> 115 Then    '--- s
+                GoTo UnexpectedSymbol
+            End If
+            If (.Text(.Pos + 3) Or &H20) <> 101 Then    '--- e
                 GoTo UnexpectedSymbol
             End If
             .Pos = .Pos + 4
             pvJsonParse = False
         Case 110, 78 '--- "n", "N"
-            If Not ((.Text(.Pos + 0) Or &H20) = 117 And (.Text(.Pos + 1) Or &H20) = 108 And (.Text(.Pos + 2) Or &H20) = 108) Then
+            If (.Text(.Pos + 0) Or &H20) <> 117 Then    '--- u
+                GoTo UnexpectedSymbol
+            End If
+            If (.Text(.Pos + 1) Or &H20) <> 108 Then    '--- l
+                GoTo UnexpectedSymbol
+            End If
+            If (.Text(.Pos + 2) Or &H20) <> 108 Then    '--- l
                 GoTo UnexpectedSymbol
             End If
             .Pos = .Pos + 3
@@ -434,7 +474,8 @@ EH:
 End Function
 
 Public Function JsonDump(vJson As Variant, Optional ByVal Level As Long, Optional ByVal Minimize As Boolean) As String
-    Const STR_CODES     As String = "\u0000|\u0001|\u0002|\u0003|\u0004|\u0005|\u0006|\u0007|\b|\t|\n|\u000B|\f|\r|\u000E|\u000F|\u0010|\u0011|\u0012|\u0013|\u0014|\u0015|\u0016|\u0017|\u0018|\u0019|\u001A|\u001B|\u001C|\u001D|\u001E|\u001F"
+    Const STR_CODES     As String = "\u0000|\u0001|\u0002|\u0003|\u0004|\u0005|\u0006|\u0007|\b|\t|\n|\u000B|\f|\r|\u000E|\u000F|\u0010|\u0011|" & _
+                                    "\u0012|\u0013|\u0014|\u0015|\u0016|\u0017|\u0018|\u0019|\u001A|\u001B|\u001C|\u001D|\u001E|\u001F"
     Const LNG_INDENT    As Long = 4
     Static vTranscode   As Variant
     Dim vKeys           As Variant
@@ -444,7 +485,7 @@ Public Function JsonDump(vJson As Variant, Optional ByVal Level As Long, Optiona
     Dim sCompound       As String
     Dim sSpace          As String
     Dim lAsc            As Long
-    Dim lCompareMode    As Long
+    Dim lCompareMode    As VbCompareMethod
     Dim lCount          As Long
 #If ImplCollection And ImplRichClient Then
     Dim oJson           As cCollection
@@ -467,7 +508,7 @@ Public Function JsonDump(vJson As Variant, Optional ByVal Level As Long, Optiona
             Exit Function
         End If
         lCompareMode = pvJsonCompareMode(oJson)
-        sCompound = IIf(lCompareMode = TEXT_COMPARE, "{}", "[]")
+        sCompound = IIf(lCompareMode = vbBinaryCompare, "{}", "[]")
         #If ImplCollection Then
             lCount = oJson.Count - 1
         #Else
@@ -478,7 +519,7 @@ Public Function JsonDump(vJson As Variant, Optional ByVal Level As Long, Optiona
         Else
             sSpace = IIf(Minimize, vbNullString, " ")
             ReDim vItems(0 To lCount - 1) As String
-            If lCompareMode = TEXT_COMPARE Then
+            If lCompareMode = vbBinaryCompare Then
                 #If ImplCollection Then
                     Set vKeys = oJson.Item(STR_COL_KEYS)
                 #ElseIf Not ImplRichClient Then
@@ -497,7 +538,7 @@ Public Function JsonDump(vJson As Variant, Optional ByVal Level As Long, Optiona
                 #Else
                     vItems(lIdx) = JsonDump(oJson.Item(vKeys(lIdx)), Level + 1, Minimize)
                 #End If
-                If lCompareMode = TEXT_COMPARE Then
+                If lCompareMode = vbBinaryCompare Then
                     #If ImplCollection Then
                         vItems(lIdx) = JsonDump(vKeys.Item(lIdx + 1)) & ":" & sSpace & vItems(lIdx)
                     #ElseIf ImplRichClient Then
@@ -555,7 +596,6 @@ Public Property Get JsonItem(oJson As Object, ByVal sKey As String) As Variant
     Dim lIdx            As Long
     Dim lJdx            As Long
     Dim vKey            As Variant
-    Dim lKey            As Long
     Dim vItem           As Variant
 #If ImplCollection And ImplRichClient Then
     Dim oParam          As cCollection
@@ -573,7 +613,11 @@ Public Property Get JsonItem(oJson As Object, ByVal sKey As String) As Variant
     If oJson Is Nothing Then
         GoTo ReturnEmpty
     End If
-    vSplit = Split(sKey, "/")
+    If LenB(sKey) = 0 Then
+        vSplit = Array(vbNullString)
+    Else
+        vSplit = Split(sKey, "/")
+    End If
     Set oParam = oJson
     For lIdx = 0 To UBound(vSplit)
         vKey = vSplit(lIdx)
@@ -585,7 +629,9 @@ Public Property Get JsonItem(oJson As Object, ByVal sKey As String) As Variant
             #End If
             GoTo QH
         ElseIf IsOnlyDigits(vKey) Then
-            vKey = C_Lng(vKey)
+            If pvJsonCompareMode(oParam) <> vbBinaryCompare Then
+                vKey = C_Lng(vKey)
+            End If
         End If
         AssignVariant vItem, pvJsonItem(oParam, vKey)
         If Not IsEmpty(vItem) Then
@@ -608,13 +654,21 @@ Public Property Get JsonItem(oJson As Object, ByVal sKey As String) As Variant
                     vKey = vKey & "/" & vSplit(lJdx)
                 Next
                 #If ImplCollection Then
-                    ReDim vItem(0 To oParam.Count - 2) As Variant
+                    If oParam.Count > 1 Then
+                        ReDim vItem(0 To oParam.Count - 2) As Variant
+                    Else
+                        vItem = Array()
+                    End If
                 #Else
-                    ReDim vItem(0 To oParam.Count - 1) As Variant
+                    If oParam.Count > 0 Then
+                        ReDim vItem(0 To oParam.Count - 1) As Variant
+                    Else
+                        vItem = Array()
+                    End If
                 #End If
                 lJdx = 0
-                For lKey = 0 To UBound(vItem)
-                    AssignVariant vItem(lJdx), JsonItem(oParam, lKey & vKey)
+                For Each vSplit In JsonKeys(oParam)
+                    AssignVariant vItem(lJdx), JsonItem(oParam, vSplit & vKey)
                     lJdx = lJdx + 1
                 Next
                 If lJdx = 0 Then
@@ -628,7 +682,7 @@ Public Property Get JsonItem(oJson As Object, ByVal sKey As String) As Variant
             Else
 ReturnEmpty:
                 If Right$(sKey, 1) = "/" Then
-                    Set JsonItem = pvJsonCreateObject(TEXT_COMPARE)
+                    Set JsonItem = pvJsonCreateObject(vbBinaryCompare)
                 ElseIf Right$(sKey, 3) = "/-1" Then
                     JsonItem = 0&
                 ElseIf InStr(sKey, "*") > 0 Then
@@ -667,12 +721,16 @@ Public Property Let JsonItem(oJson As Object, ByVal sKey As String, vValue As Va
 #End If
 
     On Error GoTo EH
-    vSplit = Split(sKey, "/")
+    If LenB(sKey) = 0 Then
+        vSplit = Array(vbNullString)
+    Else
+        vSplit = Split(sKey, "/")
+    End If
     If oJson Is Nothing Then
         If UBound(vSplit) < 0 Then
-            Set oJson = pvJsonCreateObject(TEXT_COMPARE)
+            Set oJson = pvJsonCreateObject(vbBinaryCompare)
         Else
-            Set oJson = pvJsonCreateObject(-(Not IsOnlyDigits(vSplit(0)) And vSplit(0) <> "*" And vSplit(0) <> "-1"))
+            Set oJson = pvJsonCreateObject(-(IsOnlyDigits(vSplit(0)) Or vSplit(0) = "*" Or vSplit(0) = "-1"))
         End If
     End If
     Set oParam = oJson
@@ -685,7 +743,9 @@ Public Property Let JsonItem(oJson As Object, ByVal sKey As String, vValue As Va
                 vKey = oParam.Count
             #End If
         ElseIf IsOnlyDigits(vKey) Then
-            vKey = C_Lng(vKey)
+            If pvJsonCompareMode(oParam) <> vbBinaryCompare Then
+                vKey = C_Lng(vKey)
+            End If
         End If
         If C_Str(vKey) = "*" Then
 HandleArray:
@@ -693,13 +753,12 @@ HandleArray:
             For lJdx = lIdx + 1 To UBound(vSplit)
                 vKey = vKey & "/" & vSplit(lJdx)
             Next
-            lKey = 0
             If IsEmpty(vValue) Then
                 For Each vItem In JsonKeys(oParam)
-                    JsonItem(oParam, lKey & vKey) = Empty
-                    lKey = lKey + 1
+                    JsonItem(oParam, vItem & vKey) = Empty
                 Next
             Else
+                lKey = 0
                 For Each vItem In vValue
                     JsonItem(oParam, lKey & vKey) = vItem
                     lKey = lKey + 1
@@ -708,7 +767,7 @@ HandleArray:
             Exit For
         ElseIf lIdx < UBound(vSplit) Then
             If Not IsObject(pvJsonItem(oParam, vKey)) Then
-                pvJsonItem(oParam, vKey) = pvJsonCreateObject(-(Not IsOnlyDigits(vSplit(lIdx + 1)) And vSplit(lIdx + 1) <> "*" And vSplit(lIdx + 1) <> "-1"))
+                pvJsonItem(oParam, vKey) = pvJsonCreateObject(-(IsOnlyDigits(vSplit(lIdx + 1)) Or vSplit(lIdx + 1) = "*" Or vSplit(lIdx + 1) = "-1"))
             End If
             Set oParam = pvJsonItem(oParam, vKey)
         ElseIf IsEmpty(vValue) Then
@@ -725,7 +784,7 @@ HandleArray:
                 End If
             #End If
         ElseIf IsArray(vValue) Then
-            pvJsonItem(oParam, vKey) = pvJsonCreateObject()
+            pvJsonItem(oParam, vKey) = pvJsonCreateObject(vbTextCompare)
             Set oParam = pvJsonItem(oParam, vKey)
             GoTo HandleArray
         Else
@@ -768,7 +827,9 @@ Public Function JsonKeys(oJson As Object, Optional ByVal sKey As String) As Vari
     For lIdx = 0 To UBound(vSplit)
         vKey = vSplit(lIdx)
         If IsOnlyDigits(vKey) Then
-            vKey = C_Lng(vKey)
+            If pvJsonCompareMode(oParam) <> vbBinaryCompare Then
+                vKey = C_Lng(vKey)
+            End If
         End If
         AssignVariant vItem, pvJsonItem(oParam, vKey)
         If IsObject(vItem) Then
@@ -788,7 +849,7 @@ Public Function JsonKeys(oJson As Object, Optional ByVal sKey As String) As Vari
         Exit Function
     End If
     ReDim vItem(0 To lCount - 1) As Variant
-    If pvJsonCompareMode(oParam) = TEXT_COMPARE Then
+    If pvJsonCompareMode(oParam) = vbBinaryCompare Then
         #If ImplCollection Then
             lIdx = 0
             For Each vKey In oParam.Item(STR_COL_KEYS)
@@ -843,7 +904,9 @@ Public Function JsonObjectType(oJson As Object, Optional ByVal sKey As String) A
     For lIdx = 0 To UBound(vSplit)
         vKey = vSplit(lIdx)
         If IsOnlyDigits(vKey) Then
-            vKey = C_Lng(vKey)
+            If pvJsonCompareMode(oParam) <> vbBinaryCompare Then
+                vKey = C_Lng(vKey)
+            End If
         End If
         AssignVariant vItem, pvJsonItem(oParam, vKey)
         If IsObject(vItem) Then
@@ -901,11 +964,11 @@ Public Function JsonToXmlDocument(vJson As Variant, Optional oRoot As Object, Op
                 If Not oRoot Is oDoc.documentElement Then
                     oRoot.setAttribute STR_ATTR_EMPTY & pvJsonCompareMode(oJson), 1
                 End If
-                If pvJsonCompareMode(oJson) <> TEXT_COMPARE Then
+                If pvJsonCompareMode(oJson) <> vbBinaryCompare Then
                     oRoot.setAttribute STR_ATTR_ARRAY, 1
                 End If
             Else
-                If pvJsonCompareMode(oJson) <> TEXT_COMPARE Then
+                If pvJsonCompareMode(oJson) <> vbBinaryCompare Then
                     Set oArray = oRoot
                     If oArray Is oDoc.documentElement Then
                         Set oArray = oArray.appendChild(oDoc.createElement(STR_NODE_ARRAY))
@@ -962,14 +1025,14 @@ Public Function JsonToXmlDocument(vJson As Variant, Optional oRoot As Object, Op
         oRoot.setAttribute STR_ATTR_NIL, 1
     ElseIf VarType(vJson) = vbBoolean Then
         oRoot.setAttribute STR_ATTR_BOOL, 1
-        oRoot.nodeTypedValue = -vJson
+        oRoot.NodeTypedValue = -vJson
     ElseIf VarType(vJson) = vbDate Then
         oRoot.DataType = "dateTime.tz"
-        oRoot.nodeTypedValue = vJson
+        oRoot.NodeTypedValue = vJson
     ElseIf IsArray(vJson) Then
-        oRoot.nodeTypedValue = Join(vJson)
+        oRoot.NodeTypedValue = Join(vJson)
     Else
-        oRoot.nodeTypedValue = vJson
+        oRoot.NodeTypedValue = vJson
     End If
     Set JsonToXmlDocument = oRoot
     Exit Function
@@ -1020,8 +1083,8 @@ Public Function JsonFromXmlDocument(vXml As Variant) As Variant
     Else
         bHasAttributes = oRoot.Attributes.Length > 0 Or oRoot Is oRoot.ownerDocument.documentElement
     End If
-    If C_Bool(oRoot.getAttribute(STR_ATTR_EMPTY & TEXT_COMPARE)) Then
-        Set JsonFromXmlDocument = pvJsonCreateObject(TEXT_COMPARE)
+    If C_Bool(oRoot.getAttribute(STR_ATTR_EMPTY & vbBinaryCompare)) Then
+        Set JsonFromXmlDocument = pvJsonCreateObject(vbBinaryCompare)
     ElseIf C_Bool(oRoot.getAttribute(STR_ATTR_EMPTY)) Then
         JsonFromXmlDocument = Empty
     ElseIf C_Bool(oRoot.getAttribute(STR_ATTR_NIL)) Then
@@ -1030,9 +1093,9 @@ Public Function JsonFromXmlDocument(vXml As Variant) As Variant
         JsonFromXmlDocument = C_Bool(oRoot.Text)
     ElseIf bHasAttributes Then
         If oRoot.firstChild Is Nothing Then
-            Set oDict = pvJsonCreateObject(-Not C_Bool(oRoot.getAttribute(STR_ATTR_ARRAY)))
+            Set oDict = pvJsonCreateObject(-C_Bool(oRoot.getAttribute(STR_ATTR_ARRAY)))
         Else
-            Set oDict = pvJsonCreateObject(TEXT_COMPARE)
+            Set oDict = pvJsonCreateObject(vbBinaryCompare)
         End If
         For Each oNode In oRoot.Attributes
             sKey = C_Str(oNode.nodeName)
@@ -1049,7 +1112,7 @@ Public Function JsonFromXmlDocument(vXml As Variant) As Variant
                 ElseIf C_Str(C_Dbl(oNode.Text)) = oNode.Text Then
                     pvJsonItem(oDict, sKey) = C_Dbl(oNode.Text)
                 Else
-                    pvJsonItem(oDict, sKey) = oNode.nodeTypedValue
+                    pvJsonItem(oDict, sKey) = oNode.NodeTypedValue
                 End If
             End If
         Next
@@ -1063,18 +1126,18 @@ Public Function JsonFromXmlDocument(vXml As Variant) As Variant
             If Not IsEmpty(pvJsonItem(oDict, sKey)) Or sKey = STR_NODE_ARRAY Or C_Bool(oNode.getAttribute(STR_ATTR_ARRAY)) Then
                 AssignVariant vItem, pvJsonItem(oDict, sKey)
                 If IsEmpty(vItem) Then
-                    Set oArray = pvJsonCreateObject()
+                    Set oArray = pvJsonCreateObject(vbTextCompare)
                     pvJsonItem(oDict, sKey) = oArray
                 ElseIf Not IsObject(vItem) Then
 CreateArray:
-                    Set oArray = pvJsonCreateObject()
+                    Set oArray = pvJsonCreateObject(vbTextCompare)
                     #If ImplCollection Then
                         oArray.Add vItem
                     #Else
                         oArray.Add 0&, vItem
                     #End If
                     pvJsonItem(oDict, sKey) = oArray
-                ElseIf pvJsonCompareMode(C_Obj(vItem)) = TEXT_COMPARE Then
+                ElseIf pvJsonCompareMode(C_Obj(vItem)) = vbBinaryCompare Then
                     GoTo CreateArray
                 Else
                     Set oArray = C_Obj(vItem)
@@ -1103,7 +1166,7 @@ CreateArray:
         vItem = Split(Replace(Replace(Replace(Replace(oRoot.Text, "T", "-"), ":", "-"), ".", "-"), "+", "-"), "-")
         JsonFromXmlDocument = DateSerial(C_Lng(vItem(0)), C_Lng(vItem(1)), C_Lng(vItem(2))) + TimeSerial(C_Lng(vItem(3)), C_Lng(vItem(4)), Val(vItem(5)))
     Else
-        JsonFromXmlDocument = oRoot.nodeTypedValue
+        JsonFromXmlDocument = oRoot.NodeTypedValue
     End If
     Exit Function
 EH:
@@ -1113,56 +1176,56 @@ EH:
 End Function
 
 #If ImplCollection And ImplRichClient Then
-    Private Function pvJsonCreateObject(Optional ByVal lCompareMode As Long) As cCollection
+    Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As cCollection
         Set pvJsonCreateObject = New cCollection
-        If lCompareMode = 0 Then
+        If lCompareMode = vbBinaryCompare Then
             pvJsonCreateObject.Add Empty, STR_COL_KEYS
         Else
             pvJsonCreateObject.Add New VBA.Collection, STR_COL_KEYS
         End If
     End Function
     
-    Private Function pvJsonCompareMode(oJson As cCollection) As Long
+    Private Function pvJsonCompareMode(oJson As cCollection) As VbCompareMethod
         pvJsonCompareMode = -IsObject(oJson.Item(STR_COL_KEYS))
     End Function
 #ElseIf ImplCollection Then
-    Private Function pvJsonCreateObject(Optional ByVal lCompareMode As Long) As VBA.Collection
+    Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As VBA.Collection
         Set pvJsonCreateObject = New VBA.Collection
-        If lCompareMode = 0 Then
+        If lCompareMode = vbBinaryCompare Then
             pvJsonCreateObject.Add Empty, STR_COL_KEYS
         Else
             pvJsonCreateObject.Add New VBA.Collection, STR_COL_KEYS
         End If
     End Function
     
-    Private Function pvJsonCompareMode(oJson As VBA.Collection) As Long
+    Private Function pvJsonCompareMode(oJson As VBA.Collection) As VbCompareMethod
         pvJsonCompareMode = -IsObject(oJson.Item(STR_COL_KEYS))
     End Function
 #ElseIf ImplRichClient Then
-    Private Function pvJsonCreateObject(Optional ByVal lCompareMode As Long) As cSortedDictionary
+    Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As cSortedDictionary
         Set pvJsonCreateObject = New cSortedDictionary
         pvJsonCreateObject.StringCompareMode = lCompareMode
     End Function
     
-    Private Function pvJsonCompareMode(oJson As cSortedDictionary) As Long
+    Private Function pvJsonCompareMode(oJson As cSortedDictionary) As VbCompareMethod
         pvJsonCompareMode = oJson.StringCompareMode
     End Function
 #ElseIf ImplScripting Then
-    Private Function pvJsonCreateObject(Optional ByVal lCompareMode As Long) As Scripting.Dictionary
+    Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As Scripting.Dictionary
         Set pvJsonCreateObject = New Scripting.Dictionary
         pvJsonCreateObject.CompareMode = lCompareMode
     End Function
     
-    Private Function pvJsonCompareMode(oJson As Scripting.Dictionary) As Long
+    Private Function pvJsonCompareMode(oJson As Scripting.Dictionary) As VbCompareMethod
         pvJsonCompareMode = oJson.CompareMode
     End Function
 #Else
-    Private Function pvJsonCreateObject(Optional ByVal lCompareMode As Long) As Object
+    Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As Object
         Set pvJsonCreateObject = CreateObject(PROGID_DICTIONARY)
         pvJsonCreateObject.CompareMode = lCompareMode
     End Function
     
-    Private Function pvJsonCompareMode(oJson As Object) As Long
+    Private Function pvJsonCompareMode(oJson As Object) As VbCompareMethod
         pvJsonCompareMode = oJson.CompareMode
     End Function
 #End If
@@ -1307,3 +1370,5 @@ Private Function Printf(ByVal sText As String, ParamArray A() As Variant) As Str
 End Function
 
 #End If
+
+
