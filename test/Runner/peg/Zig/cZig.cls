@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 13.11.2018 14:07:52
+' Auto-generated on 2.12.2018 13:41:51
 Option Explicit
 DefObj A-Z
 
@@ -71,7 +71,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "13.11.2018 14:07:52"
+    ParserVersion = "2.12.2018 13:41:51"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -193,7 +193,7 @@ Public Sub Parseskip()
         Do
             p1101 = .BufPos
             Select Case .BufData(.BufPos)
-            Case 32, 10                             ' [ \n]
+            Case 32, 13, 10                         ' [ \r\n]
                 .BufPos = .BufPos + 1
             Case Else
                 If Not (Parseline_comment()) Then
@@ -5312,7 +5312,7 @@ Public Function Parsechar_char() As Boolean
             .BufPos = p1073
         End If
         Select Case .BufData(.BufPos)
-        Case 92, 39, 10                             ' [\\'\n]
+        Case 92, 39, 13, 10                         ' [\\'\r\n]
             '--- do nothing
         Case Else
             If .BufPos < .BufSize Then
@@ -5337,7 +5337,7 @@ Public Function Parsestring_char() As Boolean
             .BufPos = p1077
         End If
         Select Case .BufData(.BufPos)
-        Case 92, 34, 10                             ' [\\"\n]
+        Case 92, 34, 13, 10                         ' [\\"\r\n]
             '--- do nothing
         Case Else
             If .BufPos < .BufSize Then
@@ -5355,7 +5355,7 @@ Public Function Parseline_comment() As Boolean
             .BufPos = .BufPos + 2
             Do
                 Select Case .BufData(.BufPos)
-                Case 10                             ' [\n]
+                Case 13, 10                         ' [\r\n]
                     Exit Do
                 Case Else
                     If .BufPos < .BufSize Then
@@ -5385,7 +5385,7 @@ Public Function Parseline_string() As Boolean
             End If
             Do
                 Select Case .BufData(.BufPos)
-                Case 10                             ' [\n]
+                Case 13, 10                         ' [\r\n]
                     Exit Do
                 Case Else
                     If .BufPos < .BufSize Then
@@ -5397,7 +5397,7 @@ Public Function Parseline_string() As Boolean
             Loop
             Do
                 Select Case .BufData(.BufPos)
-                Case 32, 10                         ' [ \n]
+                Case 32, 13, 10                     ' [ \r\n]
                     .BufPos = .BufPos + 1
                 Case Else
                     Exit Do
@@ -5425,7 +5425,7 @@ Public Function Parseline_cstring() As Boolean
             End If
             Do
                 Select Case .BufData(.BufPos)
-                Case 10                             ' [\n]
+                Case 13, 10                         ' [\r\n]
                     Exit Do
                 Case Else
                     If .BufPos < .BufSize Then
@@ -5437,7 +5437,7 @@ Public Function Parseline_cstring() As Boolean
             Loop
             Do
                 Select Case .BufData(.BufPos)
-                Case 32, 10                         ' [ \n]
+                Case 32, 13, 10                     ' [ \r\n]
                     .BufPos = .BufPos + 1
                 Case Else
                     Exit Do
