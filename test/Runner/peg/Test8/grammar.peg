@@ -13,13 +13,13 @@ stmt
     = expr SEMI?
     
 expr
-    = binexpr{ 0 }
+    = binexpr
 
-binexpr{ ByVal lMinPrec As Long }
+binexpr(Optional ByVal lMinPrec As Long)
     = l:unexpr (op:BINOP                                               &{   Dim vOpInfo         As Variant
                                                                             vOpInfo = GetBinopInfo($$text) }
                                                                        &{   vOpInfo(0) >= lMinPrec }
-                         r:binexpr{ vOpInfo(0) + vOpInfo(1) }           {   JsonItem(oJson, "Tag") = "BinOp"
+                         r:binexpr(vOpInfo(0) + vOpInfo(1))             {   JsonItem(oJson, "Tag") = "BinOp"
                                                                             JsonItem(oJson, "Left") = $l
                                                                             JsonItem(oJson, "Oper") = $op
                                                                             JsonItem(oJson, "Right") = $r

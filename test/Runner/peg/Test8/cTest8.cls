@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 2.12.2018 20:18:15
+' Auto-generated on 2.12.2018 23:59:05
 Option Explicit
 DefObj A-Z
 
@@ -87,7 +87,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "2.12.2018 20:18:15"
+    ParserVersion = "2.12.2018 23:59:05"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -270,7 +270,7 @@ Public Function Parsestmt() As Boolean
     Dim q20 As Long
 
     With ctx
-        If Parsebinexpr(0) Then
+        If Parsebinexpr() Then
             p20 = .BufPos
             q20 = .ThunkPos
             If Not (ParseSEMI()) Then
@@ -293,7 +293,7 @@ Private Function ParseSEMI() As Boolean
     End With
 End Function
 
-Public Function Parsebinexpr(ByVal lMinPrec As Long) As Boolean
+Public Function Parsebinexpr(Optional ByVal lMinPrec As Long) As Boolean
     Dim p34 As Long
     Dim q34 As Long
 
@@ -431,7 +431,7 @@ Public Function Parseprimary() As Boolean
             .ThunkPos = q65
         End If
         If ParseLPAREN() Then
-            If Parsebinexpr(0) Then
+            If Parsebinexpr() Then
                 If ParseRPAREN() Then
                     Parseprimary = True
                     Exit Function

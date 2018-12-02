@@ -31,7 +31,7 @@ Rule            <- Identifier                                           {   lNod
                                                                             End If
                                                                             .Push lNode }
                                                                        &{ ClearErrors(ctx.BufPos + 1) And SetUserDataTag($$text) }
-                   (CodeBlock                                           { .RuleParams(.Top) = $$text }
+                   (ParamBlock                                          { .RuleParams(.Top) = $$text }
                    )?
                               (Literal                                  { .RuleDescription(.Top) = $$text }
                               )?       AssignLiteral 
@@ -61,8 +61,8 @@ SuffixExpr      <- PrimaryExpr (QUESTION                                { .Push 
                                 / PLUS                                  { .Push .MakePlus(lOffset, .Pop) }
                                )?
 PrimaryExpr     <- Identifier                                           { .Push .MakeReference(lOffset, $$text) }
-                              (&{ IsParamRule($$text) } CodeBlock       { .NodeParams(.Top) = $$text } 
-                              )? !(CodeNC? LiteralNC? AssignLiteral)
+                              (&{ IsParamRule($$text) } ParamBlock      { .NodeParams(.Top) = $$text } 
+                              )? !(ParamNC? LiteralNC? AssignLiteral)
                  / OPEN                                                &{ ClearErrors(ctx.BufPos + 1) }
                         (Expression CLOSE
                          /                                             &{ AppendError("Invalid expression", ctx.BufPos + 1) }
@@ -128,6 +128,8 @@ EndOfFile       <- !.
 
 CodeBlock       <- '{' ([ \t]* EndOfLine)* < ([^{}] / CodeNC)* > '}' Spacing
 CodeNC          <- '{' ([^{}] / CodeNC)* '}' Spacing                    # Non-capture version
+ParamBlock      <- '(' < ([^()] / ParamNC)* > ')' Spacing
+ParamNC         <- '(' ([^()] / ParamNC)* ')' Spacing                   # Non-capture version
 BEGIN           <- '<' Spacing
 END             <- '>' Spacing
 
@@ -140,16 +142,16 @@ SEMI            <- ';' Spacing
 AT              <- '@' Spacing
 CARET           <- '^' Spacing
 
-Preprocess      <- Spacing (Identifier CodeNC Literal? AssignLiteral   &{ '--- this might be premature
-                                                                          AddParamRule($$text) }
-                            / OPEN PrepExpr* CLOSE
+Preprocess      <- Spacing (Identifier ParamNC LiteralNC? AssignLiteral &{ '--- this might be premature
+                                                                           AddParamRule($$text) }
                             / PrepExpr
                             / . Spacing                                 # DOT BEGIN END CARET COLON ChoiceLiteral
                            )+
-PrepExpr        <- Identifier !(CodeNC? LiteralNC? AssignLiteral)
+PrepExpr        <- Identifier
                  / Literal
                  / Class
                  / CodeNC
+                 / ParamBlock
 
 @members {
     ParseErrors         As Collection
