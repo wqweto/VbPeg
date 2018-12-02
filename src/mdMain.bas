@@ -38,7 +38,7 @@ Private Declare Function VirtualProtect Lib "kernel32" (ByVal lpAddress As Long,
 ' Constants and member variables
 '=========================================================================
 
-Private Const STR_VERSION           As String = "0.3.13"
+Private Const STR_VERSION           As String = "0.4.1"
 
 Private m_oParser               As cParser
 Private m_oOpt                  As Object
