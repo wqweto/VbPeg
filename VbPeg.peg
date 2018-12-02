@@ -31,13 +31,15 @@ Rule            <- Identifier                                           {   lNod
                                                                             End If
                                                                             .Push lNode }
                                                                        &{ ClearErrors(ctx.BufPos + 1) And SetUserDataTag($$text) }
-                   (ParamBlock                                          { .RuleParams(.Top) = $$text }
-                   )?
-                              (Literal                                  { .RuleDescription(.Top) = $$text }
-                              )?       AssignLiteral 
-                                                     (Expression        { lNode = .Pop: .SetExpression .Pop, lNode }
-                                                      /                &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'", ctx.BufPos + 1) }
-                                                     )           SEMI?
+                             (ParamBlock                                { .RuleParams(.Top) = $$text }
+                             )?          (Literal                       { .RuleDescription(.Top) = $$text }
+                                         )?       (RuleOption          &{ CheckRuleOptionName($$text) }
+                                                                        { .RuleOption(.Top, $$text) = True }
+                                                  )*
+                   AssignLiteral 
+                                 (Expression                            { lNode = .Pop: .SetExpression .Pop, lNode }
+                                  /                                    &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'", ctx.BufPos + 1) }
+                                 )           SEMI?
 Expression      <- ChoiceExpr
 ChoiceExpr      <- SequenceExpr (ChoiceLiteral SequenceExpr             { lNode = .Pop: .Push .AppendChild(.MakeChoice(lOffset, .Pop), lNode) }
                                 )*
@@ -62,7 +64,7 @@ SuffixExpr      <- PrimaryExpr (QUESTION                                { .Push 
                                )?
 PrimaryExpr     <- Identifier                                           { .Push .MakeReference(lOffset, $$text) }
                               (&{ IsParamRule($$text) } ParamBlock      { .NodeParams(.Top) = $$text } 
-                              )? !(ParamNC? LiteralNC? AssignLiteral)
+                              )? !(ParamNC? LiteralNC? RuleOptNC* AssignLiteral)
                  / OPEN                                                &{ ClearErrors(ctx.BufPos + 1) }
                         (Expression CLOSE
                          /                                             &{ AppendError("Invalid expression", ctx.BufPos + 1) }
@@ -86,9 +88,15 @@ Setting         <- SettingName                                         &{ CheckS
                                )
 SettingName     <- AT (Identifier / Literal / EMPTY)                   
 SettingValue    <- (Identifier / Literal / CodeBlock) SEMI?                          
-                 
+
 # Lexical rules
 
+CodeBlock       <- '{' ([ \t]* EndOfLine)* < ([^{}] / CodeNC)* > '}' Spacing
+CodeNC          <- '{' ([^{}] / CodeNC)* '}' Spacing                    # Non-capture version
+ParamBlock      <- '(' < ([^()] / ParamNC)* > ')' Spacing
+ParamNC         <- '(' ([^()] / ParamNC)* ')' Spacing                   # Non-capture version
+RuleOption      <- '-' Identifier
+RuleOptNC       <- '-' IdentStart IdentCont* Spacing
 Identifier      <- < IdentStart IdentCont* > Spacing
 IdentStart      <- [a-zA-Z_\-]
 IdentCont       <- [a-zA-Z_0-9\-]
@@ -125,14 +133,8 @@ BlockComment    <- '/*' ([^*/] / BlockComment / (!'*/' .))* '*/'
 Space           <- ' ' / '\t' / EndOfLine
 EndOfLine       <- '\r\n' / '\n' / '\r'
 EndOfFile       <- !.
-
-CodeBlock       <- '{' ([ \t]* EndOfLine)* < ([^{}] / CodeNC)* > '}' Spacing
-CodeNC          <- '{' ([^{}] / CodeNC)* '}' Spacing                    # Non-capture version
-ParamBlock      <- '(' < ([^()] / ParamNC)* > ')' Spacing
-ParamNC         <- '(' ([^()] / ParamNC)* ')' Spacing                   # Non-capture version
 BEGIN           <- '<' Spacing
 END             <- '>' Spacing
-
 AssignLiteral   <- LEFTARROW / EQUAL
 ChoiceLiteral   <- SLASH / BAR
 EQUAL           <- '=' Spacing
@@ -142,10 +144,13 @@ SEMI            <- ';' Spacing
 AT              <- '@' Spacing
 CARET           <- '^' Spacing
 
-Preprocess      <- Spacing (Identifier ParamNC LiteralNC? AssignLiteral &{ '--- this might be premature
-                                                                           AddParamRule($$text) }
+# First-pass rules
+
+Preprocess      <- Spacing (Identifier ParamNC LiteralNC?
+                                 RuleOptNC* AssignLiteral              &{ '--- this might be premature
+                                                                          AddParamRule($$text) }
                             / PrepExpr
-                            / . Spacing                                 # DOT BEGIN END CARET COLON ChoiceLiteral
+                            / . Spacing                                 # skip DOT BEGIN END CARET COLON ChoiceLiteral
                            )+
 PrepExpr        <- Identifier
                  / Literal
@@ -222,5 +227,13 @@ End Sub
 
 Private Function IsParamRule(sRule As String) As Boolean
     IsParamRule = SearchCollection(ctx.ParamRules, sRule)
+End Function
+
+Private Function CheckRuleOptionName(sName As String) As Boolean
+    Const STR_ALL = "|public|"
+    If InStr(1, STR_ALL, "|" & sName & "|", vbTextCompare) = 0 Then
+        AppendError "Rule option '" & sName & "' is unrecognized", ctx.CaptureBegin + 1, "warning"
+    End If
+    CheckRuleOptionName = True
 End Function
 }

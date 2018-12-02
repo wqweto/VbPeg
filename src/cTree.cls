@@ -54,19 +54,20 @@ Public Enum UcsTreeNodeTypeEnum
 End Enum
 
 Public Enum UcsTreeNodeFlagsEnum
-    ucsNdfUsed = 2 ^ 0
-    ucsNdfReached = 2 ^ 1
-    ucsNdfAlwaysTrue = 2 ^ 2
-    ucsNdfSavePos = 2 ^ 3
-    ucsNdfRestorePos = 2 ^ 4
-    ucsNdfIsNot = 2 ^ 5
-    ucsNdfCanInline = 2 ^ 6
-    ucsNdfHasActions = 2 ^ 7
-    ucsNdfSkipAdvance = 2 ^ 8
-    ucsNdfIgnoreCase = 2 ^ 9
-    ucsNdfHasAdvance = 2 ^ 10
-    ucsNdfReferenced = 2 ^ 11
-    ucsNdfHasCapture = 2 ^ 12
+    ucsNdfPublic = 2 ^ 0
+    ucsNdfUsed = 2 ^ 1
+    ucsNdfReached = 2 ^ 2
+    ucsNdfAlwaysTrue = 2 ^ 3
+    ucsNdfSavePos = 2 ^ 4
+    ucsNdfRestorePos = 2 ^ 5
+    ucsNdfIsNot = 2 ^ 6
+    ucsNdfCanInline = 2 ^ 7
+    ucsNdfHasActions = 2 ^ 8
+    ucsNdfSkipAdvance = 2 ^ 9
+    ucsNdfIgnoreCase = 2 ^ 10
+    ucsNdfHasAdvance = 2 ^ 11
+    ucsNdfReferenced = 2 ^ 12
+    ucsNdfHasCapture = 2 ^ 13
 End Enum
 
 Private Type UcsTreeNodeType
@@ -162,6 +163,25 @@ Property Let RuleParams(ByVal lRule As Long, sValue As String)
     With m_uTree
         Debug.Assert .Nodes(lRule).NodeType = ucsNdtRule
         .Nodes(lRule).Params = Trim$(sValue)
+    End With
+End Property
+
+Property Let RuleOption(ByVal lRule As Long, sOption As String, ByVal bValue As Boolean)
+    Dim eFlag           As UcsTreeNodeFlagsEnum
+    
+    With m_uTree
+        Debug.Assert .Nodes(lRule).NodeType = ucsNdtRule
+        Select Case LCase$(sOption)
+        Case "public"
+            eFlag = ucsNdfPublic
+        Case Else
+            Exit Property
+        End Select
+        If bValue Then
+            .Nodes(lRule).Flags = .Nodes(lRule).Flags Or eFlag
+        Else
+            .Nodes(lRule).Flags = .Nodes(lRule).Flags And Not eFlag
+        End If
     End With
 End Property
 

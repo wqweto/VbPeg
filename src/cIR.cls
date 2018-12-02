@@ -249,8 +249,10 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                         IIf(LenB(.NodeParams(vElem)) <> 0, "(" & .NodeParams(vElem) & ")", vbNullString))
                     If vElem = .StartRule Then
                         m_uIr.CodeGenStartFunc = m_uIr.Nodes(lBody).Text
+                        IrFlag(lBody, ucsIrfPublic) = True
+                    ElseIf .NodeFlag(vElem, ucsNdfPublic) Then
+                        IrFlag(lBody, ucsIrfPublic) = True
                     End If
-                    IrFlag(lBody, ucsIrfPublic) = (.NodeText(vElem) <> UCase$(.NodeText(vElem)))
                     If .NodeFlag(vElem, ucsNdfHasCapture) And Not .NodeFlag(vElem, ucsNdfHasActions) Then
                         If .NodeFlag(vElem, ucsNdfHasAdvance) Then
                             lSuccess = AddNode(ucsIrtBlock)
