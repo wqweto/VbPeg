@@ -544,6 +544,8 @@ Public Function TryGetValue(ByVal oCol As Collection, Index As Variant, RetVal A
 End Function
 
 Public Function SearchCollection(oCol As Collection, Index As Variant, Optional RetVal As Variant) As Boolean
-    SearchCollection = TryGetValue(oCol, Index, RetVal) = 0 ' S_OK
+    If Not oCol Is Nothing Then
+        SearchCollection = TryGetValue(oCol, Index, RetVal) = 0 ' S_OK
+    End If
 End Function
 
