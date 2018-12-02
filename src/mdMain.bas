@@ -9,8 +9,6 @@ Attribute VB_Name = "mdMain"
 Option Explicit
 DefObj A-Z
 
-#Const HasIVbCollection = False
-
 '=========================================================================
 ' API
 '=========================================================================
@@ -19,10 +17,12 @@ DefObj A-Z
 Private Const GENERIC_WRITE                 As Long = &H40000000
 Private Const OPEN_EXISTING                 As Long = 3
 Private Const FILE_SHARE_READ               As Long = &H1
+'--- for VirtualProtect
+Private Const PAGE_EXECUTE_READWRITE        As Long = &H40
 
+Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function CommandLineToArgvW Lib "shell32" (ByVal lpCmdLine As Long, pNumArgs As Long) As Long
 Private Declare Function LocalFree Lib "kernel32" (ByVal hMem As Long) As Long
-Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function ApiSysAllocString Lib "oleaut32" Alias "SysAllocString" (ByVal Ptr As Long) As Long
 Private Declare Function GetFileAttributes Lib "kernel32" Alias "GetFileAttributesA" (ByVal lpFileName As String) As Long
 Private Declare Function IsTextUnicode Lib "advapi32" (lpBuffer As Any, ByVal cb As Long, lpi As Long) As Long
@@ -32,6 +32,7 @@ Private Declare Function SetFilePointer Lib "kernel32" (ByVal hFile As Long, ByV
 Private Declare Function SetEndOfFile Lib "kernel32" (ByVal hFile As Long) As Long
 Private Declare Function CloseHandle Lib "kernel32" (ByVal hObject As Long) As Long
 Private Declare Sub ExitProcess Lib "kernel32" (ByVal uExitCode As Long)
+Private Declare Function VirtualProtect Lib "kernel32" (ByVal lpAddress As Long, ByVal dwSize As Long, ByVal flNewProtect As Long, ByRef lpflOldProtect As Long) As Long
 
 '=========================================================================
 ' Constants and member variables
@@ -388,8 +389,10 @@ End Function
 
 Public Function At(vArray As Variant, ByVal lIdx As Long) As Variant
     On Error GoTo QH
-    If lIdx >= LBound(vArray) And lIdx <= UBound(vArray) Then
-        At = vArray(lIdx)
+    If IsArray(vArray) Then
+        If lIdx >= LBound(vArray) And lIdx <= UBound(vArray) Then
+            At = vArray(lIdx)
+        End If
     End If
 QH:
 End Function
@@ -442,19 +445,6 @@ Public Function SetFileLen(sFile As String, ByVal lSize As Long) As Boolean
         Call CloseHandle(hFile)
     End If
 End Function
-
-#If HasIVbCollection Then
-    Public Function SearchCollection(oCol As IVbCollection, Index As Variant) As Boolean
-        SearchCollection = (oCol.Item(Index) >= 0)
-    End Function
-#Else
-    Public Function SearchCollection(oCol As Collection, Index As Variant) As Boolean
-        On Error GoTo QH
-        oCol.Item Index
-        SearchCollection = True
-QH:
-    End Function
-#End If
 
 Public Function Zn(sText As String, Optional IfEmptyString As Variant = Null) As Variant
     Zn = IIf(LenB(sText) = 0, IfEmptyString, sText)
@@ -532,3 +522,28 @@ Public Function Split2(sText As String, sDelim As String) As Variant
         Split2 = Array(sText)
     End If
 End Function
+
+Public Sub PatchMethodProto(ByVal pfn As Long, ByVal lMethodIdx As Long)
+    If InIde Then
+        '--- note: IDE is not large-address aware
+        Call CopyMemory(pfn, ByVal pfn + &H16, 4)
+    Else
+        Call VirtualProtect(pfn, 12, PAGE_EXECUTE_READWRITE, 0)
+    End If
+    ' 0: 8B 44 24 04          mov         eax,dword ptr [esp+4]
+    ' 4: 8B 00                mov         eax,dword ptr [eax]
+    ' 6: FF A0 00 00 00 00    jmp         dword ptr [eax+lMethodIdx*4]
+    Call CopyMemory(ByVal pfn, -684575231150992.4725@, 8)
+    Call CopyMemory(ByVal (pfn Xor &H80000000) + 8 Xor &H80000000, lMethodIdx * 4, 4)
+End Sub
+ 
+Public Function TryGetValue(ByVal oCol As Collection, Index As Variant, RetVal As Variant) As Long
+    Const IDX_COLLECTION_ITEM   As Long = 7
+    PatchMethodProto AddressOf mdMain.TryGetValue, IDX_COLLECTION_ITEM
+    TryGetValue = TryGetValue(oCol, Index, RetVal)
+End Function
+
+Public Function SearchCollection(oCol As Collection, Index As Variant, Optional RetVal As Variant) As Boolean
+    SearchCollection = TryGetValue(oCol, Index, RetVal) = 0 ' S_OK
+End Function
+

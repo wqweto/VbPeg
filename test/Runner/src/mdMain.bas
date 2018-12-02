@@ -11,11 +11,12 @@ Attribute VB_Name = "mdMain"
 Option Explicit
 DefObj A-Z
 
-#Const HasIVbCollection = False
-
 '=========================================================================
 ' API
 '=========================================================================
+
+'--- for VirtualProtect
+Private Const PAGE_EXECUTE_READWRITE        As Long = &H40
 
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function CommandLineToArgvW Lib "shell32" (ByVal lpCmdLine As Long, pNumArgs As Long) As Long
@@ -23,6 +24,7 @@ Private Declare Function LocalFree Lib "kernel32" (ByVal hMem As Long) As Long
 Private Declare Function ApiSysAllocString Lib "oleaut32" Alias "SysAllocString" (ByVal Ptr As Long) As Long
 Private Declare Function GetFileAttributes Lib "kernel32" Alias "GetFileAttributesA" (ByVal lpFileName As String) As Long
 Private Declare Function IsTextUnicode Lib "advapi32" (lpBuffer As Any, ByVal cb As Long, lpi As Long) As Long
+Private Declare Function VirtualProtect Lib "kernel32" (ByVal lpAddress As Long, ByVal dwSize As Long, ByVal flNewProtect As Long, ByRef lpflOldProtect As Long) As Long
 
 '=========================================================================
 ' Constants and member variables
@@ -315,16 +317,27 @@ Public Sub AssignVariant(vDest As Variant, vSrc As Variant)
     End If
 End Sub
 
-#If HasIVbCollection Then
-    Public Function SearchCollection(oCol As IVbCollection, Index As Variant) As Boolean
-        SearchCollection = (oCol.Item(Index) >= 0)
-    End Function
-#Else
-    Public Function SearchCollection(oCol As Collection, Index As Variant) As Boolean
-        On Error GoTo QH
-        oCol.Item Index
-        SearchCollection = True
-QH:
-    End Function
-#End If
+Public Sub PatchMethodProto(ByVal pfn As Long, ByVal lMethodIdx As Long)
+    If App.LogMode = 0 Then
+        '--- note: IDE is not large-address aware
+        Call CopyMemory(pfn, ByVal pfn + &H16, 4)
+    Else
+        Call VirtualProtect(pfn, 12, PAGE_EXECUTE_READWRITE, 0)
+    End If
+    ' 0: 8B 44 24 04          mov         eax,dword ptr [esp+4]
+    ' 4: 8B 00                mov         eax,dword ptr [eax]
+    ' 6: FF A0 00 00 00 00    jmp         dword ptr [eax+lMethodIdx*4]
+    Call CopyMemory(ByVal pfn, -684575231150992.4725@, 8)
+    Call CopyMemory(ByVal (pfn Xor &H80000000) + 8 Xor &H80000000, lMethodIdx * 4, 4)
+End Sub
+ 
+Public Function TryGetValue(ByVal oCol As Collection, Index As Variant, RetVal As Variant) As Long
+    Const IDX_COLLECTION_ITEM   As Long = 7
+    PatchMethodProto AddressOf mdMain.TryGetValue, IDX_COLLECTION_ITEM
+    TryGetValue = TryGetValue(oCol, Index, RetVal)
+End Function
+
+Public Function SearchCollection(oCol As Collection, Index As Variant, Optional RetVal As Variant) As Boolean
+    SearchCollection = TryGetValue(oCol, Index, RetVal) = 0 ' S_OK
+End Function
 
