@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 2.12.2018 13:41:49
+' Auto-generated on 3.12.2018 1:29:29
 Option Explicit
 DefObj A-Z
 
@@ -25,6 +25,17 @@ Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
+Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+
+Private Type SAFEARRAY1D
+    cDims               As Integer
+    fFeatures           As Integer
+    cbElements          As Long
+    cLocks              As Long
+    pvData              As Long
+    cElements           As Long
+    lLbound             As Long
+End Type
 
 '=========================================================================
 ' Constants and member variables
@@ -154,6 +165,7 @@ End Type
 
 Private Type UcsParserType
     Contents            As String
+    BufArray            As SAFEARRAY1D
     BufData()           As Integer
     BufPos              As Long
     BufSize             As Long
@@ -191,7 +203,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "2.12.2018 13:41:49"
+    ParserVersion = "3.12.2018 1:29:29"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -227,12 +239,17 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        .Contents = sSubject
-        ReDim .BufData(0 To Len(sSubject) + 3) As Integer
-        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        With .BufArray
+            .cDims = 1
+            .cbElements = 2
+            .fFeatures = 1 ' FADF_AUTO
+            .pvData = StrPtr(sSubject)
+            .cElements = Len(sSubject) + 2 '-- look-ahead chars
+        End With
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
-        .BufData(.BufSize) = -1 '-- EOF anchor
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
         .ThunkPos = 0
         .CaptureBegin = 0
@@ -279,8 +296,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        .Contents = vbNullString
-        Erase .BufData
+        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -354,7 +371,7 @@ Public Function ParseDoc() As Boolean
     End With
 End Function
 
-Public Function ParseStartList() As Boolean
+Private Function ParseStartList() As Boolean
     Dim p2759 As Long
 
     With ctx
@@ -367,7 +384,7 @@ Public Function ParseStartList() As Boolean
     End With
 End Function
 
-Public Function ParseBlock() As Boolean
+Private Function ParseBlock() As Boolean
     Dim p18 As Long
     Dim p24 As Long
     Dim q24 As Long
@@ -469,14 +486,14 @@ Public Function ParseBlock() As Boolean
     End With
 End Function
 
-Public Function ParseBlankLine() As Boolean
+Private Function ParseBlankLine() As Boolean
     Call ParseSp
     If ParseNewline() Then
         ParseBlankLine = True
     End If
 End Function
 
-Public Function ParseBlockQuote() As Boolean
+Private Function ParseBlockQuote() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 1
         pvPushThunk ucsActResultClear
@@ -489,7 +506,7 @@ Public Function ParseBlockQuote() As Boolean
     End With
 End Function
 
-Public Function ParseVerbatim() As Boolean
+Private Function ParseVerbatim() As Boolean
     Dim i228 As Long
     Dim p227 As Long
     Dim q227 As Long
@@ -518,7 +535,7 @@ Public Function ParseVerbatim() As Boolean
     End With
 End Function
 
-Public Function ParseNote() As Boolean
+Private Function ParseNote() As Boolean
     Dim p2940 As Long
     Dim q2940 As Long
     Dim p2938 As Long
@@ -571,7 +588,7 @@ Public Function ParseNote() As Boolean
     End With
 End Function
 
-Public Function ParseReference() As Boolean
+Private Function ParseReference() As Boolean
     Dim p2157 As Long
     Dim i2176 As Long
     Dim p2175 As Long
@@ -617,7 +634,7 @@ Public Function ParseReference() As Boolean
     End With
 End Function
 
-Public Function ParseHorizontalRule() As Boolean
+Private Function ParseHorizontalRule() As Boolean
     Dim p251 As Long
     Dim p239 As Long
     Dim i266 As Long
@@ -754,7 +771,7 @@ Public Function ParseHorizontalRule() As Boolean
     End With
 End Function
 
-Public Function ParseHeading() As Boolean
+Private Function ParseHeading() As Boolean
     Dim p169 As Long
     Dim q169 As Long
 
@@ -778,7 +795,7 @@ Public Function ParseHeading() As Boolean
     End With
 End Function
 
-Public Function ParseOrderedList() As Boolean
+Private Function ParseOrderedList() As Boolean
     Dim p395 As Long
     Dim p398 As Long
     Dim q398 As Long
@@ -809,7 +826,7 @@ Public Function ParseOrderedList() As Boolean
     End With
 End Function
 
-Public Function ParseBulletList() As Boolean
+Private Function ParseBulletList() As Boolean
     Dim p281 As Long
     Dim q281 As Long
     Dim p286 As Long
@@ -843,7 +860,7 @@ Public Function ParseBulletList() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlock() As Boolean
+Private Function ParseHtmlBlock() As Boolean
     Dim lCaptureBegin As Long
     Dim p1541 As Long
     Dim lCaptureEnd As Long
@@ -913,7 +930,7 @@ Public Function ParseHtmlBlock() As Boolean
     End With
 End Function
 
-Public Function ParseStyleBlock() As Boolean
+Private Function ParseStyleBlock() As Boolean
     Dim lCaptureBegin As Long
     Dim lCaptureEnd As Long
     Dim p1665 As Long
@@ -937,7 +954,7 @@ Public Function ParseStyleBlock() As Boolean
     End With
 End Function
 
-Public Function ParsePara() As Boolean
+Private Function ParsePara() As Boolean
     Dim i55 As Long
     Dim p54 As Long
     Dim q54 As Long
@@ -966,7 +983,7 @@ Public Function ParsePara() As Boolean
     End With
 End Function
 
-Public Function ParsePlain() As Boolean
+Private Function ParsePlain() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 1
         pvPushThunk ucsActResultClear
@@ -979,7 +996,7 @@ Public Function ParsePlain() As Boolean
     End With
 End Function
 
-Public Sub ParseNonindentSpace()
+Private Sub ParseNonindentSpace()
     With ctx
         If pvMatchString("   ") Then                ' "   "
             .BufPos = .BufPos + 3
@@ -997,7 +1014,7 @@ Public Sub ParseNonindentSpace()
     End With
 End Sub
 
-Public Function ParseInlines() As Boolean
+Private Function ParseInlines() As Boolean
     Dim i1685 As Long
     Dim p1684 As Long
     Dim q1684 As Long
@@ -1096,7 +1113,7 @@ Public Function ParseInlines() As Boolean
     End With
 End Function
 
-Public Function ParseAtxInline() As Boolean
+Private Function ParseAtxInline() As Boolean
     Dim p65 As Long
     Dim e65 As String
     Dim p73 As Long
@@ -1128,7 +1145,7 @@ Public Function ParseAtxInline() As Boolean
     End With
 End Function
 
-Public Function ParseNewline() As Boolean
+Private Function ParseNewline() As Boolean
     Dim p2550 As Long
 
     With ctx
@@ -1150,7 +1167,7 @@ Public Function ParseNewline() As Boolean
     End With
 End Function
 
-Public Sub ParseSp()
+Private Sub ParseSp()
     Dim p2551 As Long
 
     With ctx
@@ -1164,7 +1181,7 @@ Public Sub ParseSp()
     End With
 End Sub
 
-Public Function ParseInline() As Boolean
+Private Function ParseInline() As Boolean
     Dim p1692 As Long
     Dim q1692 As Long
 
@@ -1293,7 +1310,7 @@ Public Function ParseInline() As Boolean
     End With
 End Function
 
-Public Function ParseAtxStart() As Boolean
+Private Function ParseAtxStart() As Boolean
     Dim lCaptureBegin As Long
     Dim lCaptureEnd As Long
 
@@ -1361,7 +1378,7 @@ Public Function ParseAtxStart() As Boolean
     End With
 End Function
 
-Public Function ParseAtxHeading() As Boolean
+Private Function ParseAtxHeading() As Boolean
     Dim i102 As Long
     Dim p101 As Long
     Dim q101 As Long
@@ -1411,7 +1428,7 @@ Public Function ParseAtxHeading() As Boolean
     End With
 End Function
 
-Public Function ParseSetextHeading() As Boolean
+Private Function ParseSetextHeading() As Boolean
     Dim p116 As Long
     Dim q116 As Long
 
@@ -1435,7 +1452,7 @@ Public Function ParseSetextHeading() As Boolean
     End With
 End Function
 
-Public Function ParseSetextHeading1() As Boolean
+Private Function ParseSetextHeading1() As Boolean
     Dim p131 As Long
     Dim i143 As Long
     Dim p141 As Long
@@ -1491,7 +1508,7 @@ Public Function ParseSetextHeading1() As Boolean
     End With
 End Function
 
-Public Function ParseSetextHeading2() As Boolean
+Private Function ParseSetextHeading2() As Boolean
     Dim p151 As Long
     Dim i162 As Long
     Dim p160 As Long
@@ -1547,7 +1564,7 @@ Public Function ParseSetextHeading2() As Boolean
     End With
 End Function
 
-Public Function ParseSetextBottom1() As Boolean
+Private Function ParseSetextBottom1() As Boolean
     Dim i119 As Long
 
     With ctx
@@ -1567,7 +1584,7 @@ Public Function ParseSetextBottom1() As Boolean
     End With
 End Function
 
-Public Function ParseSetextBottom2() As Boolean
+Private Function ParseSetextBottom2() As Boolean
     Dim i124 As Long
 
     With ctx
@@ -1587,7 +1604,7 @@ Public Function ParseSetextBottom2() As Boolean
     End With
 End Function
 
-Public Function ParseRawLine() As Boolean
+Private Function ParseRawLine() As Boolean
     Dim p2782 As Long
     Dim lCaptureBegin As Long
     Dim p2770 As Long
@@ -1657,7 +1674,7 @@ Public Function ParseRawLine() As Boolean
     End With
 End Function
 
-Public Function ParseEndline() As Boolean
+Private Function ParseEndline() As Boolean
     Dim p1786 As Long
     Dim q1786 As Long
 
@@ -1688,7 +1705,7 @@ Public Function ParseEndline() As Boolean
     End With
 End Function
 
-Public Function ParseBlockQuoteRaw() As Boolean
+Private Function ParseBlockQuoteRaw() As Boolean
     Dim i199 As Long
     Dim p183 As Long
     Dim q183 As Long
@@ -1777,7 +1794,7 @@ Public Function ParseBlockQuoteRaw() As Boolean
     End With
 End Function
 
-Public Function ParseLine() As Boolean
+Private Function ParseLine() As Boolean
     With ctx
         If ParseRawLine() Then
             pvPushThunk ucsAct_1_Line, .CaptureBegin, .CaptureEnd
@@ -1786,7 +1803,7 @@ Public Function ParseLine() As Boolean
     End With
 End Function
 
-Public Function ParseNonblankIndentedLine() As Boolean
+Private Function ParseNonblankIndentedLine() As Boolean
     Dim p203 As Long
     Dim e203 As String
 
@@ -1803,7 +1820,7 @@ Public Function ParseNonblankIndentedLine() As Boolean
     End With
 End Function
 
-Public Function ParseIndentedLine() As Boolean
+Private Function ParseIndentedLine() As Boolean
     If ParseIndent() Then
         If ParseLine() Then
             ParseIndentedLine = True
@@ -1811,7 +1828,7 @@ Public Function ParseIndentedLine() As Boolean
     End If
 End Function
 
-Public Function ParseVerbatimChunk() As Boolean
+Private Function ParseVerbatimChunk() As Boolean
     Dim p214 As Long
     Dim q214 As Long
     Dim i219 As Long
@@ -1852,7 +1869,7 @@ Public Function ParseVerbatimChunk() As Boolean
     End With
 End Function
 
-Public Function ParseBullet() As Boolean
+Private Function ParseBullet() As Boolean
     Dim p270 As Long
     Dim q270 As Long
     Dim e270 As String
@@ -1921,7 +1938,7 @@ Public Function ParseBullet() As Boolean
     End With
 End Function
 
-Public Function ParseSpacechar() As Boolean
+Private Function ParseSpacechar() As Boolean
     With ctx
         If .BufData(.BufPos) = 32 Then              ' " "
             .BufPos = .BufPos + 1
@@ -1937,7 +1954,7 @@ Public Function ParseSpacechar() As Boolean
     End With
 End Function
 
-Public Function ParseListTight() As Boolean
+Private Function ParseListTight() As Boolean
     Dim i297 As Long
     Dim p296 As Long
     Dim q296 As Long
@@ -1996,7 +2013,7 @@ Public Function ParseListTight() As Boolean
     End With
 End Function
 
-Public Function ParseListLoose() As Boolean
+Private Function ParseListLoose() As Boolean
     Dim i318 As Long
     Dim p314 As Long
     Dim q314 As Long
@@ -2039,7 +2056,7 @@ Public Function ParseListLoose() As Boolean
     End With
 End Function
 
-Public Function ParseListItemTight() As Boolean
+Private Function ParseListItemTight() As Boolean
     Dim p339 As Long
     Dim q339 As Long
     Dim p350 As Long
@@ -2150,7 +2167,7 @@ Public Function ParseListItemTight() As Boolean
     End With
 End Function
 
-Public Function ParseEnumerator() As Boolean
+Private Function ParseEnumerator() As Boolean
     Dim i389 As Long
     Dim i393 As Long
     Dim p392 As Long
@@ -2184,7 +2201,7 @@ Public Function ParseEnumerator() As Boolean
     End With
 End Function
 
-Public Function ParseListItem() As Boolean
+Private Function ParseListItem() As Boolean
     Dim p322 As Long
     Dim q322 As Long
     Dim p334 As Long
@@ -2249,7 +2266,7 @@ Public Function ParseListItem() As Boolean
     End With
 End Function
 
-Public Function ParseListBlock() As Boolean
+Private Function ParseListBlock() As Boolean
     Dim p361 As Long
     Dim q361 As Long
     Dim e361 As String
@@ -2289,7 +2306,7 @@ Public Function ParseListBlock() As Boolean
     End With
 End Function
 
-Public Function ParseListContinuationBlock() As Boolean
+Private Function ParseListContinuationBlock() As Boolean
     Dim lCaptureBegin As Long
     Dim p375 As Long
     Dim q375 As Long
@@ -2345,7 +2362,7 @@ Public Function ParseListContinuationBlock() As Boolean
     End With
 End Function
 
-Public Function ParseListBlockLine() As Boolean
+Private Function ParseListBlockLine() As Boolean
     Dim p402 As Long
     Dim e402 As String
     Dim p409 As Long
@@ -2397,7 +2414,7 @@ Public Function ParseListBlockLine() As Boolean
     End With
 End Function
 
-Public Function ParseIndent() As Boolean
+Private Function ParseIndent() As Boolean
     With ctx
         If .BufData(.BufPos) = 9 Then               ' "\t"
             .BufPos = .BufPos + 1
@@ -2413,7 +2430,7 @@ Public Function ParseIndent() As Boolean
     End With
 End Function
 
-Public Function ParseOptionallyIndentedLine() As Boolean
+Private Function ParseOptionallyIndentedLine() As Boolean
     Dim p2754 As Long
 
     With ctx
@@ -2427,7 +2444,7 @@ Public Function ParseOptionallyIndentedLine() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenAddress() As Boolean
+Private Function ParseHtmlBlockOpenAddress() As Boolean
     Dim p425 As Long
 
     With ctx
@@ -2470,7 +2487,7 @@ Public Function ParseHtmlBlockOpenAddress() As Boolean
     End With
 End Function
 
-Public Sub ParseSpnl()
+Private Sub ParseSpnl()
     Dim p2556 As Long
 
     With ctx
@@ -2484,7 +2501,7 @@ Public Sub ParseSpnl()
     End With
 End Sub
 
-Public Function ParseHtmlAttribute() As Boolean
+Private Function ParseHtmlAttribute() As Boolean
     Dim i2497 As Long
     Dim p2496 As Long
     Dim p2502 As Long
@@ -2547,7 +2564,7 @@ L14:
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseAddress() As Boolean
+Private Function ParseHtmlBlockCloseAddress() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -2577,7 +2594,7 @@ Public Function ParseHtmlBlockCloseAddress() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockAddress() As Boolean
+Private Function ParseHtmlBlockAddress() As Boolean
     Dim p445 As Long
     Dim p442 As Long
     Dim e442 As String
@@ -2614,7 +2631,7 @@ Public Function ParseHtmlBlockAddress() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenBlockquote() As Boolean
+Private Function ParseHtmlBlockOpenBlockquote() As Boolean
     Dim p457 As Long
 
     With ctx
@@ -2657,7 +2674,7 @@ Public Function ParseHtmlBlockOpenBlockquote() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseBlockquote() As Boolean
+Private Function ParseHtmlBlockCloseBlockquote() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -2687,7 +2704,7 @@ Public Function ParseHtmlBlockCloseBlockquote() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockBlockquote() As Boolean
+Private Function ParseHtmlBlockBlockquote() As Boolean
     Dim p477 As Long
     Dim p474 As Long
     Dim e474 As String
@@ -2724,7 +2741,7 @@ Public Function ParseHtmlBlockBlockquote() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenCenter() As Boolean
+Private Function ParseHtmlBlockOpenCenter() As Boolean
     Dim p489 As Long
 
     With ctx
@@ -2767,7 +2784,7 @@ Public Function ParseHtmlBlockOpenCenter() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseCenter() As Boolean
+Private Function ParseHtmlBlockCloseCenter() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -2797,7 +2814,7 @@ Public Function ParseHtmlBlockCloseCenter() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCenter() As Boolean
+Private Function ParseHtmlBlockCenter() As Boolean
     Dim p509 As Long
     Dim p506 As Long
     Dim e506 As String
@@ -2834,7 +2851,7 @@ Public Function ParseHtmlBlockCenter() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenDir() As Boolean
+Private Function ParseHtmlBlockOpenDir() As Boolean
     Dim p521 As Long
 
     With ctx
@@ -2877,7 +2894,7 @@ Public Function ParseHtmlBlockOpenDir() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseDir() As Boolean
+Private Function ParseHtmlBlockCloseDir() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -2907,7 +2924,7 @@ Public Function ParseHtmlBlockCloseDir() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockDir() As Boolean
+Private Function ParseHtmlBlockDir() As Boolean
     Dim p541 As Long
     Dim p538 As Long
     Dim e538 As String
@@ -2944,7 +2961,7 @@ Public Function ParseHtmlBlockDir() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenDiv() As Boolean
+Private Function ParseHtmlBlockOpenDiv() As Boolean
     Dim p553 As Long
 
     With ctx
@@ -2987,7 +3004,7 @@ Public Function ParseHtmlBlockOpenDiv() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseDiv() As Boolean
+Private Function ParseHtmlBlockCloseDiv() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -3017,7 +3034,7 @@ Public Function ParseHtmlBlockCloseDiv() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockDiv() As Boolean
+Private Function ParseHtmlBlockDiv() As Boolean
     Dim p573 As Long
     Dim p570 As Long
     Dim e570 As String
@@ -3054,7 +3071,7 @@ Public Function ParseHtmlBlockDiv() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenDl() As Boolean
+Private Function ParseHtmlBlockOpenDl() As Boolean
     Dim p585 As Long
 
     With ctx
@@ -3097,7 +3114,7 @@ Public Function ParseHtmlBlockOpenDl() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseDl() As Boolean
+Private Function ParseHtmlBlockCloseDl() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -3127,7 +3144,7 @@ Public Function ParseHtmlBlockCloseDl() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockDl() As Boolean
+Private Function ParseHtmlBlockDl() As Boolean
     Dim p605 As Long
     Dim p602 As Long
     Dim e602 As String
@@ -3164,7 +3181,7 @@ Public Function ParseHtmlBlockDl() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenFieldset() As Boolean
+Private Function ParseHtmlBlockOpenFieldset() As Boolean
     Dim p617 As Long
 
     With ctx
@@ -3207,7 +3224,7 @@ Public Function ParseHtmlBlockOpenFieldset() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseFieldset() As Boolean
+Private Function ParseHtmlBlockCloseFieldset() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -3237,7 +3254,7 @@ Public Function ParseHtmlBlockCloseFieldset() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockFieldset() As Boolean
+Private Function ParseHtmlBlockFieldset() As Boolean
     Dim p637 As Long
     Dim p634 As Long
     Dim e634 As String
@@ -3274,7 +3291,7 @@ Public Function ParseHtmlBlockFieldset() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenForm() As Boolean
+Private Function ParseHtmlBlockOpenForm() As Boolean
     Dim p649 As Long
 
     With ctx
@@ -3317,7 +3334,7 @@ Public Function ParseHtmlBlockOpenForm() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseForm() As Boolean
+Private Function ParseHtmlBlockCloseForm() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -3347,7 +3364,7 @@ Public Function ParseHtmlBlockCloseForm() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockForm() As Boolean
+Private Function ParseHtmlBlockForm() As Boolean
     Dim p669 As Long
     Dim p666 As Long
     Dim e666 As String
@@ -3384,7 +3401,7 @@ Public Function ParseHtmlBlockForm() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenH1() As Boolean
+Private Function ParseHtmlBlockOpenH1() As Boolean
     Dim p681 As Long
 
     With ctx
@@ -3427,7 +3444,7 @@ Public Function ParseHtmlBlockOpenH1() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseH1() As Boolean
+Private Function ParseHtmlBlockCloseH1() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -3457,7 +3474,7 @@ Public Function ParseHtmlBlockCloseH1() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockH1() As Boolean
+Private Function ParseHtmlBlockH1() As Boolean
     Dim p701 As Long
     Dim p698 As Long
     Dim e698 As String
@@ -3494,7 +3511,7 @@ Public Function ParseHtmlBlockH1() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenH2() As Boolean
+Private Function ParseHtmlBlockOpenH2() As Boolean
     Dim p713 As Long
 
     With ctx
@@ -3537,7 +3554,7 @@ Public Function ParseHtmlBlockOpenH2() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseH2() As Boolean
+Private Function ParseHtmlBlockCloseH2() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -3567,7 +3584,7 @@ Public Function ParseHtmlBlockCloseH2() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockH2() As Boolean
+Private Function ParseHtmlBlockH2() As Boolean
     Dim p733 As Long
     Dim p730 As Long
     Dim e730 As String
@@ -3604,7 +3621,7 @@ Public Function ParseHtmlBlockH2() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenH3() As Boolean
+Private Function ParseHtmlBlockOpenH3() As Boolean
     Dim p745 As Long
 
     With ctx
@@ -3647,7 +3664,7 @@ Public Function ParseHtmlBlockOpenH3() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseH3() As Boolean
+Private Function ParseHtmlBlockCloseH3() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -3677,7 +3694,7 @@ Public Function ParseHtmlBlockCloseH3() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockH3() As Boolean
+Private Function ParseHtmlBlockH3() As Boolean
     Dim p765 As Long
     Dim p762 As Long
     Dim e762 As String
@@ -3714,7 +3731,7 @@ Public Function ParseHtmlBlockH3() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenH4() As Boolean
+Private Function ParseHtmlBlockOpenH4() As Boolean
     Dim p777 As Long
 
     With ctx
@@ -3757,7 +3774,7 @@ Public Function ParseHtmlBlockOpenH4() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseH4() As Boolean
+Private Function ParseHtmlBlockCloseH4() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -3787,7 +3804,7 @@ Public Function ParseHtmlBlockCloseH4() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockH4() As Boolean
+Private Function ParseHtmlBlockH4() As Boolean
     Dim p797 As Long
     Dim p794 As Long
     Dim e794 As String
@@ -3824,7 +3841,7 @@ Public Function ParseHtmlBlockH4() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenH5() As Boolean
+Private Function ParseHtmlBlockOpenH5() As Boolean
     Dim p809 As Long
 
     With ctx
@@ -3867,7 +3884,7 @@ Public Function ParseHtmlBlockOpenH5() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseH5() As Boolean
+Private Function ParseHtmlBlockCloseH5() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -3897,7 +3914,7 @@ Public Function ParseHtmlBlockCloseH5() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockH5() As Boolean
+Private Function ParseHtmlBlockH5() As Boolean
     Dim p829 As Long
     Dim p826 As Long
     Dim e826 As String
@@ -3934,7 +3951,7 @@ Public Function ParseHtmlBlockH5() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenH6() As Boolean
+Private Function ParseHtmlBlockOpenH6() As Boolean
     Dim p841 As Long
 
     With ctx
@@ -3977,7 +3994,7 @@ Public Function ParseHtmlBlockOpenH6() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseH6() As Boolean
+Private Function ParseHtmlBlockCloseH6() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -4007,7 +4024,7 @@ Public Function ParseHtmlBlockCloseH6() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockH6() As Boolean
+Private Function ParseHtmlBlockH6() As Boolean
     Dim p861 As Long
     Dim p858 As Long
     Dim e858 As String
@@ -4044,7 +4061,7 @@ Public Function ParseHtmlBlockH6() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenMenu() As Boolean
+Private Function ParseHtmlBlockOpenMenu() As Boolean
     Dim p873 As Long
 
     With ctx
@@ -4087,7 +4104,7 @@ Public Function ParseHtmlBlockOpenMenu() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseMenu() As Boolean
+Private Function ParseHtmlBlockCloseMenu() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -4117,7 +4134,7 @@ Public Function ParseHtmlBlockCloseMenu() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockMenu() As Boolean
+Private Function ParseHtmlBlockMenu() As Boolean
     Dim p893 As Long
     Dim p890 As Long
     Dim e890 As String
@@ -4154,7 +4171,7 @@ Public Function ParseHtmlBlockMenu() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenNoframes() As Boolean
+Private Function ParseHtmlBlockOpenNoframes() As Boolean
     Dim p905 As Long
 
     With ctx
@@ -4197,7 +4214,7 @@ Public Function ParseHtmlBlockOpenNoframes() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseNoframes() As Boolean
+Private Function ParseHtmlBlockCloseNoframes() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -4227,7 +4244,7 @@ Public Function ParseHtmlBlockCloseNoframes() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockNoframes() As Boolean
+Private Function ParseHtmlBlockNoframes() As Boolean
     Dim p925 As Long
     Dim p922 As Long
     Dim e922 As String
@@ -4264,7 +4281,7 @@ Public Function ParseHtmlBlockNoframes() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenNoscript() As Boolean
+Private Function ParseHtmlBlockOpenNoscript() As Boolean
     Dim p937 As Long
 
     With ctx
@@ -4307,7 +4324,7 @@ Public Function ParseHtmlBlockOpenNoscript() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseNoscript() As Boolean
+Private Function ParseHtmlBlockCloseNoscript() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -4337,7 +4354,7 @@ Public Function ParseHtmlBlockCloseNoscript() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockNoscript() As Boolean
+Private Function ParseHtmlBlockNoscript() As Boolean
     Dim p957 As Long
     Dim p954 As Long
     Dim e954 As String
@@ -4374,7 +4391,7 @@ Public Function ParseHtmlBlockNoscript() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenOl() As Boolean
+Private Function ParseHtmlBlockOpenOl() As Boolean
     Dim p969 As Long
 
     With ctx
@@ -4417,7 +4434,7 @@ Public Function ParseHtmlBlockOpenOl() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseOl() As Boolean
+Private Function ParseHtmlBlockCloseOl() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -4447,7 +4464,7 @@ Public Function ParseHtmlBlockCloseOl() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOl() As Boolean
+Private Function ParseHtmlBlockOl() As Boolean
     Dim p989 As Long
     Dim p986 As Long
     Dim e986 As String
@@ -4484,7 +4501,7 @@ Public Function ParseHtmlBlockOl() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenP() As Boolean
+Private Function ParseHtmlBlockOpenP() As Boolean
     Dim p1001 As Long
 
     With ctx
@@ -4527,7 +4544,7 @@ Public Function ParseHtmlBlockOpenP() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseP() As Boolean
+Private Function ParseHtmlBlockCloseP() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -4557,7 +4574,7 @@ Public Function ParseHtmlBlockCloseP() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockP() As Boolean
+Private Function ParseHtmlBlockP() As Boolean
     Dim p1021 As Long
     Dim p1018 As Long
     Dim e1018 As String
@@ -4594,7 +4611,7 @@ Public Function ParseHtmlBlockP() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenPre() As Boolean
+Private Function ParseHtmlBlockOpenPre() As Boolean
     Dim p1033 As Long
 
     With ctx
@@ -4637,7 +4654,7 @@ Public Function ParseHtmlBlockOpenPre() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockClosePre() As Boolean
+Private Function ParseHtmlBlockClosePre() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -4667,7 +4684,7 @@ Public Function ParseHtmlBlockClosePre() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockPre() As Boolean
+Private Function ParseHtmlBlockPre() As Boolean
     Dim p1053 As Long
     Dim p1050 As Long
     Dim e1050 As String
@@ -4704,7 +4721,7 @@ Public Function ParseHtmlBlockPre() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenTable() As Boolean
+Private Function ParseHtmlBlockOpenTable() As Boolean
     Dim p1065 As Long
 
     With ctx
@@ -4747,7 +4764,7 @@ Public Function ParseHtmlBlockOpenTable() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseTable() As Boolean
+Private Function ParseHtmlBlockCloseTable() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -4777,7 +4794,7 @@ Public Function ParseHtmlBlockCloseTable() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockTable() As Boolean
+Private Function ParseHtmlBlockTable() As Boolean
     Dim p1085 As Long
     Dim p1082 As Long
     Dim e1082 As String
@@ -4814,7 +4831,7 @@ Public Function ParseHtmlBlockTable() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenUl() As Boolean
+Private Function ParseHtmlBlockOpenUl() As Boolean
     Dim p1097 As Long
 
     With ctx
@@ -4857,7 +4874,7 @@ Public Function ParseHtmlBlockOpenUl() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseUl() As Boolean
+Private Function ParseHtmlBlockCloseUl() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -4887,7 +4904,7 @@ Public Function ParseHtmlBlockCloseUl() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockUl() As Boolean
+Private Function ParseHtmlBlockUl() As Boolean
     Dim p1117 As Long
     Dim p1114 As Long
     Dim e1114 As String
@@ -4924,7 +4941,7 @@ Public Function ParseHtmlBlockUl() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenDd() As Boolean
+Private Function ParseHtmlBlockOpenDd() As Boolean
     Dim p1129 As Long
 
     With ctx
@@ -4967,7 +4984,7 @@ Public Function ParseHtmlBlockOpenDd() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseDd() As Boolean
+Private Function ParseHtmlBlockCloseDd() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -4997,7 +5014,7 @@ Public Function ParseHtmlBlockCloseDd() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockDd() As Boolean
+Private Function ParseHtmlBlockDd() As Boolean
     Dim p1149 As Long
     Dim p1146 As Long
     Dim e1146 As String
@@ -5034,7 +5051,7 @@ Public Function ParseHtmlBlockDd() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenDt() As Boolean
+Private Function ParseHtmlBlockOpenDt() As Boolean
     Dim p1161 As Long
 
     With ctx
@@ -5077,7 +5094,7 @@ Public Function ParseHtmlBlockOpenDt() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseDt() As Boolean
+Private Function ParseHtmlBlockCloseDt() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -5107,7 +5124,7 @@ Public Function ParseHtmlBlockCloseDt() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockDt() As Boolean
+Private Function ParseHtmlBlockDt() As Boolean
     Dim p1181 As Long
     Dim p1178 As Long
     Dim e1178 As String
@@ -5144,7 +5161,7 @@ Public Function ParseHtmlBlockDt() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenFrameset() As Boolean
+Private Function ParseHtmlBlockOpenFrameset() As Boolean
     Dim p1193 As Long
 
     With ctx
@@ -5187,7 +5204,7 @@ Public Function ParseHtmlBlockOpenFrameset() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseFrameset() As Boolean
+Private Function ParseHtmlBlockCloseFrameset() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -5217,7 +5234,7 @@ Public Function ParseHtmlBlockCloseFrameset() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockFrameset() As Boolean
+Private Function ParseHtmlBlockFrameset() As Boolean
     Dim p1213 As Long
     Dim p1210 As Long
     Dim e1210 As String
@@ -5254,7 +5271,7 @@ Public Function ParseHtmlBlockFrameset() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenLi() As Boolean
+Private Function ParseHtmlBlockOpenLi() As Boolean
     Dim p1225 As Long
 
     With ctx
@@ -5297,7 +5314,7 @@ Public Function ParseHtmlBlockOpenLi() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseLi() As Boolean
+Private Function ParseHtmlBlockCloseLi() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -5327,7 +5344,7 @@ Public Function ParseHtmlBlockCloseLi() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockLi() As Boolean
+Private Function ParseHtmlBlockLi() As Boolean
     Dim p1245 As Long
     Dim p1242 As Long
     Dim e1242 As String
@@ -5364,7 +5381,7 @@ Public Function ParseHtmlBlockLi() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenTbody() As Boolean
+Private Function ParseHtmlBlockOpenTbody() As Boolean
     Dim p1257 As Long
 
     With ctx
@@ -5407,7 +5424,7 @@ Public Function ParseHtmlBlockOpenTbody() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseTbody() As Boolean
+Private Function ParseHtmlBlockCloseTbody() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -5437,7 +5454,7 @@ Public Function ParseHtmlBlockCloseTbody() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockTbody() As Boolean
+Private Function ParseHtmlBlockTbody() As Boolean
     Dim p1277 As Long
     Dim p1274 As Long
     Dim e1274 As String
@@ -5474,7 +5491,7 @@ Public Function ParseHtmlBlockTbody() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenTd() As Boolean
+Private Function ParseHtmlBlockOpenTd() As Boolean
     Dim p1289 As Long
 
     With ctx
@@ -5517,7 +5534,7 @@ Public Function ParseHtmlBlockOpenTd() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseTd() As Boolean
+Private Function ParseHtmlBlockCloseTd() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -5547,7 +5564,7 @@ Public Function ParseHtmlBlockCloseTd() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockTd() As Boolean
+Private Function ParseHtmlBlockTd() As Boolean
     Dim p1309 As Long
     Dim p1306 As Long
     Dim e1306 As String
@@ -5584,7 +5601,7 @@ Public Function ParseHtmlBlockTd() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenTfoot() As Boolean
+Private Function ParseHtmlBlockOpenTfoot() As Boolean
     Dim p1321 As Long
 
     With ctx
@@ -5627,7 +5644,7 @@ Public Function ParseHtmlBlockOpenTfoot() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseTfoot() As Boolean
+Private Function ParseHtmlBlockCloseTfoot() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -5657,7 +5674,7 @@ Public Function ParseHtmlBlockCloseTfoot() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockTfoot() As Boolean
+Private Function ParseHtmlBlockTfoot() As Boolean
     Dim p1341 As Long
     Dim p1338 As Long
     Dim e1338 As String
@@ -5694,7 +5711,7 @@ Public Function ParseHtmlBlockTfoot() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenTh() As Boolean
+Private Function ParseHtmlBlockOpenTh() As Boolean
     Dim p1353 As Long
 
     With ctx
@@ -5737,7 +5754,7 @@ Public Function ParseHtmlBlockOpenTh() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseTh() As Boolean
+Private Function ParseHtmlBlockCloseTh() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -5767,7 +5784,7 @@ Public Function ParseHtmlBlockCloseTh() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockTh() As Boolean
+Private Function ParseHtmlBlockTh() As Boolean
     Dim p1373 As Long
     Dim p1370 As Long
     Dim e1370 As String
@@ -5804,7 +5821,7 @@ Public Function ParseHtmlBlockTh() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenThead() As Boolean
+Private Function ParseHtmlBlockOpenThead() As Boolean
     Dim p1385 As Long
 
     With ctx
@@ -5847,7 +5864,7 @@ Public Function ParseHtmlBlockOpenThead() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseThead() As Boolean
+Private Function ParseHtmlBlockCloseThead() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -5877,7 +5894,7 @@ Public Function ParseHtmlBlockCloseThead() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockThead() As Boolean
+Private Function ParseHtmlBlockThead() As Boolean
     Dim p1405 As Long
     Dim p1402 As Long
     Dim e1402 As String
@@ -5914,7 +5931,7 @@ Public Function ParseHtmlBlockThead() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenTr() As Boolean
+Private Function ParseHtmlBlockOpenTr() As Boolean
     Dim p1417 As Long
 
     With ctx
@@ -5957,7 +5974,7 @@ Public Function ParseHtmlBlockOpenTr() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseTr() As Boolean
+Private Function ParseHtmlBlockCloseTr() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -5987,7 +6004,7 @@ Public Function ParseHtmlBlockCloseTr() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockTr() As Boolean
+Private Function ParseHtmlBlockTr() As Boolean
     Dim p1437 As Long
     Dim p1434 As Long
     Dim e1434 As String
@@ -6024,7 +6041,7 @@ Public Function ParseHtmlBlockTr() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenScript() As Boolean
+Private Function ParseHtmlBlockOpenScript() As Boolean
     Dim p1449 As Long
 
     With ctx
@@ -6067,7 +6084,7 @@ Public Function ParseHtmlBlockOpenScript() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseScript() As Boolean
+Private Function ParseHtmlBlockCloseScript() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -6097,7 +6114,7 @@ Public Function ParseHtmlBlockCloseScript() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockScript() As Boolean
+Private Function ParseHtmlBlockScript() As Boolean
     Dim p1467 As Long
     Dim p1465 As Long
     Dim e1465 As String
@@ -6129,7 +6146,7 @@ Public Function ParseHtmlBlockScript() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockOpenHead() As Boolean
+Private Function ParseHtmlBlockOpenHead() As Boolean
     Dim p1479 As Long
 
     With ctx
@@ -6172,7 +6189,7 @@ Public Function ParseHtmlBlockOpenHead() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockCloseHead() As Boolean
+Private Function ParseHtmlBlockCloseHead() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -6202,7 +6219,7 @@ Public Function ParseHtmlBlockCloseHead() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockHead() As Boolean
+Private Function ParseHtmlBlockHead() As Boolean
     Dim p1497 As Long
     Dim p1495 As Long
     Dim e1495 As String
@@ -6234,7 +6251,7 @@ Public Function ParseHtmlBlockHead() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockInTags() As Boolean
+Private Function ParseHtmlBlockInTags() As Boolean
     Dim p1504 As Long
 
     With ctx
@@ -6446,7 +6463,7 @@ Public Function ParseHtmlBlockInTags() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlComment() As Boolean
+Private Function ParseHtmlComment() As Boolean
     Dim p2516 As Long
     Dim p2514 As Long
 
@@ -6478,7 +6495,7 @@ Public Function ParseHtmlComment() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockSelfClosing() As Boolean
+Private Function ParseHtmlBlockSelfClosing() As Boolean
     Dim p1555 As Long
 
     With ctx
@@ -6508,7 +6525,7 @@ Public Function ParseHtmlBlockSelfClosing() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlBlockType() As Boolean
+Private Function ParseHtmlBlockType() As Boolean
     With ctx
         If pvMatchString("address") Then            ' "address"
             .BufPos = .BufPos + 7
@@ -6932,7 +6949,7 @@ Public Function ParseHtmlBlockType() As Boolean
     End With
 End Function
 
-Public Function ParseStyleOpen() As Boolean
+Private Function ParseStyleOpen() As Boolean
     Dim p1639 As Long
 
     With ctx
@@ -6975,7 +6992,7 @@ Public Function ParseStyleOpen() As Boolean
     End With
 End Function
 
-Public Function ParseStyleClose() As Boolean
+Private Function ParseStyleClose() As Boolean
     With ctx
         If .BufData(.BufPos) = 60 Then              ' "<"
             .BufPos = .BufPos + 1
@@ -7005,7 +7022,7 @@ Public Function ParseStyleClose() As Boolean
     End With
 End Function
 
-Public Function ParseInStyleTags() As Boolean
+Private Function ParseInStyleTags() As Boolean
     Dim p1657 As Long
     Dim p1655 As Long
     Dim e1655 As String
@@ -7037,7 +7054,7 @@ Public Function ParseInStyleTags() As Boolean
     End With
 End Function
 
-Public Function ParseStr() As Boolean
+Private Function ParseStr() As Boolean
     Dim lCaptureBegin As Long
     Dim i1734 As Long
     Dim p1733 As Long
@@ -7088,7 +7105,7 @@ Public Function ParseStr() As Boolean
     End With
 End Function
 
-Public Function ParseUlOrStarLine() As Boolean
+Private Function ParseUlOrStarLine() As Boolean
     Dim p1828 As Long
 
     With ctx
@@ -7110,7 +7127,7 @@ Public Function ParseUlOrStarLine() As Boolean
     End With
 End Function
 
-Public Function ParseSpace() As Boolean
+Private Function ParseSpace() As Boolean
     Dim i1724 As Long
     Dim p1723 As Long
 
@@ -7129,7 +7146,7 @@ Public Function ParseSpace() As Boolean
     End With
 End Function
 
-Public Function ParseStrong() As Boolean
+Private Function ParseStrong() As Boolean
     Dim p1922 As Long
     Dim q1922 As Long
 
@@ -7153,7 +7170,7 @@ Public Function ParseStrong() As Boolean
     End With
 End Function
 
-Public Function ParseEmph() As Boolean
+Private Function ParseEmph() As Boolean
     Dim p1865 As Long
     Dim q1865 As Long
 
@@ -7177,7 +7194,7 @@ Public Function ParseEmph() As Boolean
     End With
 End Function
 
-Public Function ParseStrike() As Boolean
+Private Function ParseStrike() As Boolean
     Dim p1965 As Long
     Dim e1965 As String
     Dim i1978 As Long
@@ -7238,7 +7255,7 @@ Public Function ParseStrike() As Boolean
     End With
 End Function
 
-Public Function ParseImage() As Boolean
+Private Function ParseImage() As Boolean
     Dim p1986 As Long
     Dim q1986 As Long
 
@@ -7269,7 +7286,7 @@ Public Function ParseImage() As Boolean
     End With
 End Function
 
-Public Function ParseLink() As Boolean
+Private Function ParseLink() As Boolean
     Dim p1991 As Long
     Dim q1991 As Long
 
@@ -7300,7 +7317,7 @@ Public Function ParseLink() As Boolean
     End With
 End Function
 
-Public Function ParseNoteReference() As Boolean
+Private Function ParseNoteReference() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 1
         If extension(EXT_NOTES) Then
@@ -7315,7 +7332,7 @@ Public Function ParseNoteReference() As Boolean
     End With
 End Function
 
-Public Function ParseInlineNote() As Boolean
+Private Function ParseInlineNote() As Boolean
     Dim i2956 As Long
     Dim p2954 As Long
     Dim q2954 As Long
@@ -7365,7 +7382,7 @@ Public Function ParseInlineNote() As Boolean
     End With
 End Function
 
-Public Function ParseCode() As Boolean
+Private Function ParseCode() As Boolean
     Dim p2370 As Long
     Dim lCaptureBegin As Long
     Dim i2336 As Long
@@ -8055,7 +8072,7 @@ L52:
     End With
 End Function
 
-Public Function ParseRawHtml() As Boolean
+Private Function ParseRawHtml() As Boolean
     Dim lCaptureBegin As Long
     Dim p2466 As Long
     Dim lCaptureEnd As Long
@@ -8096,7 +8113,7 @@ Public Function ParseRawHtml() As Boolean
     End With
 End Function
 
-Public Function ParseEntity() As Boolean
+Private Function ParseEntity() As Boolean
     Dim p1777 As Long
 
     With ctx
@@ -8125,7 +8142,7 @@ Public Function ParseEntity() As Boolean
     End With
 End Function
 
-Public Function ParseEscapedChar() As Boolean
+Private Function ParseEscapedChar() As Boolean
     Dim p1767 As Long
     Dim e1767 As String
     Dim lCaptureBegin As Long
@@ -8155,7 +8172,7 @@ Public Function ParseEscapedChar() As Boolean
     End With
 End Function
 
-Public Function ParseSmart() As Boolean
+Private Function ParseSmart() As Boolean
     Dim p2818 As Long
     Dim q2818 As Long
 
@@ -8202,7 +8219,7 @@ Public Function ParseSmart() As Boolean
     End With
 End Function
 
-Public Function ParseSymbol() As Boolean
+Private Function ParseSymbol() As Boolean
     Dim lCaptureBegin As Long
     Dim lCaptureEnd As Long
 
@@ -8218,7 +8235,7 @@ Public Function ParseSymbol() As Boolean
     End With
 End Function
 
-Public Function ParseNormalChar() As Boolean
+Private Function ParseNormalChar() As Boolean
     Dim p2581 As Long
     Dim p2579 As Long
 
@@ -8243,7 +8260,7 @@ Public Function ParseNormalChar() As Boolean
     End With
 End Function
 
-Public Function ParseStrChunk() As Boolean
+Private Function ParseStrChunk() As Boolean
     Dim p1758 As Long
     Dim q1758 As Long
     Dim lCaptureBegin As Long
@@ -8307,7 +8324,7 @@ Public Function ParseStrChunk() As Boolean
     End With
 End Function
 
-Public Function ParseAlphanumeric() As Boolean
+Private Function ParseAlphanumeric() As Boolean
     With ctx
         Select Case .BufData(.BufPos)
         Case 48 To 57, 65 To 90, 97 To 122          ' [0-9A-Za-z]
@@ -9086,7 +9103,7 @@ Public Function ParseAlphanumeric() As Boolean
     End With
 End Function
 
-Public Function ParseAposChunk() As Boolean
+Private Function ParseAposChunk() As Boolean
     Dim p1763 As Long
 
     With ctx
@@ -9105,7 +9122,7 @@ Public Function ParseAposChunk() As Boolean
     End With
 End Function
 
-Public Function ParseHexEntity() As Boolean
+Private Function ParseHexEntity() As Boolean
     Dim lCaptureBegin As Long
     Dim i2724 As Long
     Dim lCaptureEnd As Long
@@ -9143,7 +9160,7 @@ Public Function ParseHexEntity() As Boolean
     End With
 End Function
 
-Public Function ParseDecEntity() As Boolean
+Private Function ParseDecEntity() As Boolean
     Dim lCaptureBegin As Long
     Dim i2732 As Long
     Dim lCaptureEnd As Long
@@ -9178,7 +9195,7 @@ Public Function ParseDecEntity() As Boolean
     End With
 End Function
 
-Public Function ParseCharEntity() As Boolean
+Private Function ParseCharEntity() As Boolean
     Dim lCaptureBegin As Long
     Dim i2740 As Long
     Dim lCaptureEnd As Long
@@ -9209,7 +9226,7 @@ Public Function ParseCharEntity() As Boolean
     End With
 End Function
 
-Public Function ParseLineBreak() As Boolean
+Private Function ParseLineBreak() As Boolean
     With ctx
         If .BufData(.BufPos) = 32 And .BufData(.BufPos + 1) = 32 Then ' "  "
             .BufPos = .BufPos + 2
@@ -9222,7 +9239,7 @@ Public Function ParseLineBreak() As Boolean
     End With
 End Function
 
-Public Function ParseTerminalEndline() As Boolean
+Private Function ParseTerminalEndline() As Boolean
     With ctx
         Call ParseSp
         If ParseNewline() Then
@@ -9234,7 +9251,7 @@ Public Function ParseTerminalEndline() As Boolean
     End With
 End Function
 
-Public Function ParseNormalEndline() As Boolean
+Private Function ParseNormalEndline() As Boolean
     Dim p1793 As Long
     Dim e1793 As String
     Dim p1795 As Long
@@ -9314,7 +9331,7 @@ Public Function ParseNormalEndline() As Boolean
     End With
 End Function
 
-Public Function ParseEof() As Boolean
+Private Function ParseEof() As Boolean
     Dim p2535 As Long
 
     With ctx
@@ -9326,7 +9343,7 @@ Public Function ParseEof() As Boolean
     End With
 End Function
 
-Public Function ParseSpecialChar() As Boolean
+Private Function ParseSpecialChar() As Boolean
     Dim p2561 As Long
 
     With ctx
@@ -9431,7 +9448,7 @@ Public Function ParseSpecialChar() As Boolean
     End With
 End Function
 
-Public Function ParseUlLine() As Boolean
+Private Function ParseUlLine() As Boolean
     Dim p1860 As Long
     Dim lCaptureBegin As Long
     Dim lCaptureEnd As Long
@@ -9488,7 +9505,7 @@ Public Function ParseUlLine() As Boolean
     End With
 End Function
 
-Public Function ParseStarLine() As Boolean
+Private Function ParseStarLine() As Boolean
     Dim p1845 As Long
     Dim lCaptureBegin As Long
     Dim lCaptureEnd As Long
@@ -9545,7 +9562,7 @@ Public Function ParseStarLine() As Boolean
     End With
 End Function
 
-Public Function ParseEmphStar() As Boolean
+Private Function ParseEmphStar() As Boolean
     Dim p1872 As Long
     Dim e1872 As String
     Dim i1892 As Long
@@ -9624,7 +9641,7 @@ Public Function ParseEmphStar() As Boolean
     End With
 End Function
 
-Public Function ParseEmphUl() As Boolean
+Private Function ParseEmphUl() As Boolean
     Dim p1897 As Long
     Dim e1897 As String
     Dim i1917 As Long
@@ -9703,7 +9720,7 @@ Public Function ParseEmphUl() As Boolean
     End With
 End Function
 
-Public Function ParseWhitespace() As Boolean
+Private Function ParseWhitespace() As Boolean
     Dim p1869 As Long
 
     With ctx
@@ -9723,7 +9740,7 @@ Public Function ParseWhitespace() As Boolean
     End With
 End Function
 
-Public Function ParseStrongStar() As Boolean
+Private Function ParseStrongStar() As Boolean
     Dim p1925 As Long
     Dim e1925 As String
     Dim i1939 As Long
@@ -9782,7 +9799,7 @@ Public Function ParseStrongStar() As Boolean
     End With
 End Function
 
-Public Function ParseStrongUl() As Boolean
+Private Function ParseStrongUl() As Boolean
     Dim p1944 As Long
     Dim e1944 As String
     Dim i1958 As Long
@@ -9841,7 +9858,7 @@ Public Function ParseStrongUl() As Boolean
     End With
 End Function
 
-Public Function ParseExplicitLink() As Boolean
+Private Function ParseExplicitLink() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 3
         pvPushThunk ucsActResultClear
@@ -9870,7 +9887,7 @@ Public Function ParseExplicitLink() As Boolean
     End With
 End Function
 
-Public Function ParseReferenceLink() As Boolean
+Private Function ParseReferenceLink() As Boolean
     Dim p1998 As Long
     Dim q1998 As Long
 
@@ -9894,7 +9911,7 @@ Public Function ParseReferenceLink() As Boolean
     End With
 End Function
 
-Public Function ParseAutoLink() As Boolean
+Private Function ParseAutoLink() As Boolean
     Dim p2120 As Long
     Dim q2120 As Long
 
@@ -9918,7 +9935,7 @@ Public Function ParseAutoLink() As Boolean
     End With
 End Function
 
-Public Function ParseReferenceLinkDouble() As Boolean
+Private Function ParseReferenceLinkDouble() As Boolean
     Dim lCaptureBegin As Long
     Dim lCaptureEnd As Long
     Dim p2008 As Long
@@ -9952,7 +9969,7 @@ Public Function ParseReferenceLinkDouble() As Boolean
     End With
 End Function
 
-Public Function ParseReferenceLinkSingle() As Boolean
+Private Function ParseReferenceLinkSingle() As Boolean
     Dim lCaptureBegin As Long
     Dim p2021 As Long
     Dim q2021 As Long
@@ -9984,7 +10001,7 @@ Public Function ParseReferenceLinkSingle() As Boolean
     End With
 End Function
 
-Public Function ParseLabel() As Boolean
+Private Function ParseLabel() As Boolean
     Dim p2187 As Long
     Dim p2180 As Long
     Dim p2196 As Long
@@ -10086,7 +10103,7 @@ Public Function ParseLabel() As Boolean
     End With
 End Function
 
-Public Sub ParseSource()
+Private Sub ParseSource()
     Dim p2056 As Long
     Dim lCaptureBegin As Long
     Dim lCaptureEnd As Long
@@ -10118,7 +10135,7 @@ Public Sub ParseSource()
     End With
 End Sub
 
-Public Sub ParseTitle()
+Private Sub ParseTitle()
     Dim p2079 As Long
     Dim lCaptureBegin As Long
     Dim lCaptureEnd As Long
@@ -10139,7 +10156,7 @@ Public Sub ParseTitle()
     End With
 End Sub
 
-Public Sub ParseSourceContents()
+Private Sub ParseSourceContents()
     Dim p2073 As Long
     Dim i2068 As Long
     Dim p2063 As Long
@@ -10200,7 +10217,7 @@ Public Sub ParseSourceContents()
     End With
 End Sub
 
-Public Function ParseNonspacechar() As Boolean
+Private Function ParseNonspacechar() As Boolean
     Dim p2540 As Long
     Dim e2540 As String
     Dim p2542 As Long
@@ -10226,7 +10243,7 @@ Public Function ParseNonspacechar() As Boolean
     End With
 End Function
 
-Public Function ParseTitleSingle() As Boolean
+Private Function ParseTitleSingle() As Boolean
     Dim lCaptureBegin As Long
     Dim p2097 As Long
     Dim p2095 As Long
@@ -10278,7 +10295,7 @@ Public Function ParseTitleSingle() As Boolean
     End With
 End Function
 
-Public Function ParseTitleDouble() As Boolean
+Private Function ParseTitleDouble() As Boolean
     Dim lCaptureBegin As Long
     Dim p2112 As Long
     Dim p2110 As Long
@@ -10330,7 +10347,7 @@ Public Function ParseTitleDouble() As Boolean
     End With
 End Function
 
-Public Function ParseAutoLinkUrl() As Boolean
+Private Function ParseAutoLinkUrl() As Boolean
     Dim lCaptureBegin As Long
     Dim i2125 As Long
     Dim i2133 As Long
@@ -10397,7 +10414,7 @@ Public Function ParseAutoLinkUrl() As Boolean
     End With
 End Function
 
-Public Function ParseAutoLinkEmail() As Boolean
+Private Function ParseAutoLinkEmail() As Boolean
     Dim lCaptureBegin As Long
     Dim i2143 As Long
     Dim i2151 As Long
@@ -10467,7 +10484,7 @@ Public Function ParseAutoLinkEmail() As Boolean
     End With
 End Function
 
-Public Function ParseRefSrc() As Boolean
+Private Function ParseRefSrc() As Boolean
     Dim lCaptureBegin As Long
     Dim i2203 As Long
     Dim p2202 As Long
@@ -10492,7 +10509,7 @@ Public Function ParseRefSrc() As Boolean
     End With
 End Function
 
-Public Sub ParseRefTitle()
+Private Sub ParseRefTitle()
     Dim p2211 As Long
 
     With ctx
@@ -10511,7 +10528,7 @@ Public Sub ParseRefTitle()
     End With
 End Sub
 
-Public Function ParseRefTitleSingle() As Boolean
+Private Function ParseRefTitleSingle() As Boolean
     Dim lCaptureBegin As Long
     Dim p2234 As Long
     Dim p2232 As Long
@@ -10563,7 +10580,7 @@ Public Function ParseRefTitleSingle() As Boolean
     End With
 End Function
 
-Public Function ParseRefTitleDouble() As Boolean
+Private Function ParseRefTitleDouble() As Boolean
     Dim lCaptureBegin As Long
     Dim p2250 As Long
     Dim p2248 As Long
@@ -10615,7 +10632,7 @@ Public Function ParseRefTitleDouble() As Boolean
     End With
 End Function
 
-Public Function ParseRefTitleParens() As Boolean
+Private Function ParseRefTitleParens() As Boolean
     Dim lCaptureBegin As Long
     Dim p2266 As Long
     Dim p2264 As Long
@@ -10667,7 +10684,7 @@ Public Function ParseRefTitleParens() As Boolean
     End With
 End Function
 
-Public Sub ParseEmptyTitle()
+Private Sub ParseEmptyTitle()
     Dim lCaptureBegin As Long
     Dim lCaptureEnd As Long
 
@@ -10679,7 +10696,7 @@ Public Sub ParseEmptyTitle()
     End With
 End Sub
 
-Public Function ParseSkipBlock() As Boolean
+Private Function ParseSkipBlock() As Boolean
     Dim p2798 As Long
     Dim q2798 As Long
     Dim i2794 As Long
@@ -10810,7 +10827,7 @@ Public Function ParseSkipBlock() As Boolean
     End With
 End Function
 
-Public Function ParseTicks1() As Boolean
+Private Function ParseTicks1() As Boolean
     Dim p2288 As Long
 
     With ctx
@@ -10826,7 +10843,7 @@ Public Function ParseTicks1() As Boolean
     End With
 End Function
 
-Public Function ParseTicks2() As Boolean
+Private Function ParseTicks2() As Boolean
     Dim p2293 As Long
 
     With ctx
@@ -10842,7 +10859,7 @@ Public Function ParseTicks2() As Boolean
     End With
 End Function
 
-Public Function ParseTicks3() As Boolean
+Private Function ParseTicks3() As Boolean
     Dim p2298 As Long
 
     With ctx
@@ -10858,7 +10875,7 @@ Public Function ParseTicks3() As Boolean
     End With
 End Function
 
-Public Function ParseTicks4() As Boolean
+Private Function ParseTicks4() As Boolean
     Dim p2303 As Long
 
     With ctx
@@ -10874,7 +10891,7 @@ Public Function ParseTicks4() As Boolean
     End With
 End Function
 
-Public Function ParseTicks5() As Boolean
+Private Function ParseTicks5() As Boolean
     Dim p2308 As Long
 
     With ctx
@@ -10890,7 +10907,7 @@ Public Function ParseTicks5() As Boolean
     End With
 End Function
 
-Public Function ParseHtmlTag() As Boolean
+Private Function ParseHtmlTag() As Boolean
     Dim i2526 As Long
     Dim p2528 As Long
 
@@ -10932,7 +10949,7 @@ Public Function ParseHtmlTag() As Boolean
     End With
 End Function
 
-Public Function ParseQuoted() As Boolean
+Private Function ParseQuoted() As Boolean
     Dim p2492 As Long
     Dim p2480 As Long
     Dim p2478 As Long
@@ -10998,7 +11015,7 @@ Public Function ParseQuoted() As Boolean
     End With
 End Function
 
-Public Function ParseExtendedSpecialChar() As Boolean
+Private Function ParseExtendedSpecialChar() As Boolean
     Dim p2812 As Long
 
     With ctx
@@ -11040,7 +11057,7 @@ Public Function ParseExtendedSpecialChar() As Boolean
     End With
 End Function
 
-Public Function ParseEllipsis() As Boolean
+Private Function ParseEllipsis() As Boolean
     With ctx
         If pvMatchString("...") Then                ' "..."
             .BufPos = .BufPos + 3
@@ -11058,7 +11075,7 @@ Public Function ParseEllipsis() As Boolean
     End With
 End Function
 
-Public Function ParseDash() As Boolean
+Private Function ParseDash() As Boolean
     Dim p2838 As Long
     Dim q2838 As Long
 
@@ -11082,7 +11099,7 @@ Public Function ParseDash() As Boolean
     End With
 End Function
 
-Public Function ParseSingleQuoted() As Boolean
+Private Function ParseSingleQuoted() As Boolean
     Dim i2875 As Long
     Dim p2873 As Long
     Dim q2873 As Long
@@ -11133,7 +11150,7 @@ Public Function ParseSingleQuoted() As Boolean
     End With
 End Function
 
-Public Function ParseDoubleQuoted() As Boolean
+Private Function ParseDoubleQuoted() As Boolean
     Dim i2896 As Long
     Dim p2894 As Long
     Dim q2894 As Long
@@ -11184,7 +11201,7 @@ Public Function ParseDoubleQuoted() As Boolean
     End With
 End Function
 
-Public Function ParseApostrophe() As Boolean
+Private Function ParseApostrophe() As Boolean
     With ctx
         If .BufData(.BufPos) = 39 Then              ' "\'"
             .BufPos = .BufPos + 1
@@ -11195,7 +11212,7 @@ Public Function ParseApostrophe() As Boolean
     End With
 End Function
 
-Public Function ParseEmDash() As Boolean
+Private Function ParseEmDash() As Boolean
     With ctx
         If pvMatchString("---") Then                ' "---"
             .BufPos = .BufPos + 3
@@ -11213,7 +11230,7 @@ Public Function ParseEmDash() As Boolean
     End With
 End Function
 
-Public Function ParseEnDash() As Boolean
+Private Function ParseEnDash() As Boolean
     Dim p2841 As Long
 
     With ctx
@@ -11231,7 +11248,7 @@ Public Function ParseEnDash() As Boolean
     End With
 End Function
 
-Public Function ParseSingleQuoteStart() As Boolean
+Private Function ParseSingleQuoteStart() As Boolean
     Dim p2854 As Long
     Dim p2853 As Long
 
@@ -11254,7 +11271,7 @@ Public Function ParseSingleQuoteStart() As Boolean
     End With
 End Function
 
-Public Function ParseSingleQuoteEnd() As Boolean
+Private Function ParseSingleQuoteEnd() As Boolean
     Dim p2859 As Long
     Dim e2859 As String
 
@@ -11273,7 +11290,7 @@ Public Function ParseSingleQuoteEnd() As Boolean
     End With
 End Function
 
-Public Function ParseRawNoteReference() As Boolean
+Private Function ParseRawNoteReference() As Boolean
     Dim lCaptureBegin As Long
     Dim i2916 As Long
     Dim p2914 As Long
@@ -11326,7 +11343,7 @@ Public Function ParseRawNoteReference() As Boolean
     End With
 End Function
 
-Public Function ParseRawNoteBlock() As Boolean
+Private Function ParseRawNoteBlock() As Boolean
     Dim i2982 As Long
     Dim p2980 As Long
     Dim q2980 As Long

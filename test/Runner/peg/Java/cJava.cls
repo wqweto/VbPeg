@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 2.12.2018 13:41:48
+' Auto-generated on 3.12.2018 1:29:27
 Option Explicit
 DefObj A-Z
 
@@ -25,6 +25,17 @@ Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
+Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+
+Private Type SAFEARRAY1D
+    cDims               As Integer
+    fFeatures           As Integer
+    cbElements          As Long
+    cLocks              As Long
+    pvData              As Long
+    cElements           As Long
+    lLbound             As Long
+End Type
 
 '=========================================================================
 ' Constants and member variables
@@ -42,6 +53,7 @@ End Type
 
 Private Type UcsParserType
     Contents            As String
+    BufArray            As SAFEARRAY1D
     BufData()           As Integer
     BufPos              As Long
     BufSize             As Long
@@ -71,7 +83,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "2.12.2018 13:41:48"
+    ParserVersion = "3.12.2018 1:29:27"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -107,12 +119,17 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        .Contents = sSubject
-        ReDim .BufData(0 To Len(sSubject) + 3) As Integer
-        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        With .BufArray
+            .cDims = 1
+            .cbElements = 2
+            .fFeatures = 1 ' FADF_AUTO
+            .pvData = StrPtr(sSubject)
+            .cElements = Len(sSubject) + 2 '-- look-ahead chars
+        End With
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
-        .BufData(.BufSize) = -1 '-- EOF anchor
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
         .ThunkPos = 0
         .CaptureBegin = 0
@@ -134,8 +151,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        .Contents = vbNullString
-        Erase .BufData
+        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -353,7 +370,7 @@ Private Function ParseRPAR() As Boolean
     End With
 End Function
 
-Public Function ParseBlockStmt() As Boolean
+Private Function ParseBlockStmt() As Boolean
     Dim p35 As Long
     Dim p39 As Long
 
@@ -394,7 +411,7 @@ Private Function ParseRCUR() As Boolean
     End With
 End Function
 
-Public Function ParseStmt() As Boolean
+Private Function ParseStmt() As Boolean
     Dim p46 As Long
 
     With ctx
@@ -438,7 +455,7 @@ Public Function ParseStmt() As Boolean
     End With
 End Function
 
-Public Function ParseErrRcblk() As Boolean
+Private Function ParseErrRcblk() As Boolean
     Dim p317 As Long
     Dim p316 As Long
 
@@ -450,7 +467,7 @@ Public Function ParseErrRcblk() As Boolean
     End With
 End Function
 
-Public Function ParseIfStmt() As Boolean
+Private Function ParseIfStmt() As Boolean
     Dim p57 As Long
     Dim p63 As Long
     Dim p67 As Long
@@ -516,7 +533,7 @@ L5:
     End With
 End Function
 
-Public Function ParseWhileStmt() As Boolean
+Private Function ParseWhileStmt() As Boolean
     Dim p87 As Long
     Dim p92 As Long
     Dim p96 As Long
@@ -564,7 +581,7 @@ L14:
     End With
 End Function
 
-Public Function ParsePrintStmt() As Boolean
+Private Function ParsePrintStmt() As Boolean
     Dim p141 As Long
     Dim p146 As Long
     Dim p150 As Long
@@ -612,7 +629,7 @@ L23:
     End With
 End Function
 
-Public Function ParseDecStmt() As Boolean
+Private Function ParseDecStmt() As Boolean
     Dim p106 As Long
     Dim p118 As Long
     Dim p113 As Long
@@ -665,7 +682,7 @@ L29:
     End With
 End Function
 
-Public Function ParseAssignStmt() As Boolean
+Private Function ParseAssignStmt() As Boolean
     Dim p126 As Long
     Dim p131 As Long
     Dim p135 As Long
@@ -718,7 +735,7 @@ Private Function ParseIF() As Boolean
     End With
 End Function
 
-Public Function ParseExp() As Boolean
+Private Function ParseExp() As Boolean
     Dim p165 As Long
     Dim p162 As Long
 
@@ -804,7 +821,7 @@ Private Function ParseSEMI() As Boolean
     End With
 End Function
 
-Public Function ParseErrSemia() As Boolean
+Private Function ParseErrSemia() As Boolean
     Dim p313 As Long
     Dim p312 As Long
 
@@ -827,7 +844,7 @@ Private Function ParsePRINTLN() As Boolean
     End With
 End Function
 
-Public Function ParseRelExp() As Boolean
+Private Function ParseRelExp() As Boolean
     Dim p176 As Long
     Dim p173 As Long
 
@@ -864,7 +881,7 @@ Private Function ParseEQ() As Boolean
     End With
 End Function
 
-Public Function ParseAddExp() As Boolean
+Private Function ParseAddExp() As Boolean
     Dim p190 As Long
     Dim p185 As Long
     Dim p187 As Long
@@ -907,7 +924,7 @@ Private Function ParseLT() As Boolean
     End With
 End Function
 
-Public Function ParseMulExp() As Boolean
+Private Function ParseMulExp() As Boolean
     Dim p204 As Long
     Dim p199 As Long
     Dim p201 As Long
@@ -961,7 +978,7 @@ Private Function ParseMINUS() As Boolean
     End With
 End Function
 
-Public Function ParseAtomExp() As Boolean
+Private Function ParseAtomExp() As Boolean
     Dim p219 As Long
     Dim p209 As Long
     Dim p214 As Long

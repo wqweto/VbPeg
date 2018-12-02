@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 2.12.2018 13:41:48
+' Auto-generated on 3.12.2018 1:29:26
 Option Explicit
 DefObj A-Z
 
@@ -20,6 +20,17 @@ DefObj A-Z
 '=========================================================================
 
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
+Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+
+Private Type SAFEARRAY1D
+    cDims               As Integer
+    fFeatures           As Integer
+    cbElements          As Long
+    cLocks              As Long
+    pvData              As Long
+    cElements           As Long
+    lLbound             As Long
+End Type
 
 '=========================================================================
 ' Constants and member variables
@@ -50,6 +61,7 @@ End Type
 
 Private Type UcsParserType
     Contents            As String
+    BufArray            As SAFEARRAY1D
     BufData()           As Integer
     BufPos              As Long
     BufSize             As Long
@@ -83,7 +95,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "2.12.2018 13:41:48"
+    ParserVersion = "3.12.2018 1:29:26"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -119,12 +131,17 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        .Contents = sSubject
-        ReDim .BufData(0 To Len(sSubject) + 3) As Integer
-        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        With .BufArray
+            .cDims = 1
+            .cbElements = 2
+            .fFeatures = 1 ' FADF_AUTO
+            .pvData = StrPtr(sSubject)
+            .cElements = Len(sSubject) + 2 '-- look-ahead chars
+        End With
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
-        .BufData(.BufSize) = -1 '-- EOF anchor
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
         .ThunkPos = 0
         .CaptureBegin = 0
@@ -171,8 +188,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        .Contents = vbNullString
-        Erase .BufData
+        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -308,7 +325,7 @@ L1:
     End With
 End Function
 
-Public Function ParseTerm() As Boolean
+Private Function ParseTerm() As Boolean
     Dim p83 As Long
     Dim q83 As Long
     Dim p71 As Long
@@ -419,7 +436,7 @@ Private Sub Parse_()
     End With
 End Sub
 
-Public Function ParseFactor() As Boolean
+Private Function ParseFactor() As Boolean
     Dim p114 As Long
     Dim q114 As Long
     Dim p110 As Long
@@ -511,7 +528,7 @@ L5:
     End With
 End Function
 
-Public Function ParseInteger() As Boolean
+Private Function ParseInteger() As Boolean
     Dim p131 As Long
     Dim q131 As Long
     Dim lCaptureBegin As Long
@@ -559,7 +576,7 @@ Public Function ParseInteger() As Boolean
     End With
 End Function
 
-Public Function ParseErrInteger() As Boolean
+Private Function ParseErrInteger() As Boolean
     Dim p143 As Long
     Dim q143 As Long
     Dim i137 As Long

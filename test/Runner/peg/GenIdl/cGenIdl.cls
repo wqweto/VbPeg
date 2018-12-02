@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 2.12.2018 13:41:48
+' Auto-generated on 3.12.2018 1:29:27
 Option Explicit
 DefObj A-Z
 
@@ -25,6 +25,17 @@ Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
+Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+
+Private Type SAFEARRAY1D
+    cDims               As Integer
+    fFeatures           As Integer
+    cbElements          As Long
+    cLocks              As Long
+    pvData              As Long
+    cElements           As Long
+    lLbound             As Long
+End Type
 
 '=========================================================================
 ' Constants and member variables
@@ -76,6 +87,7 @@ End Type
 
 Private Type UcsParserType
     Contents            As String
+    BufArray            As SAFEARRAY1D
     BufData()           As Integer
     BufPos              As Long
     BufSize             As Long
@@ -107,7 +119,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "2.12.2018 13:41:48"
+    ParserVersion = "3.12.2018 1:29:27"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -143,12 +155,17 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        .Contents = sSubject
-        ReDim .BufData(0 To Len(sSubject) + 3) As Integer
-        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        With .BufArray
+            .cDims = 1
+            .cbElements = 2
+            .fFeatures = 1 ' FADF_AUTO
+            .pvData = StrPtr(sSubject)
+            .cElements = Len(sSubject) + 2 '-- look-ahead chars
+        End With
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
-        .BufData(.BufSize) = -1 '-- EOF anchor
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
         .ThunkPos = 0
         .CaptureBegin = 0
@@ -195,8 +212,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        .Contents = vbNullString
-        Erase .BufData
+        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -313,7 +330,7 @@ L1:
     End With
 End Function
 
-Public Function ParseTypedefDecl() As Boolean
+Private Function ParseTypedefDecl() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 2
         If ParseTYPEDEF() Then
@@ -334,7 +351,7 @@ Public Function ParseTypedefDecl() As Boolean
     End With
 End Function
 
-Public Function ParseTypedefCallback() As Boolean
+Private Function ParseTypedefCallback() As Boolean
     Dim p66 As Long
     Dim q66 As Long
 
@@ -378,7 +395,7 @@ Public Function ParseTypedefCallback() As Boolean
     End With
 End Function
 
-Public Function ParseEnumDecl() As Boolean
+Private Function ParseEnumDecl() As Boolean
     Dim p73 As Long
     Dim p79 As Long
     Dim q79 As Long
@@ -465,7 +482,7 @@ Public Function ParseEnumDecl() As Boolean
     End With
 End Function
 
-Public Function ParseStructDecl() As Boolean
+Private Function ParseStructDecl() As Boolean
     Dim p117 As Long
     Dim p123 As Long
     Dim q123 As Long
@@ -543,7 +560,7 @@ Public Function ParseStructDecl() As Boolean
     End With
 End Function
 
-Public Function ParseFunDecl() As Boolean
+Private Function ParseFunDecl() As Boolean
     Dim p152 As Long
     Dim p168 As Long
     Dim q168 As Long
@@ -602,7 +619,7 @@ Public Function ParseFunDecl() As Boolean
     End With
 End Function
 
-Public Function ParseSkipStmt() As Boolean
+Private Function ParseSkipStmt() As Boolean
     Dim lCaptureBegin As Long
     Dim p189 As Long
     Dim p180 As Long
@@ -705,7 +722,7 @@ Private Function ParseTYPEDEF() As Boolean
     End With
 End Function
 
-Public Function ParseType() As Boolean
+Private Function ParseType() As Boolean
     Dim lCaptureBegin As Long
     Dim p215 As Long
     Dim q215 As Long
@@ -848,7 +865,7 @@ Private Function ParseSEMI() As Boolean
     End With
 End Function
 
-Public Function ParseTypeUnlimited() As Boolean
+Private Function ParseTypeUnlimited() As Boolean
     Dim lCaptureBegin As Long
     Dim p227 As Long
     Dim q227 As Long
@@ -949,7 +966,7 @@ Private Function ParseRPAREN() As Boolean
     End With
 End Function
 
-Public Function ParseParams() As Boolean
+Private Function ParseParams() As Boolean
     Dim p287 As Long
     Dim q287 As Long
 
@@ -1015,7 +1032,7 @@ Private Function ParseLBRACE() As Boolean
     End With
 End Function
 
-Public Function ParseEnumValue() As Boolean
+Private Function ParseEnumValue() As Boolean
     Dim p323 As Long
     Dim q323 As Long
 
@@ -1106,7 +1123,7 @@ Private Function ParseSTRUCT() As Boolean
     End With
 End Function
 
-Public Function ParseLinkage() As Boolean
+Private Function ParseLinkage() As Boolean
     Dim p359 As Long
     Dim p361 As Long
 
@@ -1274,7 +1291,7 @@ Private Sub Parse_()
     End With
 End Sub
 
-Public Function ParseTypePrefix() As Boolean
+Private Function ParseTypePrefix() As Boolean
     Dim p237 As Long
 
     With ctx
@@ -1306,7 +1323,7 @@ Public Function ParseTypePrefix() As Boolean
     End With
 End Function
 
-Public Function ParseTypeBody() As Boolean
+Private Function ParseTypeBody() As Boolean
     Dim p244 As Long
     Dim q244 As Long
 
@@ -1407,7 +1424,7 @@ Public Function ParseTypeBody() As Boolean
     End With
 End Function
 
-Public Sub ParseTypeSuffix()
+Private Sub ParseTypeSuffix()
     Dim p269 As Long
     Dim p266 As Long
 
@@ -1686,7 +1703,7 @@ Private Function ParseBOOL() As Boolean
     End With
 End Function
 
-Public Function ParseRefType() As Boolean
+Private Function ParseRefType() As Boolean
     Dim p272 As Long
     Dim e272 As String
 
@@ -1705,7 +1722,7 @@ Public Function ParseRefType() As Boolean
     End With
 End Function
 
-Public Function ParseParam() As Boolean
+Private Function ParseParam() As Boolean
     Dim p296 As Long
     Dim q296 As Long
     Dim p302 As Long
@@ -1739,7 +1756,7 @@ Public Function ParseParam() As Boolean
     End With
 End Function
 
-Public Function ParseArraySuffix() As Boolean
+Private Function ParseArraySuffix() As Boolean
     Dim lCaptureBegin As Long
     Dim p349 As Long
     Dim p347 As Long
@@ -1790,7 +1807,7 @@ Private Function ParseEQ() As Boolean
     End With
 End Function
 
-Public Function ParseEnumValueToken() As Boolean
+Private Function ParseEnumValueToken() As Boolean
     Dim lCaptureBegin As Long
     Dim i336 As Long
     Dim p335 As Long

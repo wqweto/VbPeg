@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 2.12.2018 13:41:50
+' Auto-generated on 3.12.2018 1:29:30
 Option Explicit
 DefObj A-Z
 
@@ -25,6 +25,17 @@ Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
+Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+
+Private Type SAFEARRAY1D
+    cDims               As Integer
+    fFeatures           As Integer
+    cbElements          As Long
+    cLocks              As Long
+    pvData              As Long
+    cElements           As Long
+    lLbound             As Long
+End Type
 
 '=========================================================================
 ' Constants and member variables
@@ -42,6 +53,7 @@ End Type
 
 Private Type UcsParserType
     Contents            As String
+    BufArray            As SAFEARRAY1D
     BufData()           As Integer
     BufPos              As Long
     BufSize             As Long
@@ -71,7 +83,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "2.12.2018 13:41:50"
+    ParserVersion = "3.12.2018 1:29:30"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -107,12 +119,17 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        .Contents = sSubject
-        ReDim .BufData(0 To Len(sSubject) + 3) As Integer
-        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        With .BufArray
+            .cDims = 1
+            .cbElements = 2
+            .fFeatures = 1 ' FADF_AUTO
+            .pvData = StrPtr(sSubject)
+            .cElements = Len(sSubject) + 2 '-- look-ahead chars
+        End With
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
-        .BufData(.BufSize) = -1 '-- EOF anchor
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
         .ThunkPos = 0
         .CaptureBegin = 0
@@ -134,8 +151,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        .Contents = vbNullString
-        Erase .BufData
+        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -183,7 +200,7 @@ Public Function Parsestart() As Boolean
     End With
 End Function
 
-Public Function ParseLocationPath() As Boolean
+Private Function ParseLocationPath() As Boolean
     Dim p15 As Long
 
     With ctx
@@ -217,7 +234,7 @@ Private Sub Parse_()
     End With
 End Sub
 
-Public Function ParseRelativeLocationPath() As Boolean
+Private Function ParseRelativeLocationPath() As Boolean
     Dim p30 As Long
 
     With ctx
@@ -247,7 +264,7 @@ Public Function ParseRelativeLocationPath() As Boolean
     End With
 End Function
 
-Public Function ParseAbsoluteLocationPath() As Boolean
+Private Function ParseAbsoluteLocationPath() As Boolean
     Dim p23 As Long
     Dim p21 As Long
 
@@ -273,7 +290,7 @@ Public Function ParseAbsoluteLocationPath() As Boolean
     End With
 End Function
 
-Public Function ParseAbbreviatedAbsoluteLocationPath() As Boolean
+Private Function ParseAbbreviatedAbsoluteLocationPath() As Boolean
     With ctx
         If .BufData(.BufPos) = 47 And .BufData(.BufPos + 1) = 47 Then ' "//"
             .BufPos = .BufPos + 2
@@ -286,7 +303,7 @@ Public Function ParseAbbreviatedAbsoluteLocationPath() As Boolean
     End With
 End Function
 
-Public Function ParseStep() As Boolean
+Private Function ParseStep() As Boolean
     Dim p48 As Long
     Dim p44 As Long
 
@@ -317,7 +334,7 @@ Public Function ParseStep() As Boolean
     End With
 End Function
 
-Public Sub ParseAxisSpecifier()
+Private Sub ParseAxisSpecifier()
     Dim p56 As Long
 
     With ctx
@@ -338,7 +355,7 @@ Public Sub ParseAxisSpecifier()
     End With
 End Sub
 
-Public Function ParseNodeTest() As Boolean
+Private Function ParseNodeTest() As Boolean
     Dim p87 As Long
 
     With ctx
@@ -395,7 +412,7 @@ Public Function ParseNodeTest() As Boolean
     End With
 End Function
 
-Public Function ParsePredicate() As Boolean
+Private Function ParsePredicate() As Boolean
     With ctx
         If .BufData(.BufPos) = 91 Then              ' "["
             .BufPos = .BufPos + 1
@@ -412,7 +429,7 @@ Public Function ParsePredicate() As Boolean
     End With
 End Function
 
-Public Function ParseAbbreviatedStep() As Boolean
+Private Function ParseAbbreviatedStep() As Boolean
     With ctx
         If .BufData(.BufPos) = 46 And .BufData(.BufPos + 1) = 46 Then ' ".."
             .BufPos = .BufPos + 2
@@ -428,7 +445,7 @@ Public Function ParseAbbreviatedStep() As Boolean
     End With
 End Function
 
-Public Function ParseAxisName() As Boolean
+Private Function ParseAxisName() As Boolean
     With ctx
         If pvMatchString("ancestor-or-self") Then   ' "ancestor-or-self"
             .BufPos = .BufPos + 16
@@ -510,7 +527,7 @@ Public Function ParseAxisName() As Boolean
     End With
 End Function
 
-Public Sub ParseAbbreviatedAxisSpecifier()
+Private Sub ParseAbbreviatedAxisSpecifier()
     With ctx
         If .BufData(.BufPos) = 64 Then              ' "@"
             .BufPos = .BufPos + 1
@@ -519,7 +536,7 @@ Public Sub ParseAbbreviatedAxisSpecifier()
     End With
 End Sub
 
-Public Function ParseNodeType() As Boolean
+Private Function ParseNodeType() As Boolean
     With ctx
         If pvMatchString("comment") Then            ' "comment"
             .BufPos = .BufPos + 7
@@ -547,7 +564,7 @@ Public Function ParseNodeType() As Boolean
     End With
 End Function
 
-Public Function ParseLiteral() As Boolean
+Private Function ParseLiteral() As Boolean
     Dim p273 As Long
 
     With ctx
@@ -591,7 +608,7 @@ Public Function ParseLiteral() As Boolean
     End With
 End Function
 
-Public Function ParseNameTest() As Boolean
+Private Function ParseNameTest() As Boolean
     Dim p323 As Long
 
     With ctx
@@ -629,7 +646,7 @@ Public Function ParseNameTest() As Boolean
     End With
 End Function
 
-Public Function ParseOrExpr() As Boolean
+Private Function ParseOrExpr() As Boolean
     Dim p177 As Long
 
     With ctx
@@ -655,7 +672,7 @@ Public Function ParseOrExpr() As Boolean
     End With
 End Function
 
-Public Function ParsePrimaryExpr() As Boolean
+Private Function ParsePrimaryExpr() As Boolean
     Dim p119 As Long
 
     With ctx
@@ -708,7 +725,7 @@ Public Function ParsePrimaryExpr() As Boolean
     End With
 End Function
 
-Public Function ParseVariableReference() As Boolean
+Private Function ParseVariableReference() As Boolean
     With ctx
         If .BufData(.BufPos) = 36 Then              ' "$"
             .BufPos = .BufPos + 1
@@ -720,7 +737,7 @@ Public Function ParseVariableReference() As Boolean
     End With
 End Function
 
-Public Function ParseNumber() As Boolean
+Private Function ParseNumber() As Boolean
     Dim p285 As Long
     Dim p279 As Long
     Dim p277 As Long
@@ -755,7 +772,7 @@ Public Function ParseNumber() As Boolean
     End With
 End Function
 
-Public Function ParseFunctionCall() As Boolean
+Private Function ParseFunctionCall() As Boolean
     Dim p133 As Long
     Dim p136 As Long
 
@@ -796,7 +813,7 @@ Public Function ParseFunctionCall() As Boolean
     End With
 End Function
 
-Public Function ParseFunctionName() As Boolean
+Private Function ParseFunctionName() As Boolean
     Dim p310 As Long
     Dim e310 As String
 
@@ -813,7 +830,7 @@ Public Function ParseFunctionName() As Boolean
     End With
 End Function
 
-Public Function ParseUnionExpr() As Boolean
+Private Function ParseUnionExpr() As Boolean
     Dim p149 As Long
 
     With ctx
@@ -839,7 +856,7 @@ Public Function ParseUnionExpr() As Boolean
     End With
 End Function
 
-Public Function ParsePathExpr() As Boolean
+Private Function ParsePathExpr() As Boolean
     Dim p166 As Long
     Dim p160 As Long
 
@@ -887,7 +904,7 @@ L8:
     End With
 End Function
 
-Public Function ParseFilterExpr() As Boolean
+Private Function ParseFilterExpr() As Boolean
     Dim p170 As Long
 
     With ctx
@@ -905,7 +922,7 @@ Public Function ParseFilterExpr() As Boolean
     End With
 End Function
 
-Public Function ParseAndExpr() As Boolean
+Private Function ParseAndExpr() As Boolean
     Dim p186 As Long
 
     With ctx
@@ -931,7 +948,7 @@ Public Function ParseAndExpr() As Boolean
     End With
 End Function
 
-Public Function ParseEqualityExpr() As Boolean
+Private Function ParseEqualityExpr() As Boolean
     Dim p197 As Long
 
     With ctx
@@ -961,7 +978,7 @@ Public Function ParseEqualityExpr() As Boolean
     End With
 End Function
 
-Public Function ParseRelationalExpr() As Boolean
+Private Function ParseRelationalExpr() As Boolean
     Dim p210 As Long
 
     With ctx
@@ -999,7 +1016,7 @@ Public Function ParseRelationalExpr() As Boolean
     End With
 End Function
 
-Public Function ParseAdditiveExpr() As Boolean
+Private Function ParseAdditiveExpr() As Boolean
     Dim p221 As Long
 
     With ctx
@@ -1027,7 +1044,7 @@ Public Function ParseAdditiveExpr() As Boolean
     End With
 End Function
 
-Public Function ParseMultiplicativeExpr() As Boolean
+Private Function ParseMultiplicativeExpr() As Boolean
     Dim p232 As Long
 
     With ctx
@@ -1061,7 +1078,7 @@ Public Function ParseMultiplicativeExpr() As Boolean
     End With
 End Function
 
-Public Function ParseUnaryExpr() As Boolean
+Private Function ParseUnaryExpr() As Boolean
     Dim p242 As Long
 
     With ctx
@@ -1087,7 +1104,7 @@ Public Function ParseUnaryExpr() As Boolean
     End With
 End Function
 
-Public Function ParseOperator() As Boolean
+Private Function ParseOperator() As Boolean
     Dim p291 As Long
 
     With ctx
@@ -1173,7 +1190,7 @@ Public Function ParseOperator() As Boolean
     End With
 End Function
 
-Public Function ParseDigits() As Boolean
+Private Function ParseDigits() As Boolean
     Dim i287 As Long
 
     With ctx
@@ -1192,7 +1209,7 @@ Public Function ParseDigits() As Boolean
     End With
 End Function
 
-Public Function ParseOperatorName() As Boolean
+Private Function ParseOperatorName() As Boolean
     With ctx
         If pvMatchString("and") Then                ' "and"
             .BufPos = .BufPos + 3
@@ -1220,7 +1237,7 @@ Public Function ParseOperatorName() As Boolean
     End With
 End Function
 
-Public Function ParseQName() As Boolean
+Private Function ParseQName() As Boolean
     Dim p338 As Long
 
     With ctx
@@ -1259,7 +1276,7 @@ Private Function ParseS() As Boolean
     End With
 End Function
 
-Public Function ParsePrefixedName() As Boolean
+Private Function ParsePrefixedName() As Boolean
     With ctx
         If ParseName() Then
             If .BufData(.BufPos) = 58 Then          ' ":"
@@ -1273,7 +1290,7 @@ Public Function ParsePrefixedName() As Boolean
     End With
 End Function
 
-Public Function ParseName() As Boolean
+Private Function ParseName() As Boolean
     Dim p353 As Long
 
     With ctx
@@ -1290,7 +1307,7 @@ Public Function ParseName() As Boolean
     End With
 End Function
 
-Public Function ParseNameStartChar() As Boolean
+Private Function ParseNameStartChar() As Boolean
     With ctx
         Select Case .BufData(.BufPos)
         Case 65 To 90                               ' [A-Z]
@@ -1391,7 +1408,7 @@ Public Function ParseNameStartChar() As Boolean
     End With
 End Function
 
-Public Function ParseNameChar() As Boolean
+Private Function ParseNameChar() As Boolean
     Dim p373 As Long
 
     With ctx

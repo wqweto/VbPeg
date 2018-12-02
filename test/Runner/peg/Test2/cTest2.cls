@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 2.12.2018 13:41:50
+' Auto-generated on 3.12.2018 1:29:29
 Option Explicit
 DefObj A-Z
 
@@ -25,6 +25,17 @@ Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
+Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+
+Private Type SAFEARRAY1D
+    cDims               As Integer
+    fFeatures           As Integer
+    cbElements          As Long
+    cLocks              As Long
+    pvData              As Long
+    cElements           As Long
+    lLbound             As Long
+End Type
 
 '=========================================================================
 ' Constants and member variables
@@ -42,6 +53,7 @@ End Type
 
 Private Type UcsParserType
     Contents            As String
+    BufArray            As SAFEARRAY1D
     BufData()           As Integer
     BufPos              As Long
     BufSize             As Long
@@ -71,7 +83,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "2.12.2018 13:41:50"
+    ParserVersion = "3.12.2018 1:29:29"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -107,12 +119,17 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        .Contents = sSubject
-        ReDim .BufData(0 To Len(sSubject) + 3) As Integer
-        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        With .BufArray
+            .cDims = 1
+            .cbElements = 2
+            .fFeatures = 1 ' FADF_AUTO
+            .pvData = StrPtr(sSubject)
+            .cElements = Len(sSubject) + 2 '-- look-ahead chars
+        End With
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
-        .BufData(.BufSize) = -1 '-- EOF anchor
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
         .ThunkPos = 0
         .CaptureBegin = 0
@@ -134,8 +151,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        .Contents = vbNullString
-        Erase .BufData
+        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -200,7 +217,7 @@ Public Function ParsePreprocessor() As Boolean
     End With
 End Function
 
-Public Function ParseLineComment() As Boolean
+Private Function ParseLineComment() As Boolean
     Dim p44 As Long
     Dim p42 As Long
     Dim e42 As String
@@ -234,7 +251,7 @@ Public Function ParseLineComment() As Boolean
     End With
 End Function
 
-Public Function ParseBlockComment() As Boolean
+Private Function ParseBlockComment() As Boolean
     Dim p52 As Long
     Dim p50 As Long
 
@@ -266,7 +283,7 @@ Public Function ParseBlockComment() As Boolean
     End With
 End Function
 
-Public Function Parsetext() As Boolean
+Private Function Parsetext() As Boolean
     If Parsequote() Then
         Call ParseText2
         If Parsequote() Then
@@ -275,7 +292,7 @@ Public Function Parsetext() As Boolean
     End If
 End Function
 
-Public Function ParseScope() As Boolean
+Private Function ParseScope() As Boolean
     Dim p74 As Long
     Dim i73 As Long
     Dim p72 As Long
@@ -322,7 +339,7 @@ Public Function ParseScope() As Boolean
     End With
 End Function
 
-Public Function Parsejunk() As Boolean
+Private Function Parsejunk() As Boolean
     Dim i134 As Long
     Dim p133 As Long
     Dim p131 As Long
@@ -360,7 +377,7 @@ Public Function Parsejunk() As Boolean
     End With
 End Function
 
-Public Function ParseFile() As Boolean
+Private Function ParseFile() As Boolean
     Dim i21 As Long
     Dim p19 As Long
 
@@ -386,7 +403,7 @@ Public Function ParseFile() As Boolean
     End With
 End Function
 
-Public Function ParseStatement() As Boolean
+Private Function ParseStatement() As Boolean
     Dim p37 As Long
 
     With ctx
@@ -415,7 +432,7 @@ Public Function ParseStatement() As Boolean
     End With
 End Function
 
-Public Function ParseEndOfFile() As Boolean
+Private Function ParseEndOfFile() As Boolean
     Dim p140 As Long
 
     With ctx
@@ -427,7 +444,7 @@ Public Function ParseEndOfFile() As Boolean
     End With
 End Function
 
-Public Function ParseSpacing() As Boolean
+Private Function ParseSpacing() As Boolean
     Dim i118 As Long
     Dim p115 As Long
 
@@ -458,7 +475,7 @@ Public Function ParseSpacing() As Boolean
     End With
 End Function
 
-Public Function ParseExpression() As Boolean
+Private Function ParseExpression() As Boolean
     If ParseType() Then
         If ParseIdentifier() Then
             ParseExpression = True
@@ -466,7 +483,7 @@ Public Function ParseExpression() As Boolean
     End If
 End Function
 
-Public Function ParseEndOfLine() As Boolean
+Private Function ParseEndOfLine() As Boolean
     Dim p120 As Long
 
     With ctx
@@ -494,7 +511,7 @@ Public Function ParseEndOfLine() As Boolean
     End With
 End Function
 
-Public Function Parsequote() As Boolean
+Private Function Parsequote() As Boolean
     Dim p127 As Long
 
     With ctx
@@ -510,7 +527,7 @@ Public Function Parsequote() As Boolean
     End With
 End Function
 
-Public Sub ParseText2()
+Private Sub ParseText2()
     Dim p65 As Long
     Dim p63 As Long
     Dim e63 As String
@@ -537,7 +554,7 @@ Public Sub ParseText2()
     End With
 End Sub
 
-Public Function ParseType() As Boolean
+Private Function ParseType() As Boolean
     Dim i102 As Long
     Dim p88 As Long
     Dim p84 As Long
@@ -616,7 +633,7 @@ Public Function ParseType() As Boolean
     End With
 End Function
 
-Public Function ParseIdentifier() As Boolean
+Private Function ParseIdentifier() As Boolean
     Dim p111 As Long
 
     With ctx

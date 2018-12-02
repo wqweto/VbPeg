@@ -20,6 +20,7 @@ Class=cTest4; ..\peg\Test4\cTest4.cls
 Class=cTest5; ..\peg\Test5\cTest5.cls
 Class=cTest6; ..\peg\Test6\cTest6.cls
 Class=cTest7; ..\peg\Test7\cTest7.cls
+Class=cTest8; ..\peg\Test8\cTest8.cls
 Class=cXpath; ..\peg\Xpath\cXpath.cls
 Class=cZig; ..\peg\Zig\cZig.cls
 Startup="Sub Main"

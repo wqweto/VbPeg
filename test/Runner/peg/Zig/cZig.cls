@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 2.12.2018 13:41:51
+' Auto-generated on 3.12.2018 1:29:31
 Option Explicit
 DefObj A-Z
 
@@ -25,6 +25,17 @@ Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
+Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+
+Private Type SAFEARRAY1D
+    cDims               As Integer
+    fFeatures           As Integer
+    cbElements          As Long
+    cLocks              As Long
+    pvData              As Long
+    cElements           As Long
+    lLbound             As Long
+End Type
 
 '=========================================================================
 ' Constants and member variables
@@ -42,6 +53,7 @@ End Type
 
 Private Type UcsParserType
     Contents            As String
+    BufArray            As SAFEARRAY1D
     BufData()           As Integer
     BufPos              As Long
     BufSize             As Long
@@ -71,7 +83,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "2.12.2018 13:41:51"
+    ParserVersion = "3.12.2018 1:29:31"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -107,12 +119,17 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        .Contents = sSubject
-        ReDim .BufData(0 To Len(sSubject) + 3) As Integer
-        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        With .BufArray
+            .cDims = 1
+            .cbElements = 2
+            .fFeatures = 1 ' FADF_AUTO
+            .pvData = StrPtr(sSubject)
+            .cElements = Len(sSubject) + 2 '-- look-ahead chars
+        End With
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
-        .BufData(.BufSize) = -1 '-- EOF anchor
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
         .ThunkPos = 0
         .CaptureBegin = 0
@@ -134,8 +151,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        .Contents = vbNullString
-        Erase .BufData
+        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -186,7 +203,7 @@ Public Function ParseRoot() As Boolean
     End If
 End Function
 
-Public Sub Parseskip()
+Private Sub Parseskip()
     Dim p1101 As Long
 
     With ctx
@@ -207,7 +224,7 @@ Public Sub Parseskip()
     End With
 End Sub
 
-Public Sub ParseContainerMembers()
+Private Sub ParseContainerMembers()
     Dim p17 As Long
     Dim p19 As Long
     Dim p25 As Long
@@ -264,7 +281,7 @@ Public Sub ParseContainerMembers()
     End With
 End Sub
 
-Public Function Parseeof() As Boolean
+Private Function Parseeof() As Boolean
     Dim p1044 As Long
 
     With ctx
@@ -276,7 +293,7 @@ Public Function Parseeof() As Boolean
     End With
 End Function
 
-Public Function ParseTestDecl() As Boolean
+Private Function ParseTestDecl() As Boolean
     If ParseKEYWORD_test() Then
         If ParseSTRINGLITERAL() Then
             If ParseBlock() Then
@@ -286,7 +303,7 @@ Public Function ParseTestDecl() As Boolean
     End If
 End Function
 
-Public Function ParseTopLevelComptime() As Boolean
+Private Function ParseTopLevelComptime() As Boolean
     If ParseKEYWORD_comptime() Then
         If ParseBlockExpr() Then
             ParseTopLevelComptime = True
@@ -294,7 +311,7 @@ Public Function ParseTopLevelComptime() As Boolean
     End If
 End Function
 
-Public Function ParseKEYWORD_pub() As Boolean
+Private Function ParseKEYWORD_pub() As Boolean
     With ctx
         If pvMatchString("pub") Then                ' "pub"
             .BufPos = .BufPos + 3
@@ -306,7 +323,7 @@ Public Function ParseKEYWORD_pub() As Boolean
     End With
 End Function
 
-Public Function ParseTopLevelDecl() As Boolean
+Private Function ParseTopLevelDecl() As Boolean
     Dim p78 As Long
     Dim p57 As Long
     Dim p54 As Long
@@ -396,7 +413,7 @@ L37:
     End With
 End Function
 
-Public Function ParseContainerField() As Boolean
+Private Function ParseContainerField() As Boolean
     Dim p138 As Long
     Dim p143 As Long
 
@@ -434,7 +451,7 @@ Private Function ParseCOMMA() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_test() As Boolean
+Private Function ParseKEYWORD_test() As Boolean
     With ctx
         If pvMatchString("test") Then               ' "test"
             .BufPos = .BufPos + 4
@@ -496,7 +513,7 @@ Private Function ParseSTRINGLITERAL() As Boolean
     End With
 End Function
 
-Public Function ParseBlock() As Boolean
+Private Function ParseBlock() As Boolean
     Dim p396 As Long
 
     With ctx
@@ -515,7 +532,7 @@ Public Function ParseBlock() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_comptime() As Boolean
+Private Function ParseKEYWORD_comptime() As Boolean
     With ctx
         If pvMatchString("comptime") Then           ' "comptime"
             .BufPos = .BufPos + 8
@@ -527,7 +544,7 @@ Public Function ParseKEYWORD_comptime() As Boolean
     End With
 End Function
 
-Public Function ParseBlockExpr() As Boolean
+Private Function ParseBlockExpr() As Boolean
     Dim p261 As Long
 
     With ctx
@@ -541,7 +558,7 @@ Public Function ParseBlockExpr() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_export() As Boolean
+Private Function ParseKEYWORD_export() As Boolean
     With ctx
         If pvMatchString("export") Then             ' "export"
             .BufPos = .BufPos + 6
@@ -553,7 +570,7 @@ Public Function ParseKEYWORD_export() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_extern() As Boolean
+Private Function ParseKEYWORD_extern() As Boolean
     With ctx
         If pvMatchString("extern") Then             ' "extern"
             .BufPos = .BufPos + 6
@@ -565,7 +582,7 @@ Public Function ParseKEYWORD_extern() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_inline() As Boolean
+Private Function ParseKEYWORD_inline() As Boolean
     With ctx
         If pvMatchString("inline") Then             ' "inline"
             .BufPos = .BufPos + 6
@@ -577,7 +594,7 @@ Public Function ParseKEYWORD_inline() As Boolean
     End With
 End Function
 
-Public Function ParseFnProto() As Boolean
+Private Function ParseFnProto() As Boolean
     Dim p86 As Long
     Dim p92 As Long
     Dim p101 As Long
@@ -640,7 +657,7 @@ Private Function ParseSEMICOLON() As Boolean
     End With
 End Function
 
-Public Function ParseVarDecl() As Boolean
+Private Function ParseVarDecl() As Boolean
     Dim p117 As Long
     Dim p123 As Long
     Dim p125 As Long
@@ -720,7 +737,7 @@ Public Function ParseVarDecl() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_use() As Boolean
+Private Function ParseKEYWORD_use() As Boolean
     With ctx
         If pvMatchString("use") Then                ' "use"
             .BufPos = .BufPos + 3
@@ -732,7 +749,7 @@ Public Function ParseKEYWORD_use() As Boolean
     End With
 End Function
 
-Public Function ParseExpr() As Boolean
+Private Function ParseExpr() As Boolean
     Dim p273 As Long
 
     With ctx
@@ -749,7 +766,7 @@ Public Function ParseExpr() As Boolean
     End With
 End Function
 
-Public Function ParseFnCC() As Boolean
+Private Function ParseFnCC() As Boolean
     Dim p685 As Long
     Dim p692 As Long
 
@@ -794,7 +811,7 @@ Public Function ParseFnCC() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_fn() As Boolean
+Private Function ParseKEYWORD_fn() As Boolean
     With ctx
         If .BufData(.BufPos) = 102 And .BufData(.BufPos + 1) = 110 Then ' "fn"
             .BufPos = .BufPos + 2
@@ -898,7 +915,7 @@ Private Function ParseLPAREN() As Boolean
     End With
 End Function
 
-Public Sub ParseParamDeclList()
+Private Sub ParseParamDeclList()
     Dim p1031 As Long
     Dim p1033 As Long
 
@@ -932,7 +949,7 @@ Private Function ParseRPAREN() As Boolean
     End With
 End Function
 
-Public Function ParseByteAlign() As Boolean
+Private Function ParseByteAlign() As Boolean
     If ParseKEYWORD_align() Then
         If ParseLPAREN() Then
             If ParseExpr() Then
@@ -944,7 +961,7 @@ Public Function ParseByteAlign() As Boolean
     End If
 End Function
 
-Public Function ParseSection() As Boolean
+Private Function ParseSection() As Boolean
     If ParseKEYWORD_section() Then
         If ParseLPAREN() Then
             If ParseExpr() Then
@@ -973,7 +990,7 @@ Private Function ParseEXCLAMATIONMARK() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_var() As Boolean
+Private Function ParseKEYWORD_var() As Boolean
     With ctx
         If pvMatchString("var") Then                ' "var"
             .BufPos = .BufPos + 3
@@ -985,7 +1002,7 @@ Public Function ParseKEYWORD_var() As Boolean
     End With
 End Function
 
-Public Function ParseTypeExpr() As Boolean
+Private Function ParseTypeExpr() As Boolean
     Dim p456 As Long
 
     With ctx
@@ -1002,7 +1019,7 @@ Public Function ParseTypeExpr() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_const() As Boolean
+Private Function ParseKEYWORD_const() As Boolean
     With ctx
         If pvMatchString("const") Then              ' "const"
             .BufPos = .BufPos + 5
@@ -1045,7 +1062,7 @@ Private Function ParseEQUAL() As Boolean
     End With
 End Function
 
-Public Function ParseStatement() As Boolean
+Private Function ParseStatement() As Boolean
     Dim p154 As Long
     Dim p146 As Long
     Dim p159 As Long
@@ -1141,7 +1158,7 @@ Public Function ParseStatement() As Boolean
     End With
 End Function
 
-Public Function ParseBlockExprStatement() As Boolean
+Private Function ParseBlockExprStatement() As Boolean
     Dim p260 As Long
 
     With ctx
@@ -1165,7 +1182,7 @@ Public Function ParseBlockExprStatement() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_suspend() As Boolean
+Private Function ParseKEYWORD_suspend() As Boolean
     With ctx
         If pvMatchString("suspend") Then            ' "suspend"
             .BufPos = .BufPos + 7
@@ -1177,7 +1194,7 @@ Public Function ParseKEYWORD_suspend() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_defer() As Boolean
+Private Function ParseKEYWORD_defer() As Boolean
     With ctx
         If pvMatchString("defer") Then              ' "defer"
             .BufPos = .BufPos + 5
@@ -1189,7 +1206,7 @@ Public Function ParseKEYWORD_defer() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_errdefer() As Boolean
+Private Function ParseKEYWORD_errdefer() As Boolean
     With ctx
         If pvMatchString("errdefer") Then           ' "errdefer"
             .BufPos = .BufPos + 8
@@ -1201,7 +1218,7 @@ Public Function ParseKEYWORD_errdefer() As Boolean
     End With
 End Function
 
-Public Function ParseIfStatement() As Boolean
+Private Function ParseIfStatement() As Boolean
     Dim p201 As Long
     Dim p188 As Long
     Dim p186 As Long
@@ -1265,7 +1282,7 @@ Public Function ParseIfStatement() As Boolean
     End With
 End Function
 
-Public Function ParseLabeledStatement() As Boolean
+Private Function ParseLabeledStatement() As Boolean
     Dim p203 As Long
     Dim p208 As Long
 
@@ -1290,7 +1307,7 @@ Public Function ParseLabeledStatement() As Boolean
     End With
 End Function
 
-Public Function ParseSwitchExpr() As Boolean
+Private Function ParseSwitchExpr() As Boolean
     If ParseKEYWORD_switch() Then
         If ParseLPAREN() Then
             If ParseExpr() Then
@@ -1307,7 +1324,7 @@ Public Function ParseSwitchExpr() As Boolean
     End If
 End Function
 
-Public Function ParseAssignExpr() As Boolean
+Private Function ParseAssignExpr() As Boolean
     Dim p269 As Long
 
     With ctx
@@ -1325,7 +1342,7 @@ Public Function ParseAssignExpr() As Boolean
     End With
 End Function
 
-Public Function ParseIfPrefix() As Boolean
+Private Function ParseIfPrefix() As Boolean
     Dim p722 As Long
 
     With ctx
@@ -1345,7 +1362,7 @@ Public Function ParseIfPrefix() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_else() As Boolean
+Private Function ParseKEYWORD_else() As Boolean
     With ctx
         If pvMatchString("else") Then               ' "else"
             .BufPos = .BufPos + 4
@@ -1357,7 +1374,7 @@ Public Function ParseKEYWORD_else() As Boolean
     End With
 End Function
 
-Public Function ParsePayload() As Boolean
+Private Function ParsePayload() As Boolean
     If ParsePIPE() Then
         If ParseIDENTIFIER() Then
             If ParsePIPE() Then
@@ -1367,7 +1384,7 @@ Public Function ParsePayload() As Boolean
     End If
 End Function
 
-Public Function ParseBlockLabel() As Boolean
+Private Function ParseBlockLabel() As Boolean
     If ParseIDENTIFIER() Then
         If ParseCOLON() Then
             ParseBlockLabel = True
@@ -1375,7 +1392,7 @@ Public Function ParseBlockLabel() As Boolean
     End If
 End Function
 
-Public Function ParseLoopStatement() As Boolean
+Private Function ParseLoopStatement() As Boolean
     Dim p210 As Long
     Dim p216 As Long
 
@@ -1400,7 +1417,7 @@ Public Function ParseLoopStatement() As Boolean
     End With
 End Function
 
-Public Function ParseForStatement() As Boolean
+Private Function ParseForStatement() As Boolean
     Dim p234 As Long
     Dim p224 As Long
     Dim p233 As Long
@@ -1454,7 +1471,7 @@ Public Function ParseForStatement() As Boolean
     End With
 End Function
 
-Public Function ParseWhileStatement() As Boolean
+Private Function ParseWhileStatement() As Boolean
     Dim p255 As Long
     Dim p242 As Long
     Dim p240 As Long
@@ -1518,7 +1535,7 @@ Public Function ParseWhileStatement() As Boolean
     End With
 End Function
 
-Public Function ParseForPrefix() As Boolean
+Private Function ParseForPrefix() As Boolean
     If ParseKEYWORD_for() Then
         If ParseLPAREN() Then
             If ParseExpr() Then
@@ -1532,7 +1549,7 @@ Public Function ParseForPrefix() As Boolean
     End If
 End Function
 
-Public Function ParseWhilePrefix() As Boolean
+Private Function ParseWhilePrefix() As Boolean
     Dim p730 As Long
     Dim p732 As Long
 
@@ -1557,7 +1574,7 @@ Public Function ParseWhilePrefix() As Boolean
     End With
 End Function
 
-Public Function ParseAssignOp() As Boolean
+Private Function ParseAssignOp() As Boolean
     Dim p794 As Long
 
     With ctx
@@ -1649,7 +1666,7 @@ Public Function ParseAssignOp() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_try() As Boolean
+Private Function ParseKEYWORD_try() As Boolean
     With ctx
         If pvMatchString("try") Then                ' "try"
             .BufPos = .BufPos + 3
@@ -1661,7 +1678,7 @@ Public Function ParseKEYWORD_try() As Boolean
     End With
 End Function
 
-Public Function ParseBoolOrExpr() As Boolean
+Private Function ParseBoolOrExpr() As Boolean
     Dim p283 As Long
 
     With ctx
@@ -1682,7 +1699,7 @@ Public Function ParseBoolOrExpr() As Boolean
     End With
 End Function
 
-Public Function ParseBoolAndExpr() As Boolean
+Private Function ParseBoolAndExpr() As Boolean
     Dim p291 As Long
 
     With ctx
@@ -1703,7 +1720,7 @@ Public Function ParseBoolAndExpr() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_or() As Boolean
+Private Function ParseKEYWORD_or() As Boolean
     With ctx
         If .BufData(.BufPos) = 111 And .BufData(.BufPos + 1) = 114 Then ' "or"
             .BufPos = .BufPos + 2
@@ -1715,7 +1732,7 @@ Public Function ParseKEYWORD_or() As Boolean
     End With
 End Function
 
-Public Function ParseCompareExpr() As Boolean
+Private Function ParseCompareExpr() As Boolean
     Dim p299 As Long
 
     With ctx
@@ -1733,7 +1750,7 @@ Public Function ParseCompareExpr() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_and() As Boolean
+Private Function ParseKEYWORD_and() As Boolean
     With ctx
         If pvMatchString("and") Then                ' "and"
             .BufPos = .BufPos + 3
@@ -1745,7 +1762,7 @@ Public Function ParseKEYWORD_and() As Boolean
     End With
 End Function
 
-Public Function ParseBitwiseExpr() As Boolean
+Private Function ParseBitwiseExpr() As Boolean
     Dim p307 As Long
 
     With ctx
@@ -1766,7 +1783,7 @@ Public Function ParseBitwiseExpr() As Boolean
     End With
 End Function
 
-Public Function ParseCompareOp() As Boolean
+Private Function ParseCompareOp() As Boolean
     Dim p822 As Long
 
     With ctx
@@ -1810,7 +1827,7 @@ Public Function ParseCompareOp() As Boolean
     End With
 End Function
 
-Public Function ParseBitShiftExpr() As Boolean
+Private Function ParseBitShiftExpr() As Boolean
     Dim p315 As Long
 
     With ctx
@@ -1831,7 +1848,7 @@ Public Function ParseBitShiftExpr() As Boolean
     End With
 End Function
 
-Public Function ParseBitwiseOp() As Boolean
+Private Function ParseBitwiseOp() As Boolean
     Dim p833 As Long
     Dim p839 As Long
 
@@ -1874,7 +1891,7 @@ Public Function ParseBitwiseOp() As Boolean
     End With
 End Function
 
-Public Function ParseAdditionExpr() As Boolean
+Private Function ParseAdditionExpr() As Boolean
     Dim p323 As Long
 
     With ctx
@@ -1895,7 +1912,7 @@ Public Function ParseAdditionExpr() As Boolean
     End With
 End Function
 
-Public Function ParseBitShiftOp() As Boolean
+Private Function ParseBitShiftOp() As Boolean
     Dim p846 As Long
 
     With ctx
@@ -1915,7 +1932,7 @@ Public Function ParseBitShiftOp() As Boolean
     End With
 End Function
 
-Public Function ParseMultiplyExpr() As Boolean
+Private Function ParseMultiplyExpr() As Boolean
     Dim p331 As Long
 
     With ctx
@@ -1936,7 +1953,7 @@ Public Function ParseMultiplyExpr() As Boolean
     End With
 End Function
 
-Public Function ParseAdditionOp() As Boolean
+Private Function ParseAdditionOp() As Boolean
     Dim p851 As Long
 
     With ctx
@@ -1974,7 +1991,7 @@ Public Function ParseAdditionOp() As Boolean
     End With
 End Function
 
-Public Function ParsePrefixExpr() As Boolean
+Private Function ParsePrefixExpr() As Boolean
     Dim p335 As Long
 
     With ctx
@@ -1991,7 +2008,7 @@ Public Function ParsePrefixExpr() As Boolean
     End With
 End Function
 
-Public Function ParseMultiplyOp() As Boolean
+Private Function ParseMultiplyOp() As Boolean
     Dim p861 As Long
 
     With ctx
@@ -2035,7 +2052,7 @@ Public Function ParseMultiplyOp() As Boolean
     End With
 End Function
 
-Public Function ParsePrefixOp() As Boolean
+Private Function ParsePrefixOp() As Boolean
     Dim p872 As Long
 
     With ctx
@@ -2085,7 +2102,7 @@ Public Function ParsePrefixOp() As Boolean
     End With
 End Function
 
-Public Function ParsePrimaryExpr() As Boolean
+Private Function ParsePrimaryExpr() As Boolean
     Dim p344 As Long
     Dim p348 As Long
     Dim p351 As Long
@@ -2186,7 +2203,7 @@ Public Function ParsePrimaryExpr() As Boolean
     End With
 End Function
 
-Public Function ParseAsmExpr() As Boolean
+Private Function ParseAsmExpr() As Boolean
     Dim p606 As Long
     Dim p612 As Long
 
@@ -2211,7 +2228,7 @@ Public Function ParseAsmExpr() As Boolean
     End With
 End Function
 
-Public Function ParseIfExpr() As Boolean
+Private Function ParseIfExpr() As Boolean
     Dim p384 As Long
     Dim p382 As Long
 
@@ -2236,7 +2253,7 @@ Public Function ParseIfExpr() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_break() As Boolean
+Private Function ParseKEYWORD_break() As Boolean
     With ctx
         If pvMatchString("break") Then              ' "break"
             .BufPos = .BufPos + 5
@@ -2248,7 +2265,7 @@ Public Function ParseKEYWORD_break() As Boolean
     End With
 End Function
 
-Public Function ParseBreakLabel() As Boolean
+Private Function ParseBreakLabel() As Boolean
     If ParseCOLON() Then
         If ParseIDENTIFIER() Then
             ParseBreakLabel = True
@@ -2256,7 +2273,7 @@ Public Function ParseBreakLabel() As Boolean
     End If
 End Function
 
-Public Function ParseKEYWORD_cancel() As Boolean
+Private Function ParseKEYWORD_cancel() As Boolean
     With ctx
         If pvMatchString("cancel") Then             ' "cancel"
             .BufPos = .BufPos + 6
@@ -2268,7 +2285,7 @@ Public Function ParseKEYWORD_cancel() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_continue() As Boolean
+Private Function ParseKEYWORD_continue() As Boolean
     With ctx
         If pvMatchString("continue") Then           ' "continue"
             .BufPos = .BufPos + 8
@@ -2280,7 +2297,7 @@ Public Function ParseKEYWORD_continue() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_resume() As Boolean
+Private Function ParseKEYWORD_resume() As Boolean
     With ctx
         If pvMatchString("resume") Then             ' "resume"
             .BufPos = .BufPos + 6
@@ -2292,7 +2309,7 @@ Public Function ParseKEYWORD_resume() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_return() As Boolean
+Private Function ParseKEYWORD_return() As Boolean
     With ctx
         If pvMatchString("return") Then             ' "return"
             .BufPos = .BufPos + 6
@@ -2304,7 +2321,7 @@ Public Function ParseKEYWORD_return() As Boolean
     End With
 End Function
 
-Public Function ParseLabeledExpr() As Boolean
+Private Function ParseLabeledExpr() As Boolean
     Dim p387 As Long
     Dim p392 As Long
 
@@ -2329,7 +2346,7 @@ Public Function ParseLabeledExpr() As Boolean
     End With
 End Function
 
-Public Function ParseCurlySuffixExpr() As Boolean
+Private Function ParseCurlySuffixExpr() As Boolean
     Dim p427 As Long
 
     With ctx
@@ -2343,7 +2360,7 @@ Public Function ParseCurlySuffixExpr() As Boolean
     End With
 End Function
 
-Public Function ParseLoopExpr() As Boolean
+Private Function ParseLoopExpr() As Boolean
     Dim p401 As Long
     Dim p407 As Long
 
@@ -2390,7 +2407,7 @@ Private Function ParseRBRACE() As Boolean
     End With
 End Function
 
-Public Function ParseForExpr() As Boolean
+Private Function ParseForExpr() As Boolean
     Dim p414 As Long
 
     With ctx
@@ -2410,7 +2427,7 @@ Public Function ParseForExpr() As Boolean
     End With
 End Function
 
-Public Function ParseWhileExpr() As Boolean
+Private Function ParseWhileExpr() As Boolean
     Dim p422 As Long
     Dim p420 As Long
 
@@ -2435,7 +2452,7 @@ Public Function ParseWhileExpr() As Boolean
     End With
 End Function
 
-Public Function ParseInitList() As Boolean
+Private Function ParseInitList() As Boolean
     Dim p451 As Long
     Dim p436 As Long
     Dim p438 As Long
@@ -2515,7 +2532,7 @@ Public Function ParseInitList() As Boolean
     End With
 End Function
 
-Public Function ParseFieldInit() As Boolean
+Private Function ParseFieldInit() As Boolean
     If ParseDOT() Then
         If ParseIDENTIFIER() Then
             If ParseEQUAL() Then
@@ -2527,7 +2544,7 @@ Public Function ParseFieldInit() As Boolean
     End If
 End Function
 
-Public Function ParsePrefixTypeOp() As Boolean
+Private Function ParsePrefixTypeOp() As Boolean
     Dim p885 As Long
     Dim p890 As Long
     Dim p909 As Long
@@ -2646,7 +2663,7 @@ Public Function ParsePrefixTypeOp() As Boolean
     End With
 End Function
 
-Public Function ParseErrorUnionExpr() As Boolean
+Private Function ParseErrorUnionExpr() As Boolean
     Dim p465 As Long
 
     With ctx
@@ -2664,7 +2681,7 @@ Public Function ParseErrorUnionExpr() As Boolean
     End With
 End Function
 
-Public Function ParseSuffixExpr() As Boolean
+Private Function ParseSuffixExpr() As Boolean
     Dim p484 As Long
     Dim p474 As Long
     Dim p481 As Long
@@ -2712,7 +2729,7 @@ Public Function ParseSuffixExpr() As Boolean
     End With
 End Function
 
-Public Function ParseAsyncPrefix() As Boolean
+Private Function ParseAsyncPrefix() As Boolean
     Dim p934 As Long
 
     With ctx
@@ -2734,7 +2751,7 @@ Public Function ParseAsyncPrefix() As Boolean
     End With
 End Function
 
-Public Function ParsePrimaryTypeExpr() As Boolean
+Private Function ParsePrimaryTypeExpr() As Boolean
     Dim p491 As Long
 
     With ctx
@@ -2890,7 +2907,7 @@ Public Function ParsePrimaryTypeExpr() As Boolean
     End With
 End Function
 
-Public Function ParseSuffixOp() As Boolean
+Private Function ParseSuffixOp() As Boolean
     Dim p926 As Long
     Dim p920 As Long
     Dim p918 As Long
@@ -2945,7 +2962,7 @@ Public Function ParseSuffixOp() As Boolean
     End With
 End Function
 
-Public Function ParseFnCallArgumnets() As Boolean
+Private Function ParseFnCallArgumnets() As Boolean
     If ParseLPAREN() Then
         Call ParseExprList
         If ParseRPAREN() Then
@@ -3000,7 +3017,7 @@ Private Function ParseCHAR_LITERAL() As Boolean
     End With
 End Function
 
-Public Function ParseContainerDecl() As Boolean
+Private Function ParseContainerDecl() As Boolean
     Dim p536 As Long
 
     With ctx
@@ -3023,7 +3040,7 @@ L103:
     End With
 End Function
 
-Public Function ParseErrorSetDecl() As Boolean
+Private Function ParseErrorSetDecl() As Boolean
     If ParseKEYWORD_error() Then
         If ParseLBRACE() Then
             Call ParseIdentifierList
@@ -3465,7 +3482,7 @@ Private Function ParseFLOAT() As Boolean
     End With
 End Function
 
-Public Function ParseGroupedExpr() As Boolean
+Private Function ParseGroupedExpr() As Boolean
     If ParseLPAREN() Then
         If ParseExpr() Then
             If ParseRPAREN() Then
@@ -3475,7 +3492,7 @@ Public Function ParseGroupedExpr() As Boolean
     End If
 End Function
 
-Public Function ParseIfTypeExpr() As Boolean
+Private Function ParseIfTypeExpr() As Boolean
     Dim p557 As Long
     Dim p555 As Long
 
@@ -3586,7 +3603,7 @@ Private Function ParseINTEGER() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_anyerror() As Boolean
+Private Function ParseKEYWORD_anyerror() As Boolean
     With ctx
         If pvMatchString("anyerror") Then           ' "anyerror"
             .BufPos = .BufPos + 8
@@ -3598,7 +3615,7 @@ Public Function ParseKEYWORD_anyerror() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_error() As Boolean
+Private Function ParseKEYWORD_error() As Boolean
     With ctx
         If pvMatchString("error") Then              ' "error"
             .BufPos = .BufPos + 5
@@ -3630,7 +3647,7 @@ Private Function ParseDOT() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_false() As Boolean
+Private Function ParseKEYWORD_false() As Boolean
     With ctx
         If pvMatchString("false") Then              ' "false"
             .BufPos = .BufPos + 5
@@ -3642,7 +3659,7 @@ Public Function ParseKEYWORD_false() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_null() As Boolean
+Private Function ParseKEYWORD_null() As Boolean
     With ctx
         If pvMatchString("null") Then               ' "null"
             .BufPos = .BufPos + 4
@@ -3654,7 +3671,7 @@ Public Function ParseKEYWORD_null() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_promise() As Boolean
+Private Function ParseKEYWORD_promise() As Boolean
     With ctx
         If pvMatchString("promise") Then            ' "promise"
             .BufPos = .BufPos + 7
@@ -3666,7 +3683,7 @@ Public Function ParseKEYWORD_promise() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_true() As Boolean
+Private Function ParseKEYWORD_true() As Boolean
     With ctx
         If pvMatchString("true") Then               ' "true"
             .BufPos = .BufPos + 4
@@ -3678,7 +3695,7 @@ Public Function ParseKEYWORD_true() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_undefined() As Boolean
+Private Function ParseKEYWORD_undefined() As Boolean
     With ctx
         If pvMatchString("undefined") Then          ' "undefined"
             .BufPos = .BufPos + 9
@@ -3690,7 +3707,7 @@ Public Function ParseKEYWORD_undefined() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_unreachable() As Boolean
+Private Function ParseKEYWORD_unreachable() As Boolean
     With ctx
         If pvMatchString("unreachable") Then        ' "unreachable"
             .BufPos = .BufPos + 11
@@ -3702,7 +3719,7 @@ Public Function ParseKEYWORD_unreachable() As Boolean
     End With
 End Function
 
-Public Function ParseLabeledTypeExpr() As Boolean
+Private Function ParseLabeledTypeExpr() As Boolean
     Dim p568 As Long
     Dim p563 As Long
 
@@ -3731,7 +3748,7 @@ Public Function ParseLabeledTypeExpr() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_packed() As Boolean
+Private Function ParseKEYWORD_packed() As Boolean
     With ctx
         If pvMatchString("packed") Then             ' "packed"
             .BufPos = .BufPos + 6
@@ -3743,7 +3760,7 @@ Public Function ParseKEYWORD_packed() As Boolean
     End With
 End Function
 
-Public Function ParseContainerDeclAuto() As Boolean
+Private Function ParseContainerDeclAuto() As Boolean
     If ParseContainerDeclType() Then
         If ParseLBRACE() Then
             Call ParseContainerMembers
@@ -3754,7 +3771,7 @@ Public Function ParseContainerDeclAuto() As Boolean
     End If
 End Function
 
-Public Sub ParseIdentifierList()
+Private Sub ParseIdentifierList()
     Dim p996 As Long
     Dim p998 As Long
 
@@ -3777,7 +3794,7 @@ Public Sub ParseIdentifierList()
     End With
 End Sub
 
-Public Function ParseLoopTypeExpr() As Boolean
+Private Function ParseLoopTypeExpr() As Boolean
     Dim p569 As Long
     Dim p575 As Long
 
@@ -3802,7 +3819,7 @@ Public Function ParseLoopTypeExpr() As Boolean
     End With
 End Function
 
-Public Function ParseForTypeExpr() As Boolean
+Private Function ParseForTypeExpr() As Boolean
     Dim p582 As Long
 
     With ctx
@@ -3822,7 +3839,7 @@ Public Function ParseForTypeExpr() As Boolean
     End With
 End Function
 
-Public Function ParseWhileTypeExpr() As Boolean
+Private Function ParseWhileTypeExpr() As Boolean
     Dim p590 As Long
     Dim p588 As Long
 
@@ -3847,7 +3864,7 @@ Public Function ParseWhileTypeExpr() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_switch() As Boolean
+Private Function ParseKEYWORD_switch() As Boolean
     With ctx
         If pvMatchString("switch") Then             ' "switch"
             .BufPos = .BufPos + 6
@@ -3859,7 +3876,7 @@ Public Function ParseKEYWORD_switch() As Boolean
     End With
 End Function
 
-Public Sub ParseSwitchProngList()
+Private Sub ParseSwitchProngList()
     Dim p1003 As Long
     Dim p1005 As Long
 
@@ -3882,7 +3899,7 @@ Public Sub ParseSwitchProngList()
     End With
 End Sub
 
-Public Function ParseKEYWORD_asm() As Boolean
+Private Function ParseKEYWORD_asm() As Boolean
     With ctx
         If pvMatchString("asm") Then                ' "asm"
             .BufPos = .BufPos + 3
@@ -3894,7 +3911,7 @@ Public Function ParseKEYWORD_asm() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_volatile() As Boolean
+Private Function ParseKEYWORD_volatile() As Boolean
     With ctx
         If pvMatchString("volatile") Then           ' "volatile"
             .BufPos = .BufPos + 8
@@ -3906,7 +3923,7 @@ Public Function ParseKEYWORD_volatile() As Boolean
     End With
 End Function
 
-Public Function ParseAsmOutput() As Boolean
+Private Function ParseAsmOutput() As Boolean
     Dim p620 As Long
 
     With ctx
@@ -3921,7 +3938,7 @@ Public Function ParseAsmOutput() As Boolean
     End With
 End Function
 
-Public Sub ParseAsmOutputList()
+Private Sub ParseAsmOutputList()
     Dim p1010 As Long
     Dim p1012 As Long
 
@@ -3944,7 +3961,7 @@ Public Sub ParseAsmOutputList()
     End With
 End Sub
 
-Public Function ParseAsmInput() As Boolean
+Private Function ParseAsmInput() As Boolean
     Dim p643 As Long
 
     With ctx
@@ -3959,7 +3976,7 @@ Public Function ParseAsmInput() As Boolean
     End With
 End Function
 
-Public Function ParseAsmOutputItem() As Boolean
+Private Function ParseAsmOutputItem() As Boolean
     Dim p636 As Long
 
     With ctx
@@ -4030,7 +4047,7 @@ Private Function ParseMINUSRARROW() As Boolean
     End With
 End Function
 
-Public Sub ParseAsmInputList()
+Private Sub ParseAsmInputList()
     Dim p1017 As Long
     Dim p1019 As Long
 
@@ -4053,14 +4070,14 @@ Public Sub ParseAsmInputList()
     End With
 End Sub
 
-Public Function ParseAsmCloppers() As Boolean
+Private Function ParseAsmCloppers() As Boolean
     If ParseCOLON() Then
         Call ParseStringList
         ParseAsmCloppers = True
     End If
 End Function
 
-Public Function ParseAsmInputItem() As Boolean
+Private Function ParseAsmInputItem() As Boolean
     If ParseLBRACKET() Then
         If ParseIDENTIFIER() Then
             If ParseRBRACKET() Then
@@ -4078,7 +4095,7 @@ Public Function ParseAsmInputItem() As Boolean
     End If
 End Function
 
-Public Sub ParseStringList()
+Private Sub ParseStringList()
     Dim p1024 As Long
     Dim p1026 As Long
 
@@ -4101,7 +4118,7 @@ Public Sub ParseStringList()
     End With
 End Sub
 
-Public Function ParseWhileContinueExpr() As Boolean
+Private Function ParseWhileContinueExpr() As Boolean
     If ParseCOLON() Then
         If ParseLPAREN() Then
             If ParseAssignExpr() Then
@@ -4113,7 +4130,7 @@ Public Function ParseWhileContinueExpr() As Boolean
     End If
 End Function
 
-Public Function ParseKEYWORD_section() As Boolean
+Private Function ParseKEYWORD_section() As Boolean
     With ctx
         If pvMatchString("section") Then            ' "section"
             .BufPos = .BufPos + 7
@@ -4125,7 +4142,7 @@ Public Function ParseKEYWORD_section() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_nakedcc() As Boolean
+Private Function ParseKEYWORD_nakedcc() As Boolean
     With ctx
         If pvMatchString("nakedcc") Then            ' "nakedcc"
             .BufPos = .BufPos + 7
@@ -4137,7 +4154,7 @@ Public Function ParseKEYWORD_nakedcc() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_stdcallcc() As Boolean
+Private Function ParseKEYWORD_stdcallcc() As Boolean
     With ctx
         If pvMatchString("stdcallcc") Then          ' "stdcallcc"
             .BufPos = .BufPos + 9
@@ -4149,7 +4166,7 @@ Public Function ParseKEYWORD_stdcallcc() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_async() As Boolean
+Private Function ParseKEYWORD_async() As Boolean
     With ctx
         If pvMatchString("async") Then              ' "async"
             .BufPos = .BufPos + 5
@@ -4201,7 +4218,7 @@ Private Function ParseRARROW() As Boolean
     End With
 End Function
 
-Public Function ParseParamDecl() As Boolean
+Private Function ParseParamDecl() As Boolean
     Dim p701 As Long
     Dim p705 As Long
 
@@ -4233,7 +4250,7 @@ L140:
     End With
 End Function
 
-Public Function ParseKEYWORD_noalias() As Boolean
+Private Function ParseKEYWORD_noalias() As Boolean
     With ctx
         If pvMatchString("noalias") Then            ' "noalias"
             .BufPos = .BufPos + 7
@@ -4245,7 +4262,7 @@ Public Function ParseKEYWORD_noalias() As Boolean
     End With
 End Function
 
-Public Function ParseParamType() As Boolean
+Private Function ParseParamType() As Boolean
     Dim p713 As Long
 
     With ctx
@@ -4282,7 +4299,7 @@ Private Function ParseDOT3() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_if() As Boolean
+Private Function ParseKEYWORD_if() As Boolean
     With ctx
         If .BufData(.BufPos) = 105 And .BufData(.BufPos + 1) = 102 Then ' "if"
             .BufPos = .BufPos + 2
@@ -4294,7 +4311,7 @@ Public Function ParseKEYWORD_if() As Boolean
     End With
 End Function
 
-Public Function ParsePtrPayload() As Boolean
+Private Function ParsePtrPayload() As Boolean
     Dim p749 As Long
 
     With ctx
@@ -4312,7 +4329,7 @@ Public Function ParsePtrPayload() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_while() As Boolean
+Private Function ParseKEYWORD_while() As Boolean
     With ctx
         If pvMatchString("while") Then              ' "while"
             .BufPos = .BufPos + 5
@@ -4324,7 +4341,7 @@ Public Function ParseKEYWORD_while() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_for() As Boolean
+Private Function ParseKEYWORD_for() As Boolean
     With ctx
         If pvMatchString("for") Then                ' "for"
             .BufPos = .BufPos + 3
@@ -4336,7 +4353,7 @@ Public Function ParseKEYWORD_for() As Boolean
     End With
 End Function
 
-Public Function ParsePtrIndexPayload() As Boolean
+Private Function ParsePtrIndexPayload() As Boolean
     Dim p755 As Long
     Dim p761 As Long
 
@@ -4403,7 +4420,7 @@ Private Function ParseASTERISK() As Boolean
     End With
 End Function
 
-Public Function ParseSwitchProng() As Boolean
+Private Function ParseSwitchProng() As Boolean
     Dim p770 As Long
 
     With ctx
@@ -4421,7 +4438,7 @@ Public Function ParseSwitchProng() As Boolean
     End With
 End Function
 
-Public Function ParseSwitchCase() As Boolean
+Private Function ParseSwitchCase() As Boolean
     Dim p783 As Long
     Dim p777 As Long
     Dim p780 As Long
@@ -4469,7 +4486,7 @@ Private Function ParseEQUALRARROW() As Boolean
     End With
 End Function
 
-Public Function ParseSwitchItem() As Boolean
+Private Function ParseSwitchItem() As Boolean
     Dim p787 As Long
 
     With ctx
@@ -4708,7 +4725,7 @@ Private Function ParseCARET() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_orelse() As Boolean
+Private Function ParseKEYWORD_orelse() As Boolean
     With ctx
         If pvMatchString("orelse") Then             ' "orelse"
             .BufPos = .BufPos + 6
@@ -4720,7 +4737,7 @@ Public Function ParseKEYWORD_orelse() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_catch() As Boolean
+Private Function ParseKEYWORD_catch() As Boolean
     With ctx
         If pvMatchString("catch") Then              ' "catch"
             .BufPos = .BufPos + 5
@@ -4935,7 +4952,7 @@ Private Function ParseTILDE() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_await() As Boolean
+Private Function ParseKEYWORD_await() As Boolean
     With ctx
         If pvMatchString("await") Then              ' "await"
             .BufPos = .BufPos + 5
@@ -4958,7 +4975,7 @@ Private Function ParseQUESTIONMARK() As Boolean
     End With
 End Function
 
-Public Function ParseArrayTypeStart() As Boolean
+Private Function ParseArrayTypeStart() As Boolean
     Dim p944 As Long
 
     With ctx
@@ -4974,7 +4991,7 @@ Public Function ParseArrayTypeStart() As Boolean
     End With
 End Function
 
-Public Function ParsePtrTypeStart() As Boolean
+Private Function ParsePtrTypeStart() As Boolean
     Dim p950 As Long
 
     With ctx
@@ -5008,7 +5025,7 @@ Public Function ParsePtrTypeStart() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_align() As Boolean
+Private Function ParseKEYWORD_align() As Boolean
     With ctx
         If pvMatchString("align") Then              ' "align"
             .BufPos = .BufPos + 5
@@ -5059,7 +5076,7 @@ Private Function ParseDOTQUESTIONMARK() As Boolean
     End With
 End Function
 
-Public Sub ParseExprList()
+Private Sub ParseExprList()
     Dim p1038 As Long
     Dim p1040 As Long
 
@@ -5082,7 +5099,7 @@ Public Sub ParseExprList()
     End With
 End Sub
 
-Public Function ParseContainerDeclType() As Boolean
+Private Function ParseContainerDeclType() As Boolean
     Dim p988 As Long
     Dim p965 As Long
     Dim p968 As Long
@@ -5180,7 +5197,7 @@ L153:
     End With
 End Function
 
-Public Function ParseKEYWORD_struct() As Boolean
+Private Function ParseKEYWORD_struct() As Boolean
     With ctx
         If pvMatchString("struct") Then             ' "struct"
             .BufPos = .BufPos + 6
@@ -5192,7 +5209,7 @@ Public Function ParseKEYWORD_struct() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_enum() As Boolean
+Private Function ParseKEYWORD_enum() As Boolean
     With ctx
         If pvMatchString("enum") Then               ' "enum"
             .BufPos = .BufPos + 4
@@ -5204,7 +5221,7 @@ Public Function ParseKEYWORD_enum() As Boolean
     End With
 End Function
 
-Public Function ParseKEYWORD_union() As Boolean
+Private Function ParseKEYWORD_union() As Boolean
     With ctx
         If pvMatchString("union") Then              ' "union"
             .BufPos = .BufPos + 5
@@ -5216,7 +5233,7 @@ Public Function ParseKEYWORD_union() As Boolean
     End With
 End Function
 
-Public Function Parsechar_escape() As Boolean
+Private Function Parsechar_escape() As Boolean
     Dim p1058 As Long
 
     With ctx
@@ -5299,7 +5316,7 @@ Public Function Parsechar_escape() As Boolean
     End With
 End Function
 
-Public Function Parsechar_char() As Boolean
+Private Function Parsechar_char() As Boolean
     Dim p1073 As Long
 
     With ctx
@@ -5324,7 +5341,7 @@ Public Function Parsechar_char() As Boolean
     End With
 End Function
 
-Public Function Parsestring_char() As Boolean
+Private Function Parsestring_char() As Boolean
     Dim p1077 As Long
 
     With ctx
@@ -5349,7 +5366,7 @@ Public Function Parsestring_char() As Boolean
     End With
 End Function
 
-Public Function Parseline_comment() As Boolean
+Private Function Parseline_comment() As Boolean
     With ctx
         If .BufData(.BufPos) = 47 And .BufData(.BufPos + 1) = 47 Then ' "//"
             .BufPos = .BufPos + 2
@@ -5371,7 +5388,7 @@ Public Function Parseline_comment() As Boolean
     End With
 End Function
 
-Public Function Parseline_string() As Boolean
+Private Function Parseline_string() As Boolean
     Dim i1090 As Long
     Dim p1087 As Long
 
@@ -5411,7 +5428,7 @@ Public Function Parseline_string() As Boolean
     End With
 End Function
 
-Public Function Parseline_cstring() As Boolean
+Private Function Parseline_cstring() As Boolean
     Dim i1098 As Long
     Dim p1095 As Long
 
@@ -5451,7 +5468,7 @@ Public Function Parseline_cstring() As Boolean
     End With
 End Function
 
-Public Function Parsekeyword() As Boolean
+Private Function Parsekeyword() As Boolean
     Dim p1633 As Long
 
     With ctx
@@ -5753,7 +5770,7 @@ Public Function Parsekeyword() As Boolean
     End With
 End Function
 
-Public Function Parseend_of_word() As Boolean
+Private Function Parseend_of_word() As Boolean
     Dim p1481 As Long
 
     With ctx

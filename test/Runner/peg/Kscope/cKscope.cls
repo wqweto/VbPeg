@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 2.12.2018 13:41:49
+' Auto-generated on 3.12.2018 1:29:28
 Option Explicit
 DefObj A-Z
 
@@ -25,6 +25,17 @@ Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
+Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+
+Private Type SAFEARRAY1D
+    cDims               As Integer
+    fFeatures           As Integer
+    cbElements          As Long
+    cLocks              As Long
+    pvData              As Long
+    cElements           As Long
+    lLbound             As Long
+End Type
 
 '=========================================================================
 ' Constants and member variables
@@ -79,6 +90,7 @@ End Type
 
 Private Type UcsParserType
     Contents            As String
+    BufArray            As SAFEARRAY1D
     BufData()           As Integer
     BufPos              As Long
     BufSize             As Long
@@ -113,7 +125,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "2.12.2018 13:41:49"
+    ParserVersion = "3.12.2018 1:29:28"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -149,12 +161,17 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        .Contents = sSubject
-        ReDim .BufData(0 To Len(sSubject) + 3) As Integer
-        Call CopyMemory(.BufData(0), ByVal StrPtr(sSubject), LenB(sSubject))
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        With .BufArray
+            .cDims = 1
+            .cbElements = 2
+            .fFeatures = 1 ' FADF_AUTO
+            .pvData = StrPtr(sSubject)
+            .cElements = Len(sSubject) + 2 '-- look-ahead chars
+        End With
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
-        .BufData(.BufSize) = -1 '-- EOF anchor
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
         .ThunkPos = 0
         .CaptureBegin = 0
@@ -201,8 +218,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        .Contents = vbNullString
-        Erase .BufData
+        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -299,7 +316,7 @@ Private Sub Parse_()
     End With
 End Sub
 
-Public Function Parsestmt() As Boolean
+Private Function Parsestmt() As Boolean
     Dim p27 As Long
     Dim q27 As Long
     Dim p19 As Long
@@ -361,7 +378,7 @@ Public Function Parsestmt() As Boolean
     End With
 End Function
 
-Public Function Parsedefinition() As Boolean
+Private Function Parsedefinition() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 2
         If pvMatchString("def") Then                ' "def"
@@ -395,7 +412,7 @@ Private Function ParseSEMI() As Boolean
     End With
 End Function
 
-Public Function Parseextern() As Boolean
+Private Function Parseextern() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 1
         If pvMatchString("extern") Then             ' "extern"
@@ -414,7 +431,7 @@ Public Function Parseextern() As Boolean
     End With
 End Function
 
-Public Function Parseexpr() As Boolean
+Private Function Parseexpr() As Boolean
     With ctx
         '--- clear min precedence
         m_lBinopMinPrec = 0
@@ -424,7 +441,7 @@ Public Function Parseexpr() As Boolean
     End With
 End Function
 
-Public Function Parsens() As Boolean
+Private Function Parsens() As Boolean
     Dim p420 As Long
 
     With ctx
@@ -441,7 +458,7 @@ Public Function Parsens() As Boolean
     End With
 End Function
 
-Public Function Parseprototype() As Boolean
+Private Function Parseprototype() As Boolean
     Dim p79 As Long
     Dim q79 As Long
     Dim p82 As Long
@@ -541,7 +558,7 @@ Public Function Parseprototype() As Boolean
     End With
 End Function
 
-Public Function Parsebinopproto() As Boolean
+Private Function Parsebinopproto() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 3
         Dim sBinOp          As String
@@ -611,7 +628,7 @@ Private Function ParseLPAREN() As Boolean
     End With
 End Function
 
-Public Function Parseparam_list() As Boolean
+Private Function Parseparam_list() As Boolean
     Dim p271 As Long
     Dim q271 As Long
     Dim p265 As Long
@@ -865,7 +882,7 @@ Private Function ParseNUMBER() As Boolean
     End With
 End Function
 
-Public Function Parsebinexpr() As Boolean
+Private Function Parsebinexpr() As Boolean
     Dim p133 As Long
     Dim q133 As Long
 
@@ -914,7 +931,7 @@ Public Function Parsebinexpr() As Boolean
     End With
 End Function
 
-Public Function Parseunexpr() As Boolean
+Private Function Parseunexpr() As Boolean
     Dim p155 As Long
     Dim q155 As Long
 
@@ -951,7 +968,7 @@ Public Function Parseunexpr() As Boolean
     End With
 End Function
 
-Public Function Parseprimary() As Boolean
+Private Function Parseprimary() As Boolean
     Dim p162 As Long
     Dim q162 As Long
 
@@ -1097,7 +1114,7 @@ Private Function ParseDOUBLE() As Boolean
     End With
 End Function
 
-Public Function Parseinvokeexpr() As Boolean
+Private Function Parseinvokeexpr() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 2
         pvPushThunk ucsActResultClear
@@ -1118,7 +1135,7 @@ Public Function Parseinvokeexpr() As Boolean
     End With
 End Function
 
-Public Function Parseifexpr() As Boolean
+Private Function Parseifexpr() As Boolean
     Dim p202 As Long
     Dim q202 As Long
 
@@ -1166,7 +1183,7 @@ Public Function Parseifexpr() As Boolean
     End With
 End Function
 
-Public Function Parseforexpr() As Boolean
+Private Function Parseforexpr() As Boolean
     Dim p234 As Long
     Dim q234 As Long
 
@@ -1223,7 +1240,7 @@ Public Function Parseforexpr() As Boolean
     End With
 End Function
 
-Public Function Parsevarexpr() As Boolean
+Private Function Parsevarexpr() As Boolean
     With ctx
         pvPushThunk ucsActVarAlloc, 2
         If pvMatchString("var") Then                ' "var"
@@ -1251,7 +1268,7 @@ Public Function Parsevarexpr() As Boolean
     End With
 End Function
 
-Public Function Parsearg_list() As Boolean
+Private Function Parsearg_list() As Boolean
     Dim p286 As Long
     Dim q286 As Long
     Dim p280 As Long
@@ -1311,7 +1328,7 @@ Private Function ParseCOMMA() As Boolean
     End With
 End Function
 
-Public Function Parsevar_list() As Boolean
+Private Function Parsevar_list() As Boolean
     Dim p302 As Long
     Dim q302 As Long
     Dim p296 As Long
@@ -1349,7 +1366,7 @@ Public Function Parsevar_list() As Boolean
     End With
 End Function
 
-Public Function Parsevar_decl() As Boolean
+Private Function Parsevar_decl() As Boolean
     Dim p320 As Long
     Dim q320 As Long
 
@@ -1398,7 +1415,7 @@ Private Sub ParseEMPTY()
     End With
 End Sub
 
-Public Function ParseLineComment() As Boolean
+Private Function ParseLineComment() As Boolean
     With ctx
         If .BufData(.BufPos) = 35 Then              ' "#"
             .BufPos = .BufPos + 1
