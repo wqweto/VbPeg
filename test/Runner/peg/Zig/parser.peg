@@ -343,15 +343,15 @@ char_escape
      / "\\" [nr\\t'"]
 char_char
     <- char_escape
-     / [^\\'\n]
+     / [^\\'\r\n]
 string_char
     <- char_escape
-     / [^\\"\n]
+     / [^\\"\r\n]
 
-line_comment <- '//'[^\n]*
-line_string <- ("\\\\" [^\n]* [ \n]*)+
-line_cstring <- ("c\\\\" [^\n]* [ \n]*)+
-skip <- ([ \n] / line_comment)*
+line_comment <- '//'[^\r\n]*
+line_string <- ("\\\\" [^\r\n]* [ \r\n]*)+
+line_cstring <- ("c\\\\" [^\r\n]* [ \r\n]*)+
+skip <- ([ \r\n] / line_comment)*
 
 CHAR_LITERAL "CHAR_LITERAL" <- "'" char_char "'" skip
 FLOAT "FLOAT"
