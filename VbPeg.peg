@@ -19,11 +19,8 @@
 
 # Syntax rules
 
-Grammar         <- Preprocess?                                         &{ '-- rewind position
-                                                                          ctx.BufPos = 0 }
-                   Spacing (Setting / Rule)+ 
-                                             (EndOfFile /              &{ AppendError("Expected rule or setting", ctx.BufPos + 1) }
-                                             )
+Grammar         <- Preprocess? Spacing (Setting / Rule)+ (EndOfFile /   &{ AppendError("Expected rule or setting", ctx.BufPos + 1) }
+                                                         )
 
 Rule            <- Identifier                                           {   lNode = .BeginRule(.FindRule(lOffset, $$text))
                                                                             If .RuleExpression(lNode) <> 0 Then
@@ -36,8 +33,7 @@ Rule            <- Identifier                                           {   lNod
                                          )?       (RuleOption          &{ CheckRuleOptionName($$text) }
                                                                         { .RuleOption(.Top, $$text) = True }
                                                   )*
-                   AssignLiteral 
-                                 (Expression                            { lNode = .Pop: .SetExpression .Pop, lNode }
+                   AssignLiteral (Expression                            { lNode = .Pop: .SetExpression .Pop, lNode }
                                   /                                    &{ AppendError("Invalid definition for rule '" & .UserData.Tag & "'", ctx.BufPos + 1) }
                                  )           SEMI?
 Expression      <- ChoiceExpr
@@ -70,11 +66,9 @@ PrimaryExpr     <- Identifier                                           { .Push 
                          /                                             &{ AppendError("Invalid expression", ctx.BufPos + 1) }
                         )
                  / LiteralNoSpace                                       { .Push .MakeString(lOffset, $$text) }
-                    (IgnoreCase / EMPTY)                                { .Push .SetIgnoreCase(.Pop, $$text) }
-                    Spacing
+                    (IgnoreCase / EMPTY) Spacing                        { .Push .SetIgnoreCase(.Pop, $$text) }
                  / ClassNoSpace                                         { .Push .MakeClass(lOffset, $$text) }
-                    (IgnoreCase / EMPTY)                                { .Push .SetIgnoreCase(.Pop, $$text) }
-                    Spacing
+                    (IgnoreCase / EMPTY) Spacing                        { .Push .SetIgnoreCase(.Pop, $$text) }
                  / DOT                                                  { .Push .MakeDot(lOffset) }
                  / CodeBlock                                            { .Push .MakeAction(lOffset, $$text) }
                  / BEGIN                                                { .Push .MakePredicate(lOffset, "YY_BEGIN", AlwaysTrue:=True) }
@@ -93,10 +87,10 @@ SettingValue    <- (Identifier / Literal / CodeBlock) SEMI?
 
 CodeBlock       <- '{' ([ \t]* EndOfLine)* < ([^{}] / CodeNC)* > '}' Spacing
 CodeNC          <- '{' ([^{}] / CodeNC)* '}' Spacing                    # Non-capture version
-ParamBlock      <- '(' < ([^()] / ParamNC)* > ')' Spacing
+ParamBlock      <- '(' ([ \t]* EndOfLine)* < ([^()] / ParamNC)* > ')' Spacing
 ParamNC         <- '(' ([^()] / ParamNC)* ')' Spacing                   # Non-capture version
 RuleOption      <- '-' Identifier
-RuleOptNC       <- '-' IdentStart IdentCont* Spacing
+RuleOptNC       <- '-' IdentStart IdentCont* Spacing                    # Non-capture version
 Identifier      <- < IdentStart IdentCont* > Spacing
 IdentStart      <- [a-zA-Z_\-]
 IdentCont       <- [a-zA-Z_0-9\-]
@@ -146,12 +140,13 @@ CARET           <- '^' Spacing
 
 # First-pass rules
 
-Preprocess      <- Spacing (Identifier ParamNC LiteralNC?
-                                 RuleOptNC* AssignLiteral              &{ '--- this might be premature
-                                                                          AddParamRule($$text) }
+Preprocess      <- Spacing (Identifier ParamNC LiteralNC? RuleOptNC* 
+                                                         AssignLiteral &{ '--- this might back-track
+                                                                          AddParamRule $$text }
                             / PrepExpr
                             / . Spacing                                 # skip DOT BEGIN END CARET COLON ChoiceLiteral
-                           )+
+                           )+                                          &{ '-- rewind position
+                                                                          ctx.BufPos = 0 }
 PrepExpr        <- Identifier
                  / Literal
                  / Class
