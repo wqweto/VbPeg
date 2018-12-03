@@ -1,5 +1,5 @@
 #
-# PE Grammar for PE Grammars
+# Parsing Expression Grammar for PEGs
 # 
 # Adapted from [1] by Ian Piumarta <first-name at last-name point com>.
 # Actions translated to VB6 by wqweto@gmail.com.
