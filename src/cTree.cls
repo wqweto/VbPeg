@@ -101,7 +101,7 @@ Private Type UcsTreeType
 End Type
 
 Private m_uTree                 As UcsTreeType
-Private m_oSettings             As Object
+Private m_oSettings             As Dictionary
 Private m_vTag                  As Variant
 Private m_sFilePath             As String
 Private m_sFileName             As String
@@ -1286,16 +1286,20 @@ End Function
 Private Function pvBuildLineInfo(sSubject As String) As Long()
     Dim lIdx            As Long
     Dim laRetVal()      As Long
+    Dim oRegExp         As RegExp
+    Dim oMatches        As MatchCollection
+    Dim oMatch          As Match
     
-    With CreateObject("VBScript.RegExp")
+    Set oRegExp = CreateObject("VBScript.RegExp")
+    With oRegExp
         .Global = True
         .Pattern = "\r?\n"
-        With .Execute(sSubject)
+        Set oMatches = .Execute(sSubject)
+        With oMatches
             ReDim laRetVal(0 To .Count) As Long
             For lIdx = 0 To .Count - 1
-                With .Item(lIdx)
-                    laRetVal(lIdx + 1) = .FirstIndex + .Length
-                End With
+                Set oMatch = .Item(lIdx)
+                laRetVal(lIdx + 1) = oMatch.FirstIndex + oMatch.Length
             Next
         End With
     End With

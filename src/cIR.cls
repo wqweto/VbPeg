@@ -104,7 +104,7 @@ Private Type UcsIrType
     OutBuilder          As Collection
     OutNodeTypes        As Variant
     OutIndent           As Long
-    OutDictionary       As Object
+    OutDictionary       As Dictionary
     OutFuncScope        As String
     OutFuncName         As String
     OutFuncType         As String
@@ -941,15 +941,20 @@ Private Function pvEnumChildNodes(ByVal lNode As Long, Optional oCol As Collecti
 End Function
 
 Private Function pvCodeGenAction(sText As String, ByVal lRule As Long, Optional ByVal IsImmediate As Boolean) As String
+    Const STR_WITH_CTX  As String = "with ctx"
     Dim sCtxVar         As String
-    Dim oVars           As Object
+    Dim oVars           As Dictionary
     Dim lIdx            As Long
     Dim cOutput         As Collection
-    Dim oMatch          As Object
+    Dim oMatch          As Match
     Dim lPos            As Long
     
-    If LenB(SettingValue(STR_SETTING_PROLOG)) <> 0 Then
-        sCtxVar = STR_CTX_VAR_NAME
+    If Not IsImmediate Then
+        If LenB(SettingValue(STR_SETTING_PROLOG)) <> 0 Then
+            If LCase$(Right$(pvTrimCrLf(SettingValue(STR_SETTING_PROLOG)), Len(STR_WITH_CTX))) <> STR_WITH_CTX Then
+                sCtxVar = STR_CTX_VAR_NAME
+            End If
+        End If
     End If
     Set oVars = CreateObject("Scripting.Dictionary")
     oVars.CompareMode = vbTextCompare
@@ -984,8 +989,11 @@ Private Function pvCodeGenAction(sText As String, ByVal lRule As Long, Optional 
     pvCodeGenAction = ConcatCollection(cOutput)
 End Function
 
-Public Function pvCodeGenEnumVars(sAction As String) As Object
-    With CreateObject("VBScript.RegExp")
+Public Function pvCodeGenEnumVars(sAction As String) As MatchCollection
+    Dim oRegExp         As RegExp
+    
+    Set oRegExp = CreateObject("VBScript.RegExp")
+    With oRegExp
         .Global = True
         .Pattern = "\$[\$\w_][\d\w_]*"
         Set pvCodeGenEnumVars = .Execute(sAction)

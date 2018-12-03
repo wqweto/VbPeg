@@ -41,7 +41,7 @@ Private Declare Function VirtualProtect Lib "kernel32" (ByVal lpAddress As Long,
 Private Const STR_VERSION           As String = "0.4.1"
 
 Private m_oParser               As cParser
-Private m_oOpt                  As Object
+Private m_oOpt                  As Dictionary
 
 '=========================================================================
 ' Functions
@@ -240,8 +240,8 @@ Public Function ConsoleTrace(ByVal lOffset As Long, sRule As String, ByVal lActi
     End If
 End Function
 
-Private Function GetOpt(vArgs As Variant, Optional OptionsWithArg As String) As Object
-    Dim oRetVal         As Object
+Private Function GetOpt(vArgs As Variant, Optional OptionsWithArg As String) As Dictionary
+    Dim oRetVal         As Dictionary
     Dim lIdx            As Long
     Dim bNoMoreOpt      As Boolean
     Dim vOptArg         As Variant
@@ -326,6 +326,7 @@ Public Function ReadTextFile(sFile As String) As String
     Dim nFile           As Integer
     Dim sCharset        As String
     Dim oStream         As Object
+    Dim oFSO            As FileSystemObject
     
     '--- get file size
     On Error GoTo EH
@@ -360,8 +361,9 @@ Public Function ReadTextFile(sFile As String) As String
     End If
     '--- plain text + unicode: use FileSystemObject
     If LenB(ReadTextFile) = 0 And sCharset <> "UTF-8" Then
+        Set oFSO = CreateObject("Scripting.FileSystemObject")
         On Error Resume Next  '--- checked
-        ReadTextFile = CreateObject("Scripting.FileSystemObject").OpenTextFile(sFile, ForReading, False, sCharset = "Unicode").ReadAll()
+        ReadTextFile = oFSO.OpenTextFile(sFile, ForReading, False, sCharset = "Unicode").ReadAll()
         On Error GoTo EH
     End If
     '--- plain text + unicode + utf-8: use ADODB.Stream
@@ -459,7 +461,10 @@ QH:
 End Function
 
 Public Function CanonicalPath(sPath As String) As String
-    With CreateObject("Scripting.FileSystemObject")
+    Dim oFSO            As FileSystemObject
+    
+    Set oFSO = CreateObject("Scripting.FileSystemObject")
+    With oFSO
         CanonicalPath = .GetAbsolutePathName(sPath)
     End With
 End Function
