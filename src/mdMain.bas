@@ -79,7 +79,7 @@ Private Function Process(vArgs As Variant) As Long
             Exit Function
         End If
     End If
-    If m_oOpt.Item("numarg") = 0 Or m_oOpt.Item("-h") Or m_oOpt.Item("-?") Or m_oOpt.Item("arg1") = "?" Then
+    If m_oOpt.Item("#arg") < 0 Or m_oOpt.Item("-h") Or m_oOpt.Item("-?") Or m_oOpt.Item("arg1") = "?" Then
         ConsoleError "Usage: %1.exe [options] <in_file.peg>" & vbCrLf & vbCrLf, App.EXEName
         ConsoleError "Options:" & vbCrLf & _
             "  -o OUTFILE      write result to OUTFILE [default: stdout]" & vbCrLf & _
@@ -91,15 +91,21 @@ Private Function Process(vArgs As Variant) As Long
             "  -allrules       output all rules (don't skip unused)" & vbCrLf & _
             "  -trace          trace in_file.peg parsing as performed by generator" & vbCrLf & vbCrLf & _
             "If no -emit-xxx is used emits VB6 code. If no -o is used writes result to console." & vbCrLf
-        If m_oOpt.Item("numarg") = 0 Then
+        If m_oOpt.Item("#arg") < 0 Then
             Process = 100
         End If
         Exit Function
     End If
     sOutFile = m_oOpt.Item("-o")
     Set oTree = New cTree
-    For lIdx = 1 To m_oOpt.Item("numarg")
+    For lIdx = 0 To m_oOpt.Item("#arg")
         oTree.AddFileToQueue CanonicalPath(m_oOpt.Item("arg" & lIdx))
+    Next
+    For lIdx = 0 To m_oOpt.Item("#set")
+        vElem = Split2(m_oOpt.Item("-set" & IIf(lIdx > 0, lIdx, vbNullString)), "=")
+        If LenB(At(vElem, 0)) <> 0 Then
+            oTree.SettingValue(At(vElem, 0)) = At(vElem, 1)
+        End If
     Next
     lIdx = 1
     Do While lIdx <= oTree.FileQueue.Count
@@ -141,12 +147,6 @@ Private Function Process(vArgs As Variant) As Long
             ConsoleError "%2: %3: %1" & vbCrLf, At(vElem, 0), Join(oTree.CalcLine(At(vElem, 1)), ":"), IIf(lOffset = 0, "error", "warning")
         Next
     End If
-    For lIdx = 0 To m_oOpt.Item("#set")
-        vElem = Split2(m_oOpt.Item("-set" & IIf(lIdx > 0, lIdx, vbNullString)), "=")
-        If LenB(At(vElem, 0)) <> 0 Then
-            oTree.SettingValue(At(vElem, 0)) = At(vElem, 1)
-        End If
-    Next
     If LenB(oTree.SettingValue(STR_SETTING_MODULENAME)) = 0 And LenB(sOutFile) <> 0 Then
         oTree.SettingValue(STR_SETTING_MODULENAME) = GetFilePart(sOutFile)
     End If
@@ -252,6 +252,7 @@ Private Function GetOpt(vArgs As Variant, Optional OptionsWithArg As String) As 
     Set oRetVal = CreateObject("Scripting.Dictionary")
     With oRetVal
         .CompareMode = vbTextCompare
+        .Item("#arg") = -1&
         For lIdx = 0 To UBound(vArgs)
             Select Case Left$(At(vArgs, lIdx), 1 + bNoMoreOpt)
             Case "-", "/"
@@ -265,21 +266,25 @@ Private Function GetOpt(vArgs As Variant, Optional OptionsWithArg As String) As 
                             sValue = At(vArgs, lIdx + 1)
                             lIdx = lIdx + 1
                         Else
-                            .Item("error") = "Option -" & vElem & " requires an argument"
+                            .Item("error") = "Option `" & vElem & "` requires an argument"
                         End If
-                        If Not .Exists("-" & vElem) Then
-                            .Item("-" & vElem) = sValue
+                        vElem = "-" & vElem
+                        If Not .Exists(vElem) Then
+                            .Item(vElem) = sValue
                         Else
                             .Item("#" & vElem) = .Item("#" & vElem) + 1
-                            .Item("-" & vElem & .Item("#" & vElem)) = sValue
+                            .Item(vElem & .Item("#" & vElem)) = sValue
                         End If
                         GoTo Continue
                     End If
                 Next
-                .Item("-" & Mid$(At(vArgs, lIdx), 2)) = True
+                vElem = "-" & Mid$(At(vArgs, lIdx), 2)
+                .Item(vElem) = True
             Case Else
-                .Item("numarg") = .Item("numarg") + 1
-                .Item("arg" & .Item("numarg")) = At(vArgs, lIdx)
+                vElem = "arg"
+                sValue = At(vArgs, lIdx)
+                .Item("#" & vElem) = .Item("#" & vElem) + 1
+                .Item(vElem & .Item("#" & vElem)) = sValue
             End Select
 Continue:
         Next
