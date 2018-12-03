@@ -23,10 +23,17 @@ Private Const MODULE_NAME As String = "mdJson"
 
 #If VBA7 Then
 Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
-Private Declare PtrSafe Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As LongPtr
+Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
+Private Const NULL_PTR                  As LongPtr = 0
 #Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+Private Const NULL_PTR                  As Long = 0
+#End If
+#If Win64 Then
+Private Const PTR_SIZE                  As Long = 8
+#Else
+Private Const PTR_SIZE                  As Long = 4
 #End If
 
 Private Const PROGID_DICTIONARY     As String = "Scripting.Dictionary"
@@ -50,13 +57,17 @@ Private Const ERR_EXPECTED_SYMBOL   As String = "Expected '%1' at position %2"
 Private Const ERR_EXPECTED_TWO      As String = "Expected '%1' or '%2' at position %3"
 
 Private Type SAFEARRAY1D
-    cDims               As Integer      '--- usually 1
-    fFeatures           As Integer      '--- leave 0
-    cbElements          As Long         '--- bytes per element (2-int, 4-long)
-    cLocks              As Long         '--- leave 0
-    pvData              As Long         '--- ptr to data
-    cElements           As Long         '--- UBound + 1
-    lLbound             As Long         '--- LBound
+    cDims               As Integer
+    fFeatures           As Integer
+    cbElements          As Long
+    cLocks              As Long
+#If VBA7 Then
+    pvData              As LongPtr
+#Else
+    pvData              As Long
+#End If
+    cElements           As Long
+    lLbound             As Long
 End Type
 
 Private Type JsonContext
@@ -119,12 +130,12 @@ Public Function JsonParse( _
         '--- map array over input string
         With .TextArray
             .cDims = 1
-            .cbElements = 2
             .fFeatures = 1 ' FADF_AUTO
+            .cbElements = 2
             .pvData = StrPtr(sText)
             .cElements = Len(sText)
         End With
-        Call CopyMemory(ByVal ArrPtr(.Text), VarPtr(.TextArray), 4)
+        Call CopyMemory(ByVal ArrPtr(.Text), VarPtr(.TextArray), PTR_SIZE)
         AssignVariant RetVal, pvJsonParse(uCtx)
         If LenB(.Error) Then
             Error = .Error
@@ -137,7 +148,7 @@ Public Function JsonParse( _
         '--- success
         JsonParse = True
 QH:
-        Call CopyMemory(ByVal ArrPtr(.Text), 0&, 4)
+        Call CopyMemory(ByVal ArrPtr(.Text), NULL_PTR, PTR_SIZE)
     End With
     Exit Function
 EH:

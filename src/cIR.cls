@@ -1393,15 +1393,31 @@ Public Function EmitCode(sOutput As String) As Boolean
 "Private Declare Function CompareStringW Lib ""kernel32"" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long"
         End If
         pvOutput _
+"#If VBA7 Then" & vbCrLf & _
+"Private Declare PtrSafe Sub CopyMemory Lib ""kernel32"" Alias ""RtlMoveMemory"" (Destination As Any, Source As Any, ByVal Length As LongPtr)" & vbCrLf & _
+"Private Declare PtrSafe Function ArrPtr Lib ""vbe7"" Alias ""VarPtr"" (Ptr() As Any) As LongPtr" & vbCrLf & _
+"Private Const NULL_PTR                  As LongPtr = 0" & vbCrLf & _
+"#Else" & vbCrLf & _
 "Private Declare Sub CopyMemory Lib ""kernel32"" Alias ""RtlMoveMemory"" (Destination As Any, Source As Any, ByVal Length As Long)" & vbCrLf & _
-"Private Declare Function ArrPtr Lib ""msvbvm60"" Alias ""VarPtr"" (Ptr() As Any) As Long" & vbCrLf
+"Private Declare Function ArrPtr Lib ""msvbvm60"" Alias ""VarPtr"" (Ptr() As Any) As Long" & vbCrLf & _
+"Private Const NULL_PTR                  As Long = 0" & vbCrLf & _
+"#End If" & vbCrLf & _
+"#If Win64 Then" & vbCrLf & _
+"Private Const PTR_SIZE                  As Long = 8" & vbCrLf & _
+"#Else" & vbCrLf & _
+"Private Const PTR_SIZE                  As Long = 4" & vbCrLf & _
+"#End If" & vbCrLf
         pvOutput _
 "Private Type SAFEARRAY1D" & vbCrLf & _
 "    cDims               As Integer" & vbCrLf & _
 "    fFeatures           As Integer" & vbCrLf & _
 "    cbElements          As Long" & vbCrLf & _
 "    cLocks              As Long" & vbCrLf & _
+"#If VBA7 Then" & vbCrLf & _
+"    pvData              As LongPtr" & vbCrLf & _
+"#Else" & vbCrLf & _
 "    pvData              As Long" & vbCrLf & _
+"#End If" & vbCrLf & _
 "    cElements           As Long" & vbCrLf & _
 "    lLbound             As Long" & vbCrLf & _
 "End Type" & vbCrLf
@@ -1512,15 +1528,15 @@ Public Function EmitCode(sOutput As String) As Boolean
 "            .LastError = ""Cannot match empty input""" & vbCrLf & _
 "            Exit Function" & vbCrLf & _
 "        End If" & vbCrLf & _
-"        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)" & vbCrLf & _
+"        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), PTR_SIZE)" & vbCrLf & _
 "        With .BufArray" & vbCrLf & _
 "            .cDims = 1" & vbCrLf & _
-"            .cbElements = 2" & vbCrLf & _
 "            .fFeatures = 1 ' FADF_AUTO" & vbCrLf & _
+"            .cbElements = 2" & vbCrLf & _
 "            .pvData = StrPtr(sSubject)" & vbCrLf & _
 "            .cElements = Len(sSubject) + 2 '-- look-ahead chars" & vbCrLf & _
 "        End With" & vbCrLf & _
-"        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)" & vbCrLf & _
+"        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), PTR_SIZE)" & vbCrLf & _
 "        .BufPos = StartPos" & vbCrLf & _
 "        .BufSize = Len(sSubject)" & vbCrLf & _
 "        ReDim .ThunkData(0 To 4) As UcsParserThunkType" & vbCrLf & _
@@ -1589,8 +1605,8 @@ Public Function EmitCode(sOutput As String) As Boolean
 "        End If"
         pvOutput _
 "        " & .OutModulePrefix & "EndMatch = .BufPos + 1" & vbCrLf & _
-"        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)" & vbCrLf & _
-"        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)" & vbCrLf & _
+"        Call CopyMemory(ByVal VarPtr(.Contents), NULL_PTR, PTR_SIZE)" & vbCrLf & _
+"        Call CopyMemory(ByVal ArrPtr(.BufData), NULL_PTR, PTR_SIZE)" & vbCrLf & _
 "        .BufPos = 0" & vbCrLf & _
 "        .BufSize = 0" & vbCrLf & _
 "        Erase .ThunkData" & vbCrLf & _
@@ -1713,10 +1729,7 @@ Private Function pvEmitStmt(ByVal lNode As Long) As Boolean
                 m_uIr.OutFuncType = "Function"
                 pvOutput m_uIr.OutFuncScope & " Function " & m_uIr.OutFuncName & IIf(Right$(.Text, 1) <> ")", "()", vbNullString) & " As Boolean"
             End If
-            lIdx = InStr(m_uIr.OutFuncName, "(")
-            If lIdx > 0 Then
-                m_uIr.OutFuncName = Left$(m_uIr.OutFuncName, lIdx - 1)
-            End If
+            m_uIr.OutFuncName = pvStripParams(m_uIr.OutFuncName)
             m_uIr.OutDictionary.RemoveAll
             pvEmitCollectDeclVar lNode
             m_uIr.OutIndent = m_uIr.OutIndent + 1
@@ -1904,14 +1917,20 @@ Private Function pvEmitExpr(ByVal lNode As Long) As String
     End With
 End Function
 
-Private Function pvEmitIsPublic(sText As String) As Boolean
-    Dim lSize           As Long
+Private Function pvEmitIsPublic(sFuncName As String) As Boolean
+    Dim lIdx            As Long
     
-    '--- ToDo: check func decl
-    lSize = Len(STR_FUNC_PREFIX)
-    If Left$(sText, lSize) = STR_FUNC_PREFIX And Mid$(sText, lSize + 1) <> UCase$(Mid$(sText, lSize + 1)) Then
-        pvEmitIsPublic = True
-    End If
+    With m_uIr.Nodes(IR_ROOT)
+        For lIdx = 0 To .Count - 1
+            With m_uIr.Nodes(.Children(lIdx))
+                If pvStripParams(.Text) = pvStripParams(sFuncName) Then
+                    pvEmitIsPublic = (.Flags And ucsIrfPublic) <> 0
+                    Exit Function
+                End If
+            End With
+        Next
+    End With
+    Err.Raise vbObjectError, , "Unknown function: " & sFuncName
 End Function
 
 Private Sub pvOutput(ByVal sText As String, Optional Comment As String)
@@ -1933,4 +1952,15 @@ Private Function pvTrimCrLf(ByVal sText As String) As String
         sText = RTrim$(Left$(sText, Len(sText) - 2))
     Loop
     pvTrimCrLf = sText
+End Function
+
+Private Function pvStripParams(sFuncName As String) As String
+    Dim lPos            As Long
+    
+    lPos = InStr(sFuncName, "(")
+    If lPos > 0 Then
+        pvStripParams = Left$(sFuncName, lPos - 1)
+    Else
+        pvStripParams = sFuncName
+    End If
 End Function
