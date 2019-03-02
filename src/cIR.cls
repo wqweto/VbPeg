@@ -248,7 +248,7 @@ Public Function CodeGen(oTree As cTree, ByVal bAllRules As Boolean) As Boolean
                     lBody = AddNode(ucsIrtDeclFunc, STR_FUNC_PREFIX & .NodeText(vElem) & _
                         IIf(LenB(.NodeParams(vElem)) <> 0, "(" & .NodeParams(vElem) & ")", vbNullString))
                     If vElem = .StartRule Then
-                        m_uIr.CodeGenStartFunc = m_uIr.Nodes(lBody).Text
+                        m_uIr.CodeGenStartFunc = pvStripParams(m_uIr.Nodes(lBody).Text)
                         IrFlag(lBody, ucsIrfPublic) = True
                     ElseIf .NodeFlag(vElem, ucsNdfPublic) Then
                         IrFlag(lBody, ucsIrfPublic) = True
