@@ -12,33 +12,45 @@ Option Explicit
 DefObj A-Z
 Private Const MODULE_NAME As String = "mdJson"
 
-#Const ImplCollection = JSON_USE_COLLECTION <> 0
-#Const ImplRichClient = JSON_USE_RICHCLIENT <> 0
-#Const ImplScripting = JSON_HAS_SCRIPTING_RUNTIME <> 0
+#Const ImplScripting = JSON_USE_SCRIPTING <> 0
 #Const ImplUseShared = DebugMode <> 0
+
+#Const HasPtrSafe = (VBA7 <> 0)
+#Const LargeAddressAware = (Win64 = 0 And VBA7 = 0 And VBA6 = 0 And VBA5 = 0)
 
 '=========================================================================
 ' API
 '=========================================================================
 
-#If VBA7 Then
-Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
-Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
-Private Const NULL_PTR                  As LongPtr = 0
+#If HasPtrSafe Then
+    Private Const NULL_PTR                  As LongPtr = 0
 #Else
-Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
-Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
-Private Const NULL_PTR                  As Long = 0
+    Private Const NULL_PTR                  As Long = 0
 #End If
 #If Win64 Then
-Private Const PTR_SIZE                  As Long = 8
+    Private Const PTR_SIZE                  As Long = 8
 #Else
-Private Const PTR_SIZE                  As Long = 4
+    Private Const PTR_SIZE                  As Long = 4
+    Private Const SIGN_BIT                  As Long = &H80000000
+#End If
+'--- for CompareStringW
+Private Const LOCALE_USER_DEFAULT           As Long = &H400
+Private Const NORM_IGNORECASE               As Long = 1
+Private Const CSTR_LESS_THAN                As Long = 1
+Private Const CSTR_EQUAL                    As Long = 2
+Private Const CSTR_GREATER_THAN             As Long = 3
+
+#If HasPtrSafe Then
+    Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
+    Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
+    Private Declare PtrSafe Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
+#Else
+    Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
+    Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+    Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
 #End If
 
-Private Const PROGID_DICTIONARY     As String = "Scripting.Dictionary"
 Private Const STR_PREFIX            As String = "__json__"
-Private Const STR_COL_KEYS          As String = STR_PREFIX & "keys"
 Private Const STR_ATTR_EMPTY        As String = STR_PREFIX & "empty"
 Private Const STR_ATTR_ARRAY        As String = STR_PREFIX & "array"
 Private Const STR_ATTR_NAME         As String = STR_PREFIX & "name"
@@ -55,17 +67,22 @@ Private Const ERR_INVALID_ESCAPE    As String = "Invalid escape at position %1"
 Private Const ERR_MISSING_KEY       As String = "Missing key at position %1"
 Private Const ERR_EXPECTED_SYMBOL   As String = "Expected '%1' at position %2"
 Private Const ERR_EXPECTED_TWO      As String = "Expected '%1' or '%2' at position %3"
+#If ImplScripting Then
+    Private Const IDX_OFFSET        As Long = 0
+#Else
+    Private Const IDX_OFFSET        As Long = 1
+#End If
 
 Private Type SAFEARRAY1D
     cDims               As Integer
     fFeatures           As Integer
     cbElements          As Long
     cLocks              As Long
-#If VBA7 Then
-    pvData              As LongPtr
-#Else
-    pvData              As Long
-#End If
+    #If HasPtrSafe Then
+        pvData          As LongPtr
+    #Else
+        pvData          As Long
+    #End If
     cElements           As Long
     lLbound             As Long
 End Type
@@ -79,37 +96,63 @@ Private Type JsonContext
     TextArray           As SAFEARRAY1D
 End Type
 
+#If Win64 Then
+    Private Enum VbCollectionOffsets
+        o_pFirstIndexedItem = &H28
+        o_pRootTreeItem = &H40
+        o_pEndTreePtr = &H48
+        o_pvUnk5 = &H50
+        '--- item
+        o_KeyPtr = &H18
+        o_pNextIndexedItem = o_pFirstIndexedItem '--- Coincidence?
+        o_pRightBranch = &H38
+        o_pLeftBranch = &H40
+    End Enum
+#Else
+    Private Enum VbCollectionOffsets
+        o_pFirstIndexedItem = &H18
+        o_pRootTreeItem = &H24
+        o_pEndTreePtr = &H28
+        o_pvUnk5 = &H2C
+        '--- item
+        o_KeyPtr = &H10
+        o_pNextIndexedItem = o_pFirstIndexedItem '--- Again?
+        o_pRightBranch = &H24
+        o_pLeftBranch = &H28
+    End Enum
+#End If
+
 '=========================================================================
 ' Error management
 '=========================================================================
 
 Private Function RaiseError(sFunction As String) As VbMsgBoxResult
-#If ImplUseShared Then
-    Dim vErr            As Variant
-    
-    PushError vErr
-    RaiseError = GApp.HandleOutOfMemory(vErr)
-    If RaiseError <> vbRetry Then
-        PopRaiseError sFunction, MODULE_NAME, vErr
-    End If
-#Else
-    Err.Raise Err.Number, MODULE_NAME & "." & sFunction & vbCrLf & Err.Source, Err.Description
-#End If
+    #If ImplUseShared Then
+        Dim vErr            As Variant
+        
+        PushError vErr
+        RaiseError = GApp.HandleOutOfMemory(vErr)
+        If RaiseError <> vbRetry Then
+            PopRaiseError sFunction, MODULE_NAME, vErr
+        End If
+    #Else
+        Err.Raise Err.Number, MODULE_NAME & "." & sFunction & vbCrLf & Err.Source, Err.Description
+    #End If
 End Function
 
 Private Function PrintError(sFunction As String) As VbMsgBoxResult
-#If ImplUseShared Then
-    Dim vErr            As Variant
-    
-    PushError vErr
-    PrintError = GApp.HandleOutOfMemory(vErr)
-    If PrintError <> vbRetry Then
-        PopPrintError sFunction, MODULE_NAME, vErr
-    End If
-#Else
-    Debug.Print "Error: " & Err.Description & " [" & MODULE_NAME & "." & sFunction & "]", Timer
-    Debug.Assert MsgBox(Err.Description, vbCritical, MODULE_NAME & "." & sFunction) <> -1
-#End If
+    #If ImplUseShared Then
+        Dim vErr            As Variant
+        
+        PushError vErr
+        PrintError = GApp.HandleOutOfMemory(vErr)
+        If PrintError <> vbRetry Then
+            PopPrintError sFunction, MODULE_NAME, vErr
+        End If
+    #Else
+        Debug.Print "Critical error: " & Err.Description & " [" & MODULE_NAME & "." & sFunction & "]"
+        Debug.Assert MsgBox(Err.Description, vbCritical, MODULE_NAME & "." & sFunction) <> -1
+    #End If
 End Function
 
 '=========================================================================
@@ -132,8 +175,9 @@ Public Function JsonParse( _
             .cDims = 1
             .fFeatures = 1 ' FADF_AUTO
             .cbElements = 2
+            .cLocks = 1
             .pvData = StrPtr(sText)
-            .cElements = Len(sText)
+            .cElements = Len(sText) + 1
         End With
         Call CopyMemory(ByVal ArrPtr(.Text), VarPtr(.TextArray), PTR_SIZE)
         AssignVariant RetVal, pvJsonParse(uCtx)
@@ -147,9 +191,8 @@ Public Function JsonParse( _
         End If
         '--- success
         JsonParse = True
-QH:
-        Call CopyMemory(ByVal ArrPtr(.Text), NULL_PTR, PTR_SIZE)
     End With
+QH:
     Exit Function
 EH:
     If PrintError(FUNC_NAME) = vbRetry Then
@@ -164,17 +207,11 @@ Private Function pvJsonParse(uCtx As JsonContext) As Variant
     Dim sKey            As String
     Dim sText           As String
     Dim vValue          As Variant
-#If ImplCollection And ImplRichClient Then
-    Dim oRetVal         As cCollection
-#ElseIf ImplCollection Then
-    Dim oRetVal          As VBA.Collection
-#ElseIf ImplRichClient Then
-    Dim oRetVal          As cSortedDictionary
-#ElseIf ImplScripting Then
-    Dim oRetVal          As Scripting.Dictionary
-#Else
-    Dim oRetVal          As Object
-#End If
+    #If ImplScripting Then
+        Dim oRetVal     As Scripting.Dictionary
+    #Else
+        Dim oRetVal     As VBA.Collection
+    #End If
     
     On Error GoTo EH
     With uCtx
@@ -193,21 +230,17 @@ Private Function pvJsonParse(uCtx As JsonContext) As Variant
                         If Not .StrictMode Then
                             Exit Do
                         End If
-                        #If ImplCollection Then
-                            lIdx = oRetVal.Count - 1
-                        #Else
-                            lIdx = oRetVal.Count
-                        #End If
+                        lIdx = oRetVal.Count
                         If lIdx = 0 Then
                             Exit Do
                         End If
                     End If
                     GoTo QH
                 End If
-                #If ImplCollection Then
-                    oRetVal.Add vValue
-                #Else
+                #If ImplScripting Then
                     oRetVal.Add lIdx, vValue
+                #Else
+                    oRetVal.Add vValue
                 #End If
                 Select Case pvJsonGetChar(uCtx)
                 Case 44 '--- ,
@@ -229,11 +262,7 @@ Private Function pvJsonParse(uCtx As JsonContext) As Variant
                         If Not .StrictMode Then
                             Exit Do
                         End If
-                        #If ImplCollection Then
-                            lIdx = oRetVal.Count - 1
-                        #Else
-                            lIdx = oRetVal.Count
-                        #End If
+                        lIdx = oRetVal.Count
                         If lIdx = 0 Then
                             Exit Do
                         End If
@@ -255,19 +284,18 @@ Private Function pvJsonParse(uCtx As JsonContext) As Variant
                 End If
                 Select Case pvJsonGetChar(uCtx)
                 Case 44, 125 '--- , }
-                    #If ImplCollection Then
-                        If RemoveCollection(oRetVal, "#" & sKey) Then
-                    #Else
+                    #If ImplScripting Then
                         If oRetVal.Exists(sKey) Then
+                    #Else
+                        If CollectionIndexByKey(oRetVal, sKey, IgnoreCase:=False) > 0 Then
                     #End If
                         .Error = Printf(ERR_DUPLICATE_KEY, sKey, .Pos)
                         GoTo QH
                     End If
-                    #If ImplCollection Then
-                        oRetVal.Add vValue, "#" & sKey
-                        oRetVal.Item(STR_COL_KEYS).Add sKey, "#" & sKey
-                    #Else
+                    #If ImplScripting Then
                         oRetVal.Add sKey, vValue
+                    #Else
+                        oRetVal.Add vValue, sKey
                     #End If
                     If .LastChar = 125 Then '--- }
                         Exit Do
@@ -498,17 +526,11 @@ Public Function JsonDump(vJson As Variant, Optional ByVal Level As Long, Optiona
     Dim lAsc            As Long
     Dim lCompareMode    As VbCompareMethod
     Dim lCount          As Long
-#If ImplCollection And ImplRichClient Then
-    Dim oJson           As cCollection
-#ElseIf ImplCollection Then
-    Dim oJson           As VBA.Collection
-#ElseIf ImplRichClient Then
-    Dim oJson           As cSortedDictionary
-#ElseIf ImplScripting Then
-    Dim oJson           As Scripting.Dictionary
-#Else
-    Dim oJson           As Object
-#End If
+    #If ImplScripting Then
+        Dim oJson       As Scripting.Dictionary
+    #Else
+        Dim oJson       As VBA.Collection
+    #End If
     
     '--- note: skip error handling not to clear Err because used in error handlers
 '    On Error GoTo EH
@@ -520,43 +542,24 @@ Public Function JsonDump(vJson As Variant, Optional ByVal Level As Long, Optiona
         End If
         lCompareMode = pvJsonCompareMode(oJson)
         sCompound = IIf(lCompareMode = vbBinaryCompare, "{}", "[]")
-        #If ImplCollection Then
-            lCount = oJson.Count - 1
-        #Else
-            lCount = oJson.Count
-        #End If
+        lCount = oJson.Count
         If lCount <= 0 Then
             JsonDump = sCompound
         Else
             sSpace = IIf(Minimize, vbNullString, " ")
             ReDim vItems(0 To lCount - 1) As String
             If lCompareMode = vbBinaryCompare Then
-                #If ImplCollection Then
-                    Set vKeys = oJson.Item(STR_COL_KEYS)
-                #ElseIf Not ImplRichClient Then
+                #If ImplScripting Then
                     vKeys = oJson.Keys
-                #End If
-            Else
-                #If Not ImplCollection And Not ImplRichClient Then
-                    vKeys = oJson.Keys
+                #Else
+                    vKeys = CollectionAllKeys(oJson)
                 #End If
             End If
             For lIdx = 0 To lCount - 1
-                #If ImplCollection Then
-                    vItems(lIdx) = JsonDump(oJson.Item(lIdx + 2), Level + 1, Minimize)
-                #ElseIf ImplRichClient Then
-                    vItems(lIdx) = JsonDump(oJson.ItemByIndex(lIdx), Level + 1, Minimize)
-                #Else
-                    vItems(lIdx) = JsonDump(oJson.Item(vKeys(lIdx)), Level + 1, Minimize)
-                #End If
                 If lCompareMode = vbBinaryCompare Then
-                    #If ImplCollection Then
-                        vItems(lIdx) = JsonDump(vKeys.Item(lIdx + 1)) & ":" & sSpace & vItems(lIdx)
-                    #ElseIf ImplRichClient Then
-                        vItems(lIdx) = JsonDump(oJson.KeyByIndex(lIdx)) & ":" & sSpace & vItems(lIdx)
-                    #Else
-                        vItems(lIdx) = JsonDump(vKeys(lIdx)) & ":" & sSpace & vItems(lIdx)
-                    #End If
+                    vItems(lIdx) = JsonDump(vKeys(lIdx)) & ":" & sSpace & JsonDump(oJson.Item(vKeys(lIdx)), Level + 1, Minimize)
+                Else
+                    vItems(lIdx) = JsonDump(oJson.Item(lIdx + IDX_OFFSET), Level + 1, Minimize)
                 End If
                 lSize = lSize + Len(vItems(lIdx))
             Next
@@ -596,7 +599,7 @@ Public Function JsonDump(vJson As Variant, Optional ByVal Level As Long, Optiona
         If IsArray(vJson) Then
             JsonDump = Join(vJson)
         Else
-            JsonDump = vJson & ""
+            JsonDump = vJson & vbNullString
         End If
     End Select
 End Function
@@ -608,17 +611,11 @@ Public Property Get JsonItem(oJson As Object, ByVal sKey As String) As Variant
     Dim lJdx            As Long
     Dim vKey            As Variant
     Dim vItem           As Variant
-#If ImplCollection And ImplRichClient Then
-    Dim oParam          As cCollection
-#ElseIf ImplCollection Then
-    Dim oParam          As VBA.Collection
-#ElseIf ImplRichClient Then
-    Dim oParam          As cSortedDictionary
-#ElseIf ImplScripting Then
-    Dim oParam          As Scripting.Dictionary
-#Else
-    Dim oParam          As Object
-#End If
+    #If ImplScripting Then
+        Dim oParam      As Scripting.Dictionary
+    #Else
+        Dim oParam      As VBA.Collection
+    #End If
     
     On Error GoTo EH
     If oJson Is Nothing Then
@@ -633,11 +630,7 @@ Public Property Get JsonItem(oJson As Object, ByVal sKey As String) As Variant
     For lIdx = 0 To UBound(vSplit)
         vKey = vSplit(lIdx)
         If C_Str(vKey) = "-1" Then
-            #If ImplCollection Then
-                JsonItem = oParam.Count - 1
-            #Else
-                JsonItem = oParam.Count
-            #End If
+            JsonItem = oParam.Count
             GoTo QH
         ElseIf IsOnlyDigits(vKey) Then
             If pvJsonCompareMode(oParam) <> vbBinaryCompare Then
@@ -664,19 +657,11 @@ Public Property Get JsonItem(oJson As Object, ByVal sKey As String) As Variant
                 For lJdx = lIdx + 1 To UBound(vSplit)
                     vKey = vKey & "/" & vSplit(lJdx)
                 Next
-                #If ImplCollection Then
-                    If oParam.Count > 1 Then
-                        ReDim vItem(0 To oParam.Count - 2) As Variant
-                    Else
-                        vItem = Array()
-                    End If
-                #Else
-                    If oParam.Count > 0 Then
-                        ReDim vItem(0 To oParam.Count - 1) As Variant
-                    Else
-                        vItem = Array()
-                    End If
-                #End If
+                If oParam.Count > 0 Then
+                    ReDim vItem(0 To oParam.Count - 1) As Variant
+                Else
+                    vItem = Array()
+                End If
                 lJdx = 0
                 For Each vSplit In JsonKeys(oParam)
                     AssignVariant vItem(lJdx), JsonItem(oParam, vSplit & vKey)
@@ -719,17 +704,11 @@ Public Property Let JsonItem(oJson As Object, ByVal sKey As String, vValue As Va
     Dim vKey            As Variant
     Dim lKey            As Long
     Dim vItem           As Variant
-#If ImplCollection And ImplRichClient Then
-    Dim oParam          As cCollection
-#ElseIf ImplCollection Then
-    Dim oParam          As VBA.Collection
-#ElseIf ImplRichClient Then
-    Dim oParam          As cSortedDictionary
-#ElseIf ImplScripting Then
-    Dim oParam          As Scripting.Dictionary
-#Else
-    Dim oParam          As Object
-#End If
+    #If ImplScripting Then
+        Dim oParam      As Scripting.Dictionary
+    #Else
+        Dim oParam      As VBA.Collection
+    #End If
 
     On Error GoTo EH
     If LenB(sKey) = 0 Then
@@ -748,11 +727,7 @@ Public Property Let JsonItem(oJson As Object, ByVal sKey As String, vValue As Va
     For lIdx = 0 To UBound(vSplit)
         vKey = vSplit(lIdx)
         If C_Str(vKey) = "-1" Then
-            #If ImplCollection Then
-                vKey = oParam.Count - 1
-            #Else
-                vKey = oParam.Count
-            #End If
+            vKey = oParam.Count
         ElseIf IsOnlyDigits(vKey) Then
             If pvJsonCompareMode(oParam) <> vbBinaryCompare Then
                 vKey = C_Lng(vKey)
@@ -782,16 +757,20 @@ HandleArray:
             End If
             Set oParam = pvJsonItem(oParam, vKey)
         ElseIf IsEmpty(vValue) Then
-            #If ImplCollection Then
-                If VarType(vKey) = vbLong Then
-                    RemoveCollection oParam, vKey + 2
-                Else
-                    RemoveCollection oParam, "#" & vKey
-                    RemoveCollection oParam.Item(STR_COL_KEYS), "#" & vKey
-                End If
-            #Else
+            #If ImplScripting Then
                 If oParam.Exists(vKey) Then
                     oParam.Remove vKey
+                End If
+            #Else
+                If VarType(vKey) = vbLong Then
+                    lKey = vKey + IDX_OFFSET
+                    If lKey > 0 And lKey <= oParam.Count Then
+                        oParam.Remove lKey
+                    End If
+                Else
+                    If CollectionIndexByKey(oParam, vKey, IgnoreCase:=False) > 0 Then
+                        oParam.Remove vKey
+                    End If
                 End If
             #End If
         ElseIf IsArray(vValue) Then
@@ -809,31 +788,25 @@ EH:
     End If
 End Property
 
-Public Function JsonKeys(oJson As Object, Optional ByVal sKey As String) As Variant
-    Const FUNC_NAME     As String = "JsonKeys [get]"
+Public Function JsonKeys(oJson As Object, Optional ByVal Key As String) As Variant
+    Const FUNC_NAME     As String = "JsonKeys"
     Dim vSplit          As Variant
     Dim lIdx            As Long
     Dim vKey            As Variant
     Dim vItem           As Variant
     Dim lCount          As Long
-#If ImplCollection And ImplRichClient Then
-    Dim oParam          As cCollection
-#ElseIf ImplCollection Then
-    Dim oParam          As VBA.Collection
-#ElseIf ImplRichClient Then
-    Dim oParam          As cSortedDictionary
-#ElseIf ImplScripting Then
-    Dim oParam          As Scripting.Dictionary
-#Else
-    Dim oParam          As Object
-#End If
+    #If ImplScripting Then
+        Dim oParam      As Scripting.Dictionary
+    #Else
+        Dim oParam      As VBA.Collection
+    #End If
     
     On Error GoTo EH
     If oJson Is Nothing Then
         JsonKeys = Array()
         Exit Function
     End If
-    vSplit = Split(sKey, "/")
+    vSplit = Split(Key, "/")
     Set oParam = oJson
     For lIdx = 0 To UBound(vSplit)
         vKey = vSplit(lIdx)
@@ -850,29 +823,17 @@ Public Function JsonKeys(oJson As Object, Optional ByVal sKey As String) As Vari
             Exit Function
         End If
     Next
-    #If ImplCollection Then
-        lCount = oParam.Count - 1
-    #Else
-        lCount = oParam.Count
-    #End If
+    lCount = oParam.Count
     If lCount = 0 Then
         JsonKeys = Array()
         Exit Function
     End If
     ReDim vItem(0 To lCount - 1) As Variant
     If pvJsonCompareMode(oParam) = vbBinaryCompare Then
-        #If ImplCollection Then
-            lIdx = 0
-            For Each vKey In oParam.Item(STR_COL_KEYS)
-                vItem(lIdx) = vKey
-                lIdx = lIdx + 1
-            Next
-        #ElseIf ImplRichClient Then
-            For lIdx = 0 To lCount - 1
-                vItem(lIdx) = oParam.KeyByIndex(lIdx)
-            Next
-        #Else
+        #If ImplScripting Then
             vItem = oParam.Keys
+        #Else
+            vItem = CollectionAllKeys(oParam)
         #End If
     Else
         For lIdx = 0 To UBound(vItem)
@@ -887,27 +848,20 @@ EH:
     End If
 End Function
 
-Public Function JsonObjectType(oJson As Object, Optional ByVal sKey As String) As Long
-    Const FUNC_NAME     As String = "JsonObjectType [get]"
+Public Function JsonObjectType(oJson As Object, Optional ByVal sKey As String) As String
+    Const FUNC_NAME     As String = "JsonObjectType"
     Dim vSplit          As Variant
     Dim lIdx            As Long
     Dim vKey            As Variant
     Dim vItem           As Variant
-#If ImplCollection And ImplRichClient Then
-    Dim oParam          As cCollection
-#ElseIf ImplCollection Then
-    Dim oParam          As VBA.Collection
-#ElseIf ImplRichClient Then
-    Dim oParam          As cSortedDictionary
-#ElseIf ImplScripting Then
-    Dim oParam          As Scripting.Dictionary
-#Else
-    Dim oParam          As Object
-#End If
+    #If ImplScripting Then
+        Dim oParam      As Scripting.Dictionary
+    #Else
+        Dim oParam      As VBA.Collection
+    #End If
     
     On Error GoTo EH
     If oJson Is Nothing Then
-        JsonObjectType = -1
         Exit Function
     End If
     vSplit = Split(sKey, "/")
@@ -923,11 +877,10 @@ Public Function JsonObjectType(oJson As Object, Optional ByVal sKey As String) A
         If IsObject(vItem) Then
             Set oParam = vItem
         Else
-            JsonObjectType = -1
             Exit Function
         End If
     Next
-    JsonObjectType = pvJsonCompareMode(oParam)
+    JsonObjectType = IIf(pvJsonCompareMode(oParam) = vbBinaryCompare, "object", "array")
     Exit Function
 EH:
     If RaiseError(FUNC_NAME) = vbRetry Then
@@ -935,117 +888,98 @@ EH:
     End If
 End Function
 
-Public Function JsonToXmlDocument(vJson As Variant, Optional oRoot As Object, Optional oDoc As Object) As Object
+Public Function JsonToXmlDocument(vJson As Variant, Optional Root As Object, Optional Doc As Object) As Object
     Const FUNC_NAME     As String = "JsonToXmlDocument"
     Dim vElem           As Variant
     Dim vItem           As Variant
     Dim oArray          As Object
     Dim oItem           As Object
-#If ImplCollection And ImplRichClient Then
-    Dim oJson           As cCollection
-#ElseIf ImplCollection Then
-    Dim oJson           As VBA.Collection
-#ElseIf ImplRichClient Then
-    Dim oJson           As cSortedDictionary
-#ElseIf ImplScripting Then
-    Dim oJson           As Scripting.Dictionary
-#Else
-    Dim oJson           As Object
-#End If
+    #If ImplScripting Then
+        Dim oJson       As Scripting.Dictionary
+    #Else
+        Dim oJson       As VBA.Collection
+    #End If
     Dim lCount          As Long
     Dim lIdx            As Long
     
     On Error GoTo EH
-    If oDoc Is Nothing Then
-        Set oDoc = CreateObject("MSXML2.DOMDocument")
-        oDoc.appendChild oDoc.createProcessingInstruction("xml", "version=""1.0"" encoding=""UTF-16""")
+    If Doc Is Nothing Then
+        Set Doc = CreateObject("MSXML2.DOMDocument")
+        Doc.appendChild Doc.createProcessingInstruction("xml", "version=""1.0"" encoding=""UTF-16""")
     End If
-    If oRoot Is Nothing Then
-        Set oRoot = oDoc.appendChild(oDoc.createElement("Root"))
+    If Root Is Nothing Then
+        Set Root = Doc.appendChild(Doc.createElement("Root"))
     End If
     If IsObject(vJson) Then
         Set oJson = vJson
         If Not oJson Is Nothing Then
-            #If ImplCollection Then
-                lCount = oJson.Count - 1
-            #Else
-                lCount = oJson.Count
-            #End If
+            lCount = oJson.Count
             If lCount = 0 Then
-                If Not oRoot Is oDoc.documentElement Then
-                    oRoot.setAttribute STR_ATTR_EMPTY & pvJsonCompareMode(oJson), 1
+                If Not Root Is Doc.documentElement Then
+                    Root.setAttribute STR_ATTR_EMPTY & pvJsonCompareMode(oJson), 1
                 End If
                 If pvJsonCompareMode(oJson) <> vbBinaryCompare Then
-                    oRoot.setAttribute STR_ATTR_ARRAY, 1
+                    Root.setAttribute STR_ATTR_ARRAY, 1
                 End If
             Else
                 If pvJsonCompareMode(oJson) <> vbBinaryCompare Then
-                    Set oArray = oRoot
-                    If oArray Is oDoc.documentElement Then
-                        Set oArray = oArray.appendChild(oDoc.createElement(STR_NODE_ARRAY))
+                    Set oArray = Root
+                    If oArray Is Doc.documentElement Then
+                        Set oArray = oArray.appendChild(Doc.createElement(STR_NODE_ARRAY))
                     ElseIf lCount = 1 Then
                         oArray.setAttribute STR_ATTR_ARRAY, 1
                     End If
                     Set oItem = oArray
                     For lIdx = 0 To lCount - 1
-                        #If ImplCollection Then
-                            AssignVariant vItem, oJson.Item(lIdx + 2)
-                        #ElseIf ImplRichClient Then
-                            AssignVariant vItem, oJson.ItemByIndex(lIdx)
-                        #Else
-                            AssignVariant vItem, oJson.Item(lIdx)
-                        #End If
+                        AssignVariant vItem, oJson.Item(lIdx + IDX_OFFSET)
                         If oItem Is Nothing Then
-                            Set oItem = oArray.ParentNode.appendChild(oDoc.createElement(oArray.nodeName))
+                            Set oItem = oArray.ParentNode.appendChild(Doc.createElement(oArray.nodeName))
                         End If
-                        JsonToXmlDocument vItem, oItem, oDoc
+                        JsonToXmlDocument vItem, oItem, Doc
                         Set oItem = Nothing
                     Next
                 Else
-                    #If ImplCollection Then
-                        For Each vElem In oJson.Item(STR_COL_KEYS)
-                    #ElseIf ImplRichClient Then
-                        For lIdx = 0 To lCount - 1
-                            vElem = oJson.KeyByIndex(lIdx)
-                    #Else
+                    #If ImplScripting Then
                         For Each vElem In oJson.Keys
+                    #Else
+                        For Each vElem In CollectionAllKeys(oJson)
                     #End If
                         AssignVariant vItem, pvJsonItem(oJson, vElem)
                         If Left$(vElem, 1) = "@" Then
                             If IsObject(vItem) Then
-                                oRoot.setAttribute Mid$(vElem, 2), JsonDump(vItem, Minimize:=True)
+                                Root.setAttribute Mid$(vElem, 2), JsonDump(vItem, Minimize:=True)
                             Else
-                                oRoot.setAttribute Mid$(vElem, 2), vItem
+                                Root.setAttribute Mid$(vElem, 2), vItem
                             End If
                         Else
                             If IsOnlyDigits(vElem) Or LenB(vElem) = 0 Then
-                                Set oItem = oRoot.appendChild(oDoc.createElement(STR_PREFIX & oRoot.childNodes.Length))
+                                Set oItem = Root.appendChild(Doc.createElement(STR_PREFIX & Root.childNodes.Length))
                                 oItem.setAttribute STR_ATTR_NAME, vElem
                             Else
-                                Set oItem = oRoot.appendChild(oDoc.createElement(vElem))
+                                Set oItem = Root.appendChild(Doc.createElement(vElem))
                             End If
-                            JsonToXmlDocument vItem, oItem, oDoc
+                            JsonToXmlDocument vItem, oItem, Doc
                         End If
                     Next
                 End If
             End If
         End If
     ElseIf IsEmpty(vJson) Then
-        oRoot.setAttribute STR_ATTR_EMPTY, 1
+        Root.setAttribute STR_ATTR_EMPTY, 1
     ElseIf IsNull(vJson) Then
-        oRoot.setAttribute STR_ATTR_NIL, 1
+        Root.setAttribute STR_ATTR_NIL, 1
     ElseIf VarType(vJson) = vbBoolean Then
-        oRoot.setAttribute STR_ATTR_BOOL, 1
-        oRoot.NodeTypedValue = -vJson
+        Root.setAttribute STR_ATTR_BOOL, 1
+        Root.NodeTypedValue = -vJson
     ElseIf VarType(vJson) = vbDate Then
-        oRoot.DataType = "dateTime.tz"
-        oRoot.NodeTypedValue = vJson
+        Root.DataType = "dateTime.tz"
+        Root.NodeTypedValue = vJson
     ElseIf IsArray(vJson) Then
-        oRoot.NodeTypedValue = Join(vJson)
+        Root.NodeTypedValue = Join(vJson)
     Else
-        oRoot.NodeTypedValue = vJson
+        Root.NodeTypedValue = vJson
     End If
-    Set JsonToXmlDocument = oRoot
+    Set JsonToXmlDocument = Root
     Exit Function
 EH:
     If RaiseError(FUNC_NAME) = vbRetry Then
@@ -1060,22 +994,13 @@ Public Function JsonFromXmlDocument(vXml As Variant) As Variant
     Dim sKey            As String
     Dim bHasAttributes  As Boolean
     Dim vItem           As Variant
-#If ImplCollection And ImplRichClient Then
-    Dim oDict           As cCollection
-    Dim oArray          As cCollection
-#ElseIf ImplCollection Then
-    Dim oDict           As VBA.Collection
-    Dim oArray          As VBA.Collection
-#ElseIf ImplRichClient Then
-    Dim oDict           As cSortedDictionary
-    Dim oArray          As cSortedDictionary
-#ElseIf ImplScripting Then
-    Dim oDict           As Scripting.Dictionary
-    Dim oArray          As Scripting.Dictionary
-#Else
-    Dim oDict           As Object
-    Dim oArray          As Object
-#End If
+    #If ImplScripting Then
+        Dim oDict       As Scripting.Dictionary
+        Dim oArray      As Scripting.Dictionary
+    #Else
+        Dim oDict       As VBA.Collection
+        Dim oArray      As VBA.Collection
+    #End If
 
     On Error GoTo EH
     If IsObject(vXml) Then
@@ -1142,10 +1067,10 @@ Public Function JsonFromXmlDocument(vXml As Variant) As Variant
                 ElseIf Not IsObject(vItem) Then
 CreateArray:
                     Set oArray = pvJsonCreateObject(vbTextCompare)
-                    #If ImplCollection Then
-                        oArray.Add vItem
-                    #Else
+                    #If ImplScripting Then
                         oArray.Add 0&, vItem
+                    #Else
+                        oArray.Add vItem
                     #End If
                     pvJsonItem(oDict, sKey) = oArray
                 ElseIf pvJsonCompareMode(C_Obj(vItem)) = vbBinaryCompare Then
@@ -1154,10 +1079,10 @@ CreateArray:
                     Set oArray = C_Obj(vItem)
                 End If
                 If Not C_Bool(oNode.getAttribute(STR_ATTR_EMPTY & 0)) Then
-                    #If ImplCollection Then
-                        oArray.Add JsonFromXmlDocument(oNode)
-                    #Else
+                    #If ImplScripting Then
                         oArray.Add oArray.Count, JsonFromXmlDocument(oNode)
+                    #Else
+                        oArray.Add JsonFromXmlDocument(oNode)
                     #End If
                 End If
             Else
@@ -1186,42 +1111,54 @@ EH:
     End If
 End Function
 
-#If ImplCollection And ImplRichClient Then
-    Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As cCollection
-        Set pvJsonCreateObject = New cCollection
-        If lCompareMode = vbBinaryCompare Then
-            pvJsonCreateObject.Add Empty, STR_COL_KEYS
+#If ImplScripting Then
+    Public Function JsonToDictionary(oJson As Object) As Object
+        Set JsonToDictionary = oJson
+    End Function
+#Else
+    Public Function JsonToDictionary(oJson As Object) As Object
+        Const FUNC_NAME     As String = "JsonToDictionary"
+        Dim oRetVal         As Object
+        Dim vKeys           As Variant
+        Dim lKey            As Long
+        Dim vKey            As Variant
+        Dim vElem           As Variant
+        
+        On Error GoTo EH
+        If oJson Is Nothing Then
+            Exit Function
+        End If
+        Set oRetVal = CreateObject("Scripting.Dictionary")
+        vKeys = JsonKeys(oJson)
+        If UBound(vKeys) < 0 And oJson.Count > 0 Then
+            For lKey = 0 To oJson.Count - 1
+                AssignVariant vElem, JsonItem(oJson, lKey)
+                If IsObject(vElem) Then
+                    Set oRetVal.Item(lKey) = JsonToDictionary(C_Obj(vElem))
+                Else
+                    oRetVal.Item(lKey) = vElem
+                End If
+            Next
         Else
-            pvJsonCreateObject.Add New VBA.Collection, STR_COL_KEYS
+            For Each vKey In vKeys
+                AssignVariant vElem, JsonItem(oJson, vKey)
+                If IsObject(vElem) Then
+                    Set oRetVal.Item(vKey) = JsonToDictionary(C_Obj(vElem))
+                Else
+                    oRetVal.Item(vKey) = vElem
+                End If
+            Next
+        End If
+        Set JsonToDictionary = oRetVal
+        Exit Function
+EH:
+        If RaiseError(FUNC_NAME) = vbRetry Then
+            Resume
         End If
     End Function
-    
-    Private Function pvJsonCompareMode(oJson As cCollection) As VbCompareMethod
-        pvJsonCompareMode = -IsObject(oJson.Item(STR_COL_KEYS))
-    End Function
-#ElseIf ImplCollection Then
-    Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As VBA.Collection
-        Set pvJsonCreateObject = New VBA.Collection
-        If lCompareMode = vbBinaryCompare Then
-            pvJsonCreateObject.Add Empty, STR_COL_KEYS
-        Else
-            pvJsonCreateObject.Add New VBA.Collection, STR_COL_KEYS
-        End If
-    End Function
-    
-    Private Function pvJsonCompareMode(oJson As VBA.Collection) As VbCompareMethod
-        pvJsonCompareMode = -IsObject(oJson.Item(STR_COL_KEYS))
-    End Function
-#ElseIf ImplRichClient Then
-    Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As cSortedDictionary
-        Set pvJsonCreateObject = New cSortedDictionary
-        pvJsonCreateObject.StringCompareMode = lCompareMode
-    End Function
-    
-    Private Function pvJsonCompareMode(oJson As cSortedDictionary) As VbCompareMethod
-        pvJsonCompareMode = oJson.StringCompareMode
-    End Function
-#ElseIf ImplScripting Then
+#End If
+
+#If ImplScripting Then
     Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As Scripting.Dictionary
         Set pvJsonCreateObject = New Scripting.Dictionary
         pvJsonCreateObject.CompareMode = lCompareMode
@@ -1230,93 +1167,89 @@ End Function
     Private Function pvJsonCompareMode(oJson As Scripting.Dictionary) As VbCompareMethod
         pvJsonCompareMode = oJson.CompareMode
     End Function
-#Else
-    Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As Object
-        Set pvJsonCreateObject = CreateObject(PROGID_DICTIONARY)
-        pvJsonCreateObject.CompareMode = lCompareMode
-    End Function
     
-    Private Function pvJsonCompareMode(oJson As Object) As VbCompareMethod
-        pvJsonCompareMode = oJson.CompareMode
-    End Function
-#End If
-
-#If ImplCollection And ImplRichClient Then
-    Private Property Get pvJsonItem(oParam As cCollection, vKey As Variant) As Variant
-#ElseIf ImplCollection Then
-    Private Property Get pvJsonItem(oParam As VBA.Collection, vKey As Variant) As Variant
-#ElseIf ImplRichClient Then
-    Private Property Get pvJsonItem(oParam As cSortedDictionary, vKey As Variant) As Variant
-#ElseIf ImplScripting Then
     Private Property Get pvJsonItem(oParam As Scripting.Dictionary, vKey As Variant) As Variant
-#Else
-    Private Property Get pvJsonItem(oParam As Object, vKey As Variant) As Variant
-#End If
-    #If ImplCollection And ImplUseShared Then
-        If VarType(vKey) = vbLong Then
-            SearchCollection oParam, vKey + 2, RetVal:=pvJsonItem
-        Else
-            SearchCollection oParam, "#" & vKey, RetVal:=pvJsonItem
-        End If
-    #ElseIf ImplCollection Then
-        On Error GoTo QH
-        If VarType(vKey) = vbLong Then
-            AssignVariant pvJsonItem, oParam.Item(vKey + 2)
-        Else
-            AssignVariant pvJsonItem, oParam.Item("#" & vKey)
-        End If
-    #Else
         If oParam.Exists(vKey) Then
             AssignVariant pvJsonItem, oParam.Item(vKey)
         End If
-    #End If
-QH:
-End Property
+    End Property
 
-#If ImplCollection And ImplRichClient Then
-    Private Property Let pvJsonItem(oParam As cCollection, vKey As Variant, vValue As Variant)
-#ElseIf ImplCollection Then
-    Private Property Let pvJsonItem(oParam As VBA.Collection, vKey As Variant, vValue As Variant)
-#ElseIf ImplRichClient Then
-    Private Property Let pvJsonItem(oParam As cSortedDictionary, vKey As Variant, vValue As Variant)
-#ElseIf ImplScripting Then
     Private Property Let pvJsonItem(oParam As Scripting.Dictionary, vKey As Variant, vValue As Variant)
+        If IsObject(vValue) Then
+            Set oParam.Item(vKey) = vValue
+        Else
+            oParam.Item(vKey) = vValue
+        End If
+    End Property
 #Else
-    Private Property Let pvJsonItem(oParam As Object, vKey As Variant, vValue As Variant)
-#End If
-    #If ImplCollection Then
+    Private Function pvJsonCreateObject(ByVal lCompareMode As VbCompareMethod) As VBA.Collection
+        Set pvJsonCreateObject = New VBA.Collection
+        #If LargeAddressAware Then
+            Call CopyMemory(ByVal (ObjPtr(pvJsonCreateObject) Xor SIGN_BIT) + o_pvUnk5 Xor SIGN_BIT, lCompareMode, 4)
+        #Else
+            Call CopyMemory(ByVal ObjPtr(pvJsonCreateObject) + o_pvUnk5, lCompareMode, 4)
+        #End If
+    End Function
+    
+    Private Function pvJsonCompareMode(oJson As VBA.Collection) As VbCompareMethod
+        #If LargeAddressAware Then
+            Call CopyMemory(pvJsonCompareMode, ByVal (ObjPtr(oJson) Xor SIGN_BIT) + o_pvUnk5 Xor SIGN_BIT, 4)
+        #Else
+            Call CopyMemory(pvJsonCompareMode, ByVal ObjPtr(oJson) + o_pvUnk5, 4)
+        #End If
+    End Function
+
+    Private Property Get pvJsonItem(oParam As VBA.Collection, vKey As Variant) As Variant
+        #If ImplUseShared Then
+            If VarType(vKey) = vbLong Then
+                SearchCollection oParam, vKey + 1, RetVal:=pvJsonItem
+            Else
+                SearchCollection oParam, vKey, RetVal:=pvJsonItem
+            End If
+        #Else
+            Dim lKey            As Long
+            
+            If VarType(vKey) = vbLong Then
+                lKey = vKey + 1
+                If lKey > 0 And lKey <= oParam.Count Then
+                    AssignVariant pvJsonItem, oParam.Item(lKey)
+                End If
+            Else
+                If CollectionIndexByKey(oParam, vKey, IgnoreCase:=False) > 0 Then
+                    AssignVariant pvJsonItem, oParam.Item(vKey)
+                End If
+            End If
+        #End If
+    End Property
+
+    Private Property Let pvJsonItem(oParam As VBA.Collection, vKey As Variant, vValue As Variant)
+        Dim lKey            As Long
+        
         If VarType(vKey) = vbLong Then
-            RemoveCollection oParam, vKey + 2
-            If vKey + 2 < oParam.Count Then
-                oParam.Add vValue, Before:=vKey + 2
+            lKey = vKey + 1
+            If lKey > 0 And lKey <= oParam.Count Then
+                oParam.Remove lKey
+            End If
+            If lKey > 0 And lKey <= oParam.Count Then
+                oParam.Add vValue, Before:=lKey
             Else
                 oParam.Add vValue
             End If
         Else
-            RemoveCollection oParam, "#" & vKey
-            oParam.Add vValue, "#" & vKey
-            RemoveCollection oParam.Item(STR_COL_KEYS), "#" & vKey
-            oParam.Item(STR_COL_KEYS).Add vKey, "#" & vKey
-        End If
-    #Else
-        If VarType(vKey) = vbLong Then
-            If IsObject(vValue) Then
-                Set oParam.Item(vKey) = vValue
+            lKey = CollectionIndexByKey(oParam, vKey, IgnoreCase:=False)
+            If lKey > 0 Then
+                oParam.Remove lKey
+            End If
+            If lKey > 0 And lKey <= oParam.Count Then
+                oParam.Add vValue, vKey, Before:=lKey
             Else
-                oParam.Item(vKey) = vValue
+                oParam.Add vValue, vKey
             End If
-        Else
-            If oParam.Exists(vKey) Then
-                oParam.Remove vKey
-            End If
-            oParam.Add vKey, vValue
         End If
-    #End If
-End Property
+    End Property
+#End If
 
-#If ImplUseShared Then
-#Else
-
+#If Not ImplUseShared Then
 Private Function IsOnlyDigits(ByVal sText As String) As Boolean
     If LenB(sText) <> 0 Then
         IsOnlyDigits = Not (sText Like "*[!0-9]*")
@@ -1363,13 +1296,6 @@ Private Function C_Obj(Value As Variant) As Object
 QH:
 End Function
 
-Private Function RemoveCollection(oCol As Object, vKey As Variant) As Boolean
-    On Error GoTo QH
-    oCol.Remove vKey
-    RemoveCollection = True
-QH:
-End Function
-
 Private Function Printf(ByVal sText As String, ParamArray A() As Variant) As String
     Const LNG_PRIVATE   As Long = &HE1B6 '-- U+E000 to U+F8FF - Private Use Area (PUA)
     Dim lIdx            As Long
@@ -1380,6 +1306,94 @@ Private Function Printf(ByVal sText As String, ParamArray A() As Variant) As Str
     Printf = Replace(sText, ChrW$(LNG_PRIVATE), "%")
 End Function
 
-#End If
+Private Function CollectionAllKeys(oCol As VBA.Collection, Optional ByVal StartIndex As Long) As String()
+    #If HasPtrSafe Then
+        Dim lPtr        As LongPtr
+    #Else
+        Dim lPtr        As Long
+    #End If
+    Dim aRetVal()       As String
+    Dim lIdx            As Long
+    Dim sTemp           As String
+    
+    If oCol.Count = 0 Then
+        aRetVal = Split(vbNullString)
+    Else
+        ReDim aRetVal(StartIndex To StartIndex + oCol.Count - 1) As String
+        lPtr = ObjPtr(oCol)
+        For lIdx = LBound(aRetVal) To UBound(aRetVal)
+            #If LargeAddressAware Then
+                Call CopyMemory(lPtr, ByVal (lPtr Xor SIGN_BIT) + o_pNextIndexedItem Xor SIGN_BIT, PTR_SIZE)
+                Call CopyMemory(ByVal VarPtr(sTemp), ByVal (lPtr Xor SIGN_BIT) + o_KeyPtr Xor SIGN_BIT, PTR_SIZE)
+            #Else
+                Call CopyMemory(lPtr, ByVal lPtr + o_pNextIndexedItem, PTR_SIZE)
+                Call CopyMemory(ByVal VarPtr(sTemp), ByVal lPtr + o_KeyPtr, PTR_SIZE)
+            #End If
+            aRetVal(lIdx) = sTemp
+        Next
+        Call CopyMemory(ByVal VarPtr(sTemp), NULL_PTR, PTR_SIZE)
+    End If
+    CollectionAllKeys = aRetVal
+End Function
 
+Private Function CollectionIndexByKey(oCol As VBA.Collection, ByVal sKey As String, Optional ByVal IgnoreCase As Boolean = True) As Long
+    #If HasPtrSafe Then
+        Dim lItemPtr    As LongPtr
+        Dim lEofPtr     As LongPtr
+        Dim lPtr        As LongPtr
+    #Else
+        Dim lItemPtr    As Long
+        Dim lEofPtr     As Long
+        Dim lPtr        As Long
+    #End If
+    Dim sTemp           As String
+    
+    If Not oCol Is Nothing Then
+        #If LargeAddressAware Then
+            Call CopyMemory(lItemPtr, ByVal (ObjPtr(oCol) Xor SIGN_BIT) + o_pRootTreeItem Xor SIGN_BIT, PTR_SIZE)
+            Call CopyMemory(lEofPtr, ByVal (ObjPtr(oCol) Xor SIGN_BIT) + o_pEndTreePtr Xor SIGN_BIT, PTR_SIZE)
+        #Else
+            Call CopyMemory(lItemPtr, ByVal ObjPtr(oCol) + o_pRootTreeItem, PTR_SIZE)
+            Call CopyMemory(lEofPtr, ByVal ObjPtr(oCol) + o_pEndTreePtr, PTR_SIZE)
+        #End If
+    End If
+    Do While lItemPtr <> lEofPtr
+        #If LargeAddressAware Then
+            Call CopyMemory(ByVal VarPtr(sTemp), ByVal (lItemPtr Xor SIGN_BIT) + o_KeyPtr Xor SIGN_BIT, PTR_SIZE)
+        #Else
+            Call CopyMemory(ByVal VarPtr(sTemp), ByVal lItemPtr + o_KeyPtr, PTR_SIZE)
+        #End If
+        Select Case CompareStringW(LOCALE_USER_DEFAULT, -IgnoreCase * NORM_IGNORECASE, ByVal StrPtr(sKey), Len(sKey), ByVal StrPtr(sTemp), Len(sTemp))
+        Case CSTR_LESS_THAN
+            #If LargeAddressAware Then
+                Call CopyMemory(lItemPtr, ByVal (lItemPtr Xor SIGN_BIT) + o_pLeftBranch Xor SIGN_BIT, PTR_SIZE)
+            #Else
+                Call CopyMemory(lItemPtr, ByVal lItemPtr + o_pLeftBranch, PTR_SIZE)
+            #End If
+        Case CSTR_GREATER_THAN
+            #If LargeAddressAware Then
+                Call CopyMemory(lItemPtr, ByVal (lItemPtr Xor SIGN_BIT) + o_pRightBranch Xor SIGN_BIT, PTR_SIZE)
+            #Else
+                Call CopyMemory(lItemPtr, ByVal lItemPtr + o_pRightBranch, PTR_SIZE)
+            #End If
+        Case CSTR_EQUAL
+            lPtr = ObjPtr(oCol)
+            Do While lPtr <> lItemPtr
+                #If LargeAddressAware Then
+                    Call CopyMemory(lPtr, ByVal (lPtr Xor SIGN_BIT) + o_pNextIndexedItem Xor SIGN_BIT, PTR_SIZE)
+                #Else
+                    Call CopyMemory(lPtr, ByVal lPtr + o_pNextIndexedItem, PTR_SIZE)
+                #End If
+                CollectionIndexByKey = CollectionIndexByKey + 1
+            Loop
+            GoTo QH
+        Case Else
+            Call CopyMemory(ByVal VarPtr(sTemp), NULL_PTR, PTR_SIZE)
+            Err.Raise vbObjectError, , "Unexpected result from CompareStringW"
+        End Select
+    Loop
+QH:
+    Call CopyMemory(ByVal VarPtr(sTemp), NULL_PTR, PTR_SIZE)
+End Function
+#End If
 
