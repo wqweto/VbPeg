@@ -75,11 +75,11 @@ Private Function Process(vArgs As Variant) As Long
     End If
     If LenB(m_oOpt.Item("error")) <> 0 Then
         ConsoleError "Error in command line: " & m_oOpt.Item("error") & vbCrLf & vbCrLf
-        If Not (m_oOpt.Item("-h") Or m_oOpt.Item("-?") Or m_oOpt.Item("arg1") = "?") Then
+        If Not (m_oOpt.Item("-h") Or m_oOpt.Item("-?") Or m_oOpt.Item("arg0") = "?") Then
             Exit Function
         End If
     End If
-    If m_oOpt.Item("#arg") < 0 Or m_oOpt.Item("-h") Or m_oOpt.Item("-?") Or m_oOpt.Item("arg1") = "?" Then
+    If m_oOpt.Item("#arg") < 0 Or m_oOpt.Item("-h") Or m_oOpt.Item("-?") Or m_oOpt.Item("arg0") = "?" Then
         ConsoleError "Usage: %1.exe [options] <in_file.peg>" & vbCrLf & vbCrLf, App.EXEName
         ConsoleError "Options:" & vbCrLf & _
             "  -o OUTFILE      write result to OUTFILE [default: stdout]" & vbCrLf & _
