@@ -1,0 +1,35 @@
+#
+# PEG for Python style indentation
+# https://stackoverflow.com/questions/4205442/peg-for-python-style-indentation
+#
+# @trace ConsoleTrace
+
+block(Optional ByVal Level As Long)
+    = r:''                                                              { JsonItem(oJson, vbNullString) = Empty : Set $r = oJson }
+      (   (   SPACE &{ .CaptureEnd - .CaptureBegin = Level } 
+              ( id:IDENT EQ v:LINE [\r\n]*
+              | id:LINE [\r\n]* ( &SPACE &{ .CaptureEnd - .CaptureBegin > Level } v:block(.CaptureEnd - .CaptureBegin)
+                                |                                                 v:EMPTY )
+              )
+          )                                                             { Set oJson = $r : JsonItem(oJson, $id) = $v }
+      |   (   &{ .CaptureEnd - .CaptureBegin > Level } 
+              SPACE id:LINE [\r\n]*
+          )                                                             { Set oJson = $r : JsonItem(oJson, $id) = Array("Error baddent") }
+      )+                                                                { Set $$ = $r }
+
+SPACE   = < [ ]* >
+EMPTY   = < '' >                                                        { $$ = $$text }
+LINE    = < [^\r\n]+ >                                                  { $$ = $$text }
+IDENT   = < [a-zA-Z]+ > -                                               { $$ = $$text }
+EQ      = '=' -
+-       = [ \t]*
+
+@prolog {
+    Dim oJson As Object
+
+    With ctx
+}
+
+@epilog {
+    End With
+}
