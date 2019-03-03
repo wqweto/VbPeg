@@ -976,7 +976,7 @@ Private Function pvCodeGenAction(sText As String, ByVal lRule As Long, Optional 
     End With
     lPos = 1
     Set cOutput = New Collection
-    For Each oMatch In pvCodeGenEnumVars(sText)
+    For Each oMatch In ActionEnumVars(sText)
         cOutput.Add Mid$(sText, lPos, oMatch.FirstIndex - lPos + 1)
         If oVars.Exists(oMatch.Value) Then
             cOutput.Add oVars.Item(oMatch.Value)
@@ -987,17 +987,6 @@ Private Function pvCodeGenAction(sText As String, ByVal lRule As Long, Optional 
     Next
     cOutput.Add Mid$(sText, lPos)
     pvCodeGenAction = ConcatCollection(cOutput)
-End Function
-
-Public Function pvCodeGenEnumVars(sAction As String) As MatchCollection
-    Dim oRegExp         As RegExp
-    
-    Set oRegExp = CreateObject("VBScript.RegExp")
-    With oRegExp
-        .Global = True
-        .Pattern = "\$[\$\w_][\d\w_]*"
-        Set pvCodeGenEnumVars = .Execute(sAction)
-    End With
 End Function
 
 Private Function pvCodeGenId() As Long

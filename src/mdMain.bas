@@ -559,3 +559,14 @@ Public Function SearchCollection(oCol As Collection, Index As Variant, Optional 
     End If
 End Function
 
+Public Function ActionEnumVars(sAction As String) As MatchCollection
+    Dim oRegExp         As RegExp
+    
+    Set oRegExp = CreateObject("VBScript.RegExp")
+    With oRegExp
+        .Global = True
+        .Pattern = "\$[\$\w_][\d\w_]*"
+        Set ActionEnumVars = .Execute(sAction)
+    End With
+End Function
+

@@ -493,12 +493,19 @@ Private Function pvMakeTrace(ByVal lOffset As Long, sText As String, ByVal lNode
 End Function
 
 Public Function MakeAction(ByVal lOffset As Long, sText As String) As Long
+    Dim oMatch          As Match
+    
     With m_uTree
         Debug.Assert .ThisRule <> 0
         MakeAction = pvNewNode(ucsNdtAction, lOffset, Text:=sText)
         .ActionsCount = .ActionsCount + 1
         .Nodes(MakeAction).Id = .ActionsCount
         .Nodes(MakeAction).RefRule = .ThisRule
+        For Each oMatch In ActionEnumVars(sText)
+            If Left$(oMatch.Value, 2) <> "$$" Then
+                MakeVariable lOffset, Mid$(oMatch.Value, 2)
+            End If
+        Next
     End With
 End Function
 
