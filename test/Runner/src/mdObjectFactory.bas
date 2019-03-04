@@ -96,7 +96,7 @@ Private Function IdeCreateInstance(ByVal Class As String) As IUnknown
     '
     Set IdeCreateInstance = OneCellQueue(Nothing)
     If IdeCreateInstance Is Nothing Then
-        Err.Raise 8, , "Specified class '" + Class + "' is not defined."
+        Err.Raise 8, , "Specified class '" + Class + "' is not defined"
         Exit Function
     End If
 End Function
@@ -121,7 +121,7 @@ Private Function ExeCreateInstance(ByVal Class As String) As IUnknown
     ' If a class is not found, generated an error.
     '
     If Not GetOiOfClass(Class, lpObjectInformation) Then
-        Err.Raise 8, , "Specified class '" + Class + "' does not defined."
+        Err.Raise 8, , "Specified class '" + Class + "' is not defined"
         Exit Function
     End If
     '
@@ -177,7 +177,7 @@ Private Function LoadDescriptorsTable(dt() As MODDESCRTBL_ENTRY) As Boolean
     ' Get the address of the EPI.
     '
     If Not FindEpiSimple(lpEPI) Then
-        Err.Raise 17, , "Failed to locate EXEPROJECTINFO structure in process module image."
+        Err.Raise 17, , "Failed to locate EXEPROJECTINFO structure in process module image"
         Exit Function
     End If
     '

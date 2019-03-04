@@ -62,12 +62,12 @@ Private Sub Main()
                 Exit Do
             End If
             ConsolePrint "Pos: %1", lPos
-            If Not IsEmpty(vResult) Then
-                If TypeName(vResult) = "Dictionary" Then
-                    ConsolePrint ", Result: %1", JsonDump(vResult)
-                Else
-                    ConsolePrint ", Result: %1", C_Str(vResult)
-                End If
+            If IsObject(vResult) Then
+                ConsolePrint ", Result: %1", JsonDump(vResult)
+            ElseIf pvNeedEscape(C_Str(vResult)) Then
+                ConsolePrint ", Result: %1", JsonDump(vResult)
+            ElseIf Not IsEmpty(vResult) Then
+                ConsolePrint ", Result: %1", C_Str(vResult)
             End If
             If LenB(oParser.LastError) <> 0 Then
                 ConsolePrint ", Warning: %1", oParser.LastError
@@ -341,5 +341,12 @@ Public Function SearchCollection(oCol As Collection, Index As Variant, Optional 
     If Not oCol Is Nothing Then
         SearchCollection = TryGetValue(oCol, Index, RetVal) = 0 ' S_OK
     End If
+End Function
+
+Private Function pvNeedEscape(sText As String) As Boolean
+    With CreateObject("VBScript.RegExp")
+        .Pattern = "[\x00-\x1F]"
+        pvNeedEscape = .Test(sText)
+    End With
 End Function
 

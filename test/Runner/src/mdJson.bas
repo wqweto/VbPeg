@@ -1290,7 +1290,7 @@ Private Function C_Dbl(Value As Variant) As Double
 QH:
 End Function
 
-Private Function C_Obj(Value As Variant) As Object
+Public Function C_Obj(Value As Variant) As Object
     On Error GoTo QH
     Set C_Obj = Value
 QH:

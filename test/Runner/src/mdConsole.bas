@@ -132,15 +132,17 @@ Public Function ConsoleTrace(ByVal lOffset As Long, sRule As String, ByVal lActi
             lLevel = lLevel + 1
         Else
             Debug.Assert lLevel > 0
-            lLevel = lLevel - 1
-            If lAction = 2 Then
-                Const FOREGROUND_GREEN As Long = &H2
-                Const FOREGROUND_MASK As Long = &HF
-                ConsoleColorPrint FOREGROUND_GREEN, FOREGROUND_MASK, "%1|%2|%3=%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
-            ElseIf lAction = 3 Then
-                ConsolePrint "%1|%2|%3!%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
-            Else
-                ConsolePrint "Trace error: lAction=" & lAction & vbCrLf
+            If lLevel > 0 Then
+                lLevel = lLevel - 1
+                If lAction = 2 Then
+                    Const FOREGROUND_GREEN As Long = &H2
+                    Const FOREGROUND_MASK As Long = &HF
+                    ConsoleColorPrint FOREGROUND_GREEN, FOREGROUND_MASK, "%1|%2|%3=%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+                ElseIf lAction = 3 Then
+                    ConsolePrint "%1|%2|%3!%4" & vbCrLf, sLine, sText, Space$(lLevel * 2), sRule
+                Else
+                    ConsolePrint "Trace error: lAction=" & lAction & vbCrLf
+                End If
             End If
         End If
     End If
