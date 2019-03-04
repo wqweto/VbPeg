@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 3.12.2018 1:29:31
+' Auto-generated on 5.3.2019 1:30:21
 Option Explicit
 DefObj A-Z
 
@@ -24,15 +24,31 @@ Private Const NORM_IGNORECASE               As Long = 1
 Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
+Private Const NULL_PTR                  As LongPtr = 0
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+Private Const NULL_PTR                  As Long = 0
+#End If
+#If Win64 Then
+Private Const PTR_SIZE                  As Long = 8
+#Else
+Private Const PTR_SIZE                  As Long = 4
+#End If
 
 Private Type SAFEARRAY1D
     cDims               As Integer
     fFeatures           As Integer
     cbElements          As Long
     cLocks              As Long
+#If VBA7 Then
+    pvData              As LongPtr
+#Else
     pvData              As Long
+#End If
     cElements           As Long
     lLbound             As Long
 End Type
@@ -83,7 +99,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "3.12.2018 1:29:31"
+    ParserVersion = "5.3.2019 1:30:21"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -119,15 +135,15 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), PTR_SIZE)
         With .BufArray
             .cDims = 1
-            .cbElements = 2
             .fFeatures = 1 ' FADF_AUTO
+            .cbElements = 2
             .pvData = StrPtr(sSubject)
             .cElements = Len(sSubject) + 2 '-- look-ahead chars
         End With
-        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), PTR_SIZE)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
@@ -151,8 +167,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
-        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), NULL_PTR, PTR_SIZE)
+        Call CopyMemory(ByVal ArrPtr(.BufData), NULL_PTR, PTR_SIZE)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -234,50 +250,50 @@ Private Sub ParseContainerMembers()
         p17 = .BufPos
         If ParseTestDecl() Then
             Call ParseContainerMembers
+            GoTo L3
         Else
             .BufPos = p17
-            If ParseTopLevelComptime() Then
+        End If
+        If ParseTopLevelComptime() Then
+            Call ParseContainerMembers
+            GoTo L3
+        Else
+            .BufPos = p17
+        End If
+        p19 = .BufPos
+        If Not (ParseKEYWORD_pub()) Then
+            .BufPos = p19
+        End If
+        If ParseTopLevelDecl() Then
+            Call ParseContainerMembers
+            GoTo L3
+        Else
+            .BufPos = p17
+        End If
+        p25 = .BufPos
+        If Not (ParseKEYWORD_pub()) Then
+            .BufPos = p25
+        End If
+        If ParseContainerField() Then
+            If ParseCOMMA() Then
                 Call ParseContainerMembers
+                GoTo L3
             Else
                 .BufPos = p17
-                p19 = .BufPos
-                If Not (ParseKEYWORD_pub()) Then
-                    .BufPos = p19
-                End If
-                If ParseTopLevelDecl() Then
-                    Call ParseContainerMembers
-                Else
-                    .BufPos = p17
-                    p25 = .BufPos
-                    If Not (ParseKEYWORD_pub()) Then
-                        .BufPos = p25
-                    End If
-                    If ParseContainerField() Then
-                        If ParseCOMMA() Then
-                            Call ParseContainerMembers
-                        Else
-                            .BufPos = p17
-                            p33 = .BufPos
-                            If Not (ParseKEYWORD_pub()) Then
-                                .BufPos = p33
-                            End If
-                            If Not (ParseContainerField()) Then
-                                .BufPos = p17
-                            End If
-                        End If
-                    Else
-                        .BufPos = p17
-                        p33 = .BufPos
-                        If Not (ParseKEYWORD_pub()) Then
-                            .BufPos = p33
-                        End If
-                        If Not (ParseContainerField()) Then
-                            .BufPos = p17
-                        End If
-                    End If
-                End If
             End If
+        Else
+            .BufPos = p17
         End If
+        p33 = .BufPos
+        If Not (ParseKEYWORD_pub()) Then
+            .BufPos = p33
+        End If
+        If ParseContainerField() Then
+            GoTo L3
+        Else
+            .BufPos = p17
+        End If
+L3:
     End With
 End Sub
 
@@ -334,38 +350,33 @@ Private Function ParseTopLevelDecl() As Boolean
     With ctx
         p78 = .BufPos
         p57 = .BufPos
-        If ParseKEYWORD_export() Then
-            GoTo L35
-        Else
+        If Not (ParseKEYWORD_export()) Then
             .BufPos = p57
-        End If
-        If ParseKEYWORD_extern() Then
+            If Not (ParseKEYWORD_extern()) Then
+                .BufPos = p57
+                GoTo L20
+            End If
             p54 = .BufPos
             If Not (ParseSTRINGLITERAL()) Then
                 .BufPos = p54
             End If
-            GoTo L35
-        Else
-            .BufPos = p57
+            GoTo L18
+L20:
+            If Not (ParseKEYWORD_inline()) Then
+                .BufPos = p57
+                .BufPos = p57
+            End If
         End If
-        If ParseKEYWORD_inline() Then
-            GoTo L35
-        Else
-            .BufPos = p57
-        End If
-        .BufPos = p57
-L35:
+L18:
         If ParseFnProto() Then
             p67 = .BufPos
             If ParseSEMICOLON() Then
-                ParseTopLevelDecl = True
-                Exit Function
+                GoTo L15
             Else
                 .BufPos = p67
             End If
             If ParseBlock() Then
-                ParseTopLevelDecl = True
-                Exit Function
+                GoTo L15
             Else
                 .BufPos = p67
             End If
@@ -374,33 +385,30 @@ L35:
             .BufPos = p78
         End If
         p73 = .BufPos
-        If ParseKEYWORD_export() Then
-            GoTo L37
-        Else
+        If Not (ParseKEYWORD_export()) Then
             .BufPos = p73
-        End If
-        If ParseKEYWORD_extern() Then
+            If Not (ParseKEYWORD_extern()) Then
+                .BufPos = p73
+                GoTo L25
+            End If
             p70 = .BufPos
             If Not (ParseSTRINGLITERAL()) Then
                 .BufPos = p70
             End If
-            GoTo L37
-        Else
+            GoTo L23
+L25:
             .BufPos = p73
         End If
-        .BufPos = p73
-L37:
+L23:
         If ParseVarDecl() Then
-            ParseTopLevelDecl = True
-            Exit Function
+            GoTo L15
         Else
             .BufPos = p78
         End If
         If ParseKEYWORD_use() Then
             If ParseExpr() Then
                 If ParseSEMICOLON() Then
-                    ParseTopLevelDecl = True
-                    Exit Function
+                    GoTo L15
                 Else
                     .BufPos = p78
                 End If
@@ -409,6 +417,10 @@ L37:
             End If
         Else
             .BufPos = p78
+        End If
+        If False Then
+L15:
+            ParseTopLevelDecl = True
         End If
     End With
 End Function
@@ -474,41 +486,46 @@ Private Function ParseSTRINGLITERAL() As Boolean
         End If
         If .BufData(.BufPos) = 34 Then              ' "\""
             .BufPos = .BufPos + 1
-            Do
-                p1239 = .BufPos
-                If Not (Parsestring_char()) Then
-                    .BufPos = p1239
-                    Exit Do
-                End If
-            Loop
-            If .BufData(.BufPos) = 34 Then          ' "\""
-                .BufPos = .BufPos + 1
-                Call Parseskip
-                Call pvSetAdvance
-                ParseSTRINGLITERAL = True
-                Exit Function
-            Else
-                .BufPos = p1246
+        Else
+            .BufPos = p1246
+            GoTo L38
+        End If
+        Do
+            p1239 = .BufPos
+            If Not (Parsestring_char()) Then
+                .BufPos = p1239
+                Exit Do
             End If
+        Loop
+        If .BufData(.BufPos) = 34 Then              ' "\""
+            .BufPos = .BufPos + 1
         Else
             .BufPos = p1246
+            GoTo L38
         End If
-        If Parseline_string() Then
-            Call Parseskip
-            Call pvSetAdvance
-            ParseSTRINGLITERAL = True
-            Exit Function
-        Else
+        Call Parseskip
+        Call pvSetAdvance
+        ParseSTRINGLITERAL = True
+        Exit Function
+L38:
+        If Not (Parseline_string()) Then
             .BufPos = p1246
+            GoTo L37
         End If
-        If Parseline_cstring() Then
-            Call Parseskip
-            Call pvSetAdvance
-            ParseSTRINGLITERAL = True
-            Exit Function
-        Else
+        Call Parseskip
+        Call pvSetAdvance
+        ParseSTRINGLITERAL = True
+        Exit Function
+L37:
+        If Not (Parseline_cstring()) Then
             .BufPos = p1246
+            GoTo L36
         End If
+        Call Parseskip
+        Call pvSetAdvance
+        ParseSTRINGLITERAL = True
+        Exit Function
+L36:
         Call pvSetExpected("STRINGLITERAL")
     End With
 End Function
@@ -629,20 +646,22 @@ Private Function ParseFnProto() As Boolean
                     End If
                     p113 = .BufPos
                     If ParseKEYWORD_var() Then
-                        ParseFnProto = True
-                        Exit Function
+                        GoTo L48
                     Else
                         .BufPos = p113
                     End If
                     If ParseTypeExpr() Then
-                        ParseFnProto = True
-                        Exit Function
+                        GoTo L48
                     Else
                         .BufPos = p113
                     End If
+                    GoTo L47
+L48:
+                    ParseFnProto = True
                 End If
             End If
         End If
+L47:
     End With
 End Function
 
@@ -667,73 +686,47 @@ Private Function ParseVarDecl() As Boolean
     With ctx
         p117 = .BufPos
         If ParseKEYWORD_const() Then
-            If ParseIDENTIFIER() Then
-                p123 = .BufPos
-                If ParseCOLON() Then
-                    If Not (ParseTypeExpr()) Then
-                        .BufPos = p123
-                    End If
-                Else
-                    .BufPos = p123
-                End If
-                p125 = .BufPos
-                If Not (ParseByteAlign()) Then
-                    .BufPos = p125
-                End If
-                p127 = .BufPos
-                If Not (ParseSection()) Then
-                    .BufPos = p127
-                End If
-                p132 = .BufPos
-                If ParseEQUAL() Then
-                    If Not (ParseExpr()) Then
-                        .BufPos = p132
-                    End If
-                Else
-                    .BufPos = p132
-                End If
-                If ParseSEMICOLON() Then
-                    ParseVarDecl = True
-                    Exit Function
-                End If
-            End If
+            GoTo L62
         Else
             .BufPos = p117
         End If
         If ParseKEYWORD_var() Then
-            If ParseIDENTIFIER() Then
-                p123 = .BufPos
-                If ParseCOLON() Then
-                    If Not (ParseTypeExpr()) Then
-                        .BufPos = p123
-                    End If
-                Else
-                    .BufPos = p123
-                End If
-                p125 = .BufPos
-                If Not (ParseByteAlign()) Then
-                    .BufPos = p125
-                End If
-                p127 = .BufPos
-                If Not (ParseSection()) Then
-                    .BufPos = p127
-                End If
-                p132 = .BufPos
-                If ParseEQUAL() Then
-                    If Not (ParseExpr()) Then
-                        .BufPos = p132
-                    End If
-                Else
-                    .BufPos = p132
-                End If
-                If ParseSEMICOLON() Then
-                    ParseVarDecl = True
-                    Exit Function
-                End If
-            End If
+            GoTo L62
         Else
             .BufPos = p117
         End If
+        GoTo L55
+L62:
+        If ParseIDENTIFIER() Then
+            p123 = .BufPos
+            If ParseCOLON() Then
+                If Not (ParseTypeExpr()) Then
+                    .BufPos = p123
+                End If
+            Else
+                .BufPos = p123
+            End If
+            p125 = .BufPos
+            If Not (ParseByteAlign()) Then
+                .BufPos = p125
+            End If
+            p127 = .BufPos
+            If Not (ParseSection()) Then
+                .BufPos = p127
+            End If
+            p132 = .BufPos
+            If ParseEQUAL() Then
+                If Not (ParseExpr()) Then
+                    .BufPos = p132
+                End If
+            Else
+                .BufPos = p132
+            End If
+            If ParseSEMICOLON() Then
+                ParseVarDecl = True
+            End If
+        End If
+L55:
     End With
 End Function
 
@@ -773,20 +766,17 @@ Private Function ParseFnCC() As Boolean
     With ctx
         p685 = .BufPos
         If ParseKEYWORD_nakedcc() Then
-            ParseFnCC = True
-            Exit Function
+            GoTo L65
         Else
             .BufPos = p685
         End If
         If ParseKEYWORD_stdcallcc() Then
-            ParseFnCC = True
-            Exit Function
+            GoTo L65
         Else
             .BufPos = p685
         End If
         If ParseKEYWORD_extern() Then
-            ParseFnCC = True
-            Exit Function
+            GoTo L65
         Else
             .BufPos = p685
         End If
@@ -803,10 +793,13 @@ Private Function ParseFnCC() As Boolean
             Else
                 .BufPos = p692
             End If
-            ParseFnCC = True
-            Exit Function
+            GoTo L65
         Else
             .BufPos = p685
+        End If
+        If False Then
+L65:
+            ParseFnCC = True
         End If
     End With
 End Function
@@ -837,69 +830,71 @@ Private Function ParseIDENTIFIER() As Boolean
         e1252 = .LastExpected
         If Parsekeyword() Then
             .BufPos = p1269
+            GoTo L72
         Else
             .BufPos = p1252
             .LastExpected = e1252
-            p1258 = .BufPos
-            If .BufData(.BufPos) = 99 Then          ' "c"
-                .BufPos = .BufPos + 1
-                p1255 = .BufPos
-                Select Case .BufData(.BufPos)
-                Case 34, 92                         ' ["\\]
-                    .BufPos = p1258
-                Case Else
-                    .BufPos = p1255
-                    Do
-                        Select Case .BufData(.BufPos)
-                        Case 65 To 90, 97 To 122, 48 To 57, 95 ' [A-Za-z0-9_]
-                            .BufPos = .BufPos + 1
-                        Case Else
-                            Exit Do
-                        End Select
-                    Loop
-                    Call Parseskip
-                    Call pvSetAdvance
-                    ParseIDENTIFIER = True
-                    Exit Function
-                End Select
-            End If
-            Select Case .BufData(.BufPos)
-            Case 65 To 90, 97, 98, 100 To 122, 95   ' [A-Zabd-z_]
-                .BufPos = .BufPos + 1
-                Do
-                    Select Case .BufData(.BufPos)
-                    Case 65 To 90, 97 To 122, 48 To 57, 95 ' [A-Za-z0-9_]
-                        .BufPos = .BufPos + 1
-                    Case Else
-                        Exit Do
-                    End Select
-                Loop
-                Call Parseskip
-                Call pvSetAdvance
-                ParseIDENTIFIER = True
-                Exit Function
-            End Select
-            .BufPos = p1269
         End If
+        p1258 = .BufPos
+        If .BufData(.BufPos) = 99 Then              ' "c"
+            .BufPos = .BufPos + 1
+        Else
+            GoTo L74
+        End If
+        p1255 = .BufPos
+        Select Case .BufData(.BufPos)
+        Case 34, 92                                 ' ["\\]
+            .BufPos = p1258
+            GoTo L74
+        Case Else
+            .BufPos = p1255
+        End Select
+        GoTo L73
+L74:
+        Select Case .BufData(.BufPos)
+        Case 65 To 90, 97, 98, 100 To 122, 95       ' [A-Zabd-z_]
+            .BufPos = .BufPos + 1
+        Case Else
+            .BufPos = p1269
+            GoTo L72
+        End Select
+L73:
+        Do
+            Select Case .BufData(.BufPos)
+            Case 65 To 90, 97 To 122, 48 To 57, 95  ' [A-Za-z0-9_]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit Do
+            End Select
+        Loop
+        Call Parseskip
+        Call pvSetAdvance
+        ParseIDENTIFIER = True
+        Exit Function
+L72:
         If .BufData(.BufPos) = 64 And .BufData(.BufPos + 1) = 34 Then ' "@\""
             .BufPos = .BufPos + 2
-            Do
-                p1264 = .BufPos
-                If Not (Parsestring_char()) Then
-                    .BufPos = p1264
-                    Exit Do
-                End If
-            Loop
-            If .BufData(.BufPos) = 34 Then          ' "\""
-                .BufPos = .BufPos + 1
-                Call Parseskip
-                Call pvSetAdvance
-                ParseIDENTIFIER = True
-                Exit Function
-            Else
-                .BufPos = p1269
-            End If
+        Else
+            GoTo L71
         End If
+        Do
+            p1264 = .BufPos
+            If Not (Parsestring_char()) Then
+                .BufPos = p1264
+                Exit Do
+            End If
+        Loop
+        If .BufData(.BufPos) = 34 Then              ' "\""
+            .BufPos = .BufPos + 1
+        Else
+            .BufPos = p1269
+            GoTo L71
+        End If
+        Call Parseskip
+        Call pvSetAdvance
+        ParseIDENTIFIER = True
+        Exit Function
+L71:
         Call pvSetExpected("IDENTIFIER")
     End With
 End Function
@@ -1074,15 +1069,13 @@ Private Function ParseStatement() As Boolean
             .BufPos = p146
         End If
         If ParseVarDecl() Then
-            ParseStatement = True
-            Exit Function
+            GoTo L87
         Else
             .BufPos = p154
         End If
         If ParseKEYWORD_comptime() Then
             If ParseBlockExprStatement() Then
-                ParseStatement = True
-                Exit Function
+                GoTo L87
             Else
                 .BufPos = p154
             End If
@@ -1092,14 +1085,12 @@ Private Function ParseStatement() As Boolean
         If ParseKEYWORD_suspend() Then
             p159 = .BufPos
             If ParseSEMICOLON() Then
-                ParseStatement = True
-                Exit Function
+                GoTo L87
             Else
                 .BufPos = p159
             End If
             If ParseBlockExprStatement() Then
-                ParseStatement = True
-                Exit Function
+                GoTo L87
             Else
                 .BufPos = p159
             End If
@@ -1109,8 +1100,7 @@ Private Function ParseStatement() As Boolean
         End If
         If ParseKEYWORD_defer() Then
             If ParseBlockExprStatement() Then
-                ParseStatement = True
-                Exit Function
+                GoTo L87
             Else
                 .BufPos = p154
             End If
@@ -1119,8 +1109,7 @@ Private Function ParseStatement() As Boolean
         End If
         If ParseKEYWORD_errdefer() Then
             If ParseBlockExprStatement() Then
-                ParseStatement = True
-                Exit Function
+                GoTo L87
             Else
                 .BufPos = p154
             End If
@@ -1128,32 +1117,32 @@ Private Function ParseStatement() As Boolean
             .BufPos = p154
         End If
         If ParseIfStatement() Then
-            ParseStatement = True
-            Exit Function
+            GoTo L87
         Else
             .BufPos = p154
         End If
         If ParseLabeledStatement() Then
-            ParseStatement = True
-            Exit Function
+            GoTo L87
         Else
             .BufPos = p154
         End If
         If ParseSwitchExpr() Then
-            ParseStatement = True
-            Exit Function
+            GoTo L87
         Else
             .BufPos = p154
         End If
         If ParseAssignExpr() Then
             If ParseSEMICOLON() Then
-                ParseStatement = True
-                Exit Function
+                GoTo L87
             Else
                 .BufPos = p154
             End If
         Else
             .BufPos = p154
+        End If
+        If False Then
+L87:
+            ParseStatement = True
         End If
     End With
 End Function
@@ -1164,20 +1153,22 @@ Private Function ParseBlockExprStatement() As Boolean
     With ctx
         p260 = .BufPos
         If ParseBlockExpr() Then
-            ParseBlockExprStatement = True
-            Exit Function
+            GoTo L96
         Else
             .BufPos = p260
         End If
         If ParseAssignExpr() Then
             If ParseSEMICOLON() Then
-                ParseBlockExprStatement = True
-                Exit Function
+                GoTo L96
             Else
                 .BufPos = p260
             End If
         Else
             .BufPos = p260
+        End If
+        If False Then
+L96:
+            ParseBlockExprStatement = True
         End If
     End With
 End Function
@@ -1241,8 +1232,7 @@ Private Function ParseIfStatement() As Boolean
                 Else
                     .BufPos = p188
                 End If
-                ParseIfStatement = True
-                Exit Function
+                GoTo L101
             Else
                 .BufPos = p201
             End If
@@ -1253,8 +1243,7 @@ Private Function ParseIfStatement() As Boolean
             If ParseAssignExpr() Then
                 p200 = .BufPos
                 If ParseSEMICOLON() Then
-                    ParseIfStatement = True
-                    Exit Function
+                    GoTo L101
                 Else
                     .BufPos = p200
                 End If
@@ -1264,8 +1253,7 @@ Private Function ParseIfStatement() As Boolean
                         .BufPos = p196
                     End If
                     If ParseStatement() Then
-                        ParseIfStatement = True
-                        Exit Function
+                        GoTo L101
                     Else
                         .BufPos = p200
                     End If
@@ -1278,6 +1266,10 @@ Private Function ParseIfStatement() As Boolean
             End If
         Else
             .BufPos = p201
+        End If
+        If False Then
+L101:
+            ParseIfStatement = True
         End If
     End With
 End Function
@@ -1293,17 +1285,19 @@ Private Function ParseLabeledStatement() As Boolean
         End If
         p208 = .BufPos
         If ParseBlock() Then
-            ParseLabeledStatement = True
-            Exit Function
+            GoTo L111
         Else
             .BufPos = p208
         End If
         If ParseLoopStatement() Then
-            ParseLabeledStatement = True
-            Exit Function
+            GoTo L111
         Else
             .BufPos = p208
         End If
+        GoTo L110
+L111:
+        ParseLabeledStatement = True
+L110:
     End With
 End Function
 
@@ -1403,17 +1397,19 @@ Private Function ParseLoopStatement() As Boolean
         End If
         p216 = .BufPos
         If ParseForStatement() Then
-            ParseLoopStatement = True
-            Exit Function
+            GoTo L123
         Else
             .BufPos = p216
         End If
         If ParseWhileStatement() Then
-            ParseLoopStatement = True
-            Exit Function
+            GoTo L123
         Else
             .BufPos = p216
         End If
+        GoTo L122
+L123:
+        ParseLoopStatement = True
+L122:
     End With
 End Function
 
@@ -1434,8 +1430,7 @@ Private Function ParseForStatement() As Boolean
                 Else
                     .BufPos = p224
                 End If
-                ParseForStatement = True
-                Exit Function
+                GoTo L125
             Else
                 .BufPos = p234
             End If
@@ -1446,15 +1441,13 @@ Private Function ParseForStatement() As Boolean
             If ParseAssignExpr() Then
                 p233 = .BufPos
                 If ParseSEMICOLON() Then
-                    ParseForStatement = True
-                    Exit Function
+                    GoTo L125
                 Else
                     .BufPos = p233
                 End If
                 If ParseKEYWORD_else() Then
                     If ParseStatement() Then
-                        ParseForStatement = True
-                        Exit Function
+                        GoTo L125
                     Else
                         .BufPos = p233
                     End If
@@ -1467,6 +1460,10 @@ Private Function ParseForStatement() As Boolean
             End If
         Else
             .BufPos = p234
+        End If
+        If False Then
+L125:
+            ParseForStatement = True
         End If
     End With
 End Function
@@ -1494,8 +1491,7 @@ Private Function ParseWhileStatement() As Boolean
                 Else
                     .BufPos = p242
                 End If
-                ParseWhileStatement = True
-                Exit Function
+                GoTo L132
             Else
                 .BufPos = p255
             End If
@@ -1506,8 +1502,7 @@ Private Function ParseWhileStatement() As Boolean
             If ParseAssignExpr() Then
                 p254 = .BufPos
                 If ParseSEMICOLON() Then
-                    ParseWhileStatement = True
-                    Exit Function
+                    GoTo L132
                 Else
                     .BufPos = p254
                 End If
@@ -1517,8 +1512,7 @@ Private Function ParseWhileStatement() As Boolean
                         .BufPos = p250
                     End If
                     If ParseStatement() Then
-                        ParseWhileStatement = True
-                        Exit Function
+                        GoTo L132
                     Else
                         .BufPos = p254
                     End If
@@ -1531,6 +1525,10 @@ Private Function ParseWhileStatement() As Boolean
             End If
         Else
             .BufPos = p255
+        End If
+        If False Then
+L132:
+            ParseWhileStatement = True
         End If
     End With
 End Function
@@ -1580,88 +1578,78 @@ Private Function ParseAssignOp() As Boolean
     With ctx
         p794 = .BufPos
         If ParseASTERISKEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParseSLASHEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParsePERCENTEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParsePLUSEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParseMINUSEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParseLARROW2EQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParseRARROW2EQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParseAMPERSANDEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParseCARETEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParsePIPEEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParseASTERISKPERCENTEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParsePLUSPERCENTEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParseMINUSPERCENTEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
         End If
         If ParseEQUAL() Then
-            ParseAssignOp = True
-            Exit Function
+            GoTo L145
         Else
             .BufPos = p794
+        End If
+        If False Then
+L145:
+            ParseAssignOp = True
         End If
     End With
 End Function
@@ -1789,40 +1777,38 @@ Private Function ParseCompareOp() As Boolean
     With ctx
         p822 = .BufPos
         If ParseEQUALEQUAL() Then
-            ParseCompareOp = True
-            Exit Function
+            GoTo L155
         Else
             .BufPos = p822
         End If
         If ParseEXCLAMATIONMARKEQUAL() Then
-            ParseCompareOp = True
-            Exit Function
+            GoTo L155
         Else
             .BufPos = p822
         End If
         If ParseLARROW() Then
-            ParseCompareOp = True
-            Exit Function
+            GoTo L155
         Else
             .BufPos = p822
         End If
         If ParseRARROW() Then
-            ParseCompareOp = True
-            Exit Function
+            GoTo L155
         Else
             .BufPos = p822
         End If
         If ParseLARROWEQUAL() Then
-            ParseCompareOp = True
-            Exit Function
+            GoTo L155
         Else
             .BufPos = p822
         End If
         If ParseRARROWEQUAL() Then
-            ParseCompareOp = True
-            Exit Function
+            GoTo L155
         Else
             .BufPos = p822
+        End If
+        If False Then
+L155:
+            ParseCompareOp = True
         End If
     End With
 End Function
@@ -1855,26 +1841,22 @@ Private Function ParseBitwiseOp() As Boolean
     With ctx
         p833 = .BufPos
         If ParseAMPERSAND() Then
-            ParseBitwiseOp = True
-            Exit Function
+            GoTo L157
         Else
             .BufPos = p833
         End If
         If ParseCARET() Then
-            ParseBitwiseOp = True
-            Exit Function
+            GoTo L157
         Else
             .BufPos = p833
         End If
         If ParsePIPE() Then
-            ParseBitwiseOp = True
-            Exit Function
+            GoTo L157
         Else
             .BufPos = p833
         End If
         If ParseKEYWORD_orelse() Then
-            ParseBitwiseOp = True
-            Exit Function
+            GoTo L157
         Else
             .BufPos = p833
         End If
@@ -1883,10 +1865,13 @@ Private Function ParseBitwiseOp() As Boolean
             If Not (ParsePayload()) Then
                 .BufPos = p839
             End If
-            ParseBitwiseOp = True
-            Exit Function
+            GoTo L157
         Else
             .BufPos = p833
+        End If
+        If False Then
+L157:
+            ParseBitwiseOp = True
         End If
     End With
 End Function
@@ -1918,16 +1903,18 @@ Private Function ParseBitShiftOp() As Boolean
     With ctx
         p846 = .BufPos
         If ParseLARROW2() Then
-            ParseBitShiftOp = True
-            Exit Function
+            GoTo L161
         Else
             .BufPos = p846
         End If
         If ParseRARROW2() Then
-            ParseBitShiftOp = True
-            Exit Function
+            GoTo L161
         Else
             .BufPos = p846
+        End If
+        If False Then
+L161:
+            ParseBitShiftOp = True
         End If
     End With
 End Function
@@ -1959,34 +1946,33 @@ Private Function ParseAdditionOp() As Boolean
     With ctx
         p851 = .BufPos
         If ParsePLUS() Then
-            ParseAdditionOp = True
-            Exit Function
+            GoTo L163
         Else
             .BufPos = p851
         End If
         If ParseMINUS() Then
-            ParseAdditionOp = True
-            Exit Function
+            GoTo L163
         Else
             .BufPos = p851
         End If
         If ParsePLUS2() Then
-            ParseAdditionOp = True
-            Exit Function
+            GoTo L163
         Else
             .BufPos = p851
         End If
         If ParsePLUSPERCENT() Then
-            ParseAdditionOp = True
-            Exit Function
+            GoTo L163
         Else
             .BufPos = p851
         End If
         If ParseMINUSPERCENT() Then
-            ParseAdditionOp = True
-            Exit Function
+            GoTo L163
         Else
             .BufPos = p851
+        End If
+        If False Then
+L163:
+            ParseAdditionOp = True
         End If
     End With
 End Function
@@ -2014,40 +2000,38 @@ Private Function ParseMultiplyOp() As Boolean
     With ctx
         p861 = .BufPos
         If ParsePIPE2() Then
-            ParseMultiplyOp = True
-            Exit Function
+            GoTo L165
         Else
             .BufPos = p861
         End If
         If ParseASTERISK() Then
-            ParseMultiplyOp = True
-            Exit Function
+            GoTo L165
         Else
             .BufPos = p861
         End If
         If ParseSLASH() Then
-            ParseMultiplyOp = True
-            Exit Function
+            GoTo L165
         Else
             .BufPos = p861
         End If
         If ParsePERCENT() Then
-            ParseMultiplyOp = True
-            Exit Function
+            GoTo L165
         Else
             .BufPos = p861
         End If
         If ParseASTERISK2() Then
-            ParseMultiplyOp = True
-            Exit Function
+            GoTo L165
         Else
             .BufPos = p861
         End If
         If ParseASTERISKPERCENT() Then
-            ParseMultiplyOp = True
-            Exit Function
+            GoTo L165
         Else
             .BufPos = p861
+        End If
+        If False Then
+L165:
+            ParseMultiplyOp = True
         End If
     End With
 End Function
@@ -2058,46 +2042,43 @@ Private Function ParsePrefixOp() As Boolean
     With ctx
         p872 = .BufPos
         If ParseEXCLAMATIONMARK() Then
-            ParsePrefixOp = True
-            Exit Function
+            GoTo L166
         Else
             .BufPos = p872
         End If
         If ParseMINUS() Then
-            ParsePrefixOp = True
-            Exit Function
+            GoTo L166
         Else
             .BufPos = p872
         End If
         If ParseTILDE() Then
-            ParsePrefixOp = True
-            Exit Function
+            GoTo L166
         Else
             .BufPos = p872
         End If
         If ParseMINUSPERCENT() Then
-            ParsePrefixOp = True
-            Exit Function
+            GoTo L166
         Else
             .BufPos = p872
         End If
         If ParseAMPERSAND() Then
-            ParsePrefixOp = True
-            Exit Function
+            GoTo L166
         Else
             .BufPos = p872
         End If
         If ParseKEYWORD_try() Then
-            ParsePrefixOp = True
-            Exit Function
+            GoTo L166
         Else
             .BufPos = p872
         End If
         If ParseKEYWORD_await() Then
-            ParsePrefixOp = True
-            Exit Function
+            GoTo L166
         Else
             .BufPos = p872
+        End If
+        If False Then
+L166:
+            ParsePrefixOp = True
         End If
     End With
 End Function
@@ -2116,90 +2097,96 @@ Private Function ParsePrimaryExpr() As Boolean
             Exit Function
         Else
             .BufPos = p344
-        End If
-        If ParseIfExpr() Then
-            ParsePrimaryExpr = True
-            Exit Function
-        Else
-            .BufPos = p344
-        End If
-        If ParseKEYWORD_break() Then
-            p348 = .BufPos
-            If Not (ParseBreakLabel()) Then
-                .BufPos = p348
-            End If
-            p351 = .BufPos
-            If Not (ParseExpr()) Then
-                .BufPos = p351
-            End If
-            ParsePrimaryExpr = True
-            Exit Function
-        Else
-            .BufPos = p344
-        End If
-        If ParseKEYWORD_cancel() Then
-            If ParseExpr() Then
+            If ParseIfExpr() Then
                 ParsePrimaryExpr = True
                 Exit Function
             Else
                 .BufPos = p344
-            End If
-        Else
-            .BufPos = p344
-        End If
-        If ParseKEYWORD_comptime() Then
-            If ParseExpr() Then
+                If Not (ParseKEYWORD_break()) Then
+                    .BufPos = p344
+                    GoTo L175
+                End If
+                p348 = .BufPos
+                If Not (ParseBreakLabel()) Then
+                    .BufPos = p348
+                End If
+                p351 = .BufPos
+                If Not (ParseExpr()) Then
+                    .BufPos = p351
+                End If
                 ParsePrimaryExpr = True
                 Exit Function
-            Else
-                .BufPos = p344
-            End If
-        Else
-            .BufPos = p344
-        End If
-        If ParseKEYWORD_continue() Then
-            p362 = .BufPos
-            If Not (ParseBreakLabel()) Then
-                .BufPos = p362
-            End If
-            ParsePrimaryExpr = True
-            Exit Function
-        Else
-            .BufPos = p344
-        End If
-        If ParseKEYWORD_resume() Then
-            If ParseExpr() Then
+L175:
+                If Not (ParseKEYWORD_cancel()) Then
+                    .BufPos = p344
+                    GoTo L174
+                End If
+                If Not (ParseExpr()) Then
+                    .BufPos = p344
+                    GoTo L174
+                End If
                 ParsePrimaryExpr = True
                 Exit Function
-            Else
-                .BufPos = p344
+L174:
+                If Not (ParseKEYWORD_comptime()) Then
+                    .BufPos = p344
+                    GoTo L173
+                End If
+                If Not (ParseExpr()) Then
+                    .BufPos = p344
+                    GoTo L173
+                End If
+                ParsePrimaryExpr = True
+                Exit Function
+L173:
+                If Not (ParseKEYWORD_continue()) Then
+                    .BufPos = p344
+                    GoTo L171
+                End If
+                p362 = .BufPos
+                If Not (ParseBreakLabel()) Then
+                    .BufPos = p362
+                End If
+                ParsePrimaryExpr = True
+                Exit Function
+L171:
+                If Not (ParseKEYWORD_resume()) Then
+                    .BufPos = p344
+                    GoTo L170
+                End If
+                If Not (ParseExpr()) Then
+                    .BufPos = p344
+                    GoTo L170
+                End If
+                ParsePrimaryExpr = True
+                Exit Function
+L170:
+                If Not (ParseKEYWORD_return()) Then
+                    .BufPos = p344
+                    GoTo L168
+                End If
+                p371 = .BufPos
+                If Not (ParseExpr()) Then
+                    .BufPos = p371
+                End If
+                ParsePrimaryExpr = True
+                Exit Function
+L168:
+                If ParseLabeledExpr() Then
+                    ParsePrimaryExpr = True
+                    Exit Function
+                Else
+                    .BufPos = p344
+                    If ParseCurlySuffixExpr() Then
+                        ParsePrimaryExpr = True
+                        Exit Function
+                    Else
+                        .BufPos = p344
+                        Call pvSetExpected("PrimaryExpr")
+                    End If
+                End If
             End If
-        Else
-            .BufPos = p344
         End If
-        If ParseKEYWORD_return() Then
-            p371 = .BufPos
-            If Not (ParseExpr()) Then
-                .BufPos = p371
-            End If
-            ParsePrimaryExpr = True
-            Exit Function
-        Else
-            .BufPos = p344
-        End If
-        If ParseLabeledExpr() Then
-            ParsePrimaryExpr = True
-            Exit Function
-        Else
-            .BufPos = p344
-        End If
-        If ParseCurlySuffixExpr() Then
-            ParsePrimaryExpr = True
-            Exit Function
-        Else
-            .BufPos = p344
-        End If
-        Call pvSetExpected("PrimaryExpr")
     End With
 End Function
 
@@ -2332,17 +2319,19 @@ Private Function ParseLabeledExpr() As Boolean
         End If
         p392 = .BufPos
         If ParseBlock() Then
-            ParseLabeledExpr = True
-            Exit Function
+            GoTo L192
         Else
             .BufPos = p392
         End If
         If ParseLoopExpr() Then
-            ParseLabeledExpr = True
-            Exit Function
+            GoTo L192
         Else
             .BufPos = p392
         End If
+        GoTo L191
+L192:
+        ParseLabeledExpr = True
+L191:
     End With
 End Function
 
@@ -2371,17 +2360,19 @@ Private Function ParseLoopExpr() As Boolean
         End If
         p407 = .BufPos
         If ParseForExpr() Then
-            ParseLoopExpr = True
-            Exit Function
+            GoTo L197
         Else
             .BufPos = p407
         End If
         If ParseWhileExpr() Then
-            ParseLoopExpr = True
-            Exit Function
+            GoTo L197
         Else
             .BufPos = p407
         End If
+        GoTo L196
+L197:
+        ParseLoopExpr = True
+L196:
     End With
 End Function
 
@@ -2479,8 +2470,7 @@ Private Function ParseInitList() As Boolean
                     .BufPos = p438
                 End If
                 If ParseRBRACE() Then
-                    ParseInitList = True
-                    Exit Function
+                    GoTo L208
                 Else
                     .BufPos = p451
                 End If
@@ -2508,8 +2498,7 @@ Private Function ParseInitList() As Boolean
                     .BufPos = p448
                 End If
                 If ParseRBRACE() Then
-                    ParseInitList = True
-                    Exit Function
+                    GoTo L208
                 Else
                     .BufPos = p451
                 End If
@@ -2521,13 +2510,16 @@ Private Function ParseInitList() As Boolean
         End If
         If ParseLBRACE() Then
             If ParseRBRACE() Then
-                ParseInitList = True
-                Exit Function
+                GoTo L208
             Else
                 .BufPos = p451
             End If
         Else
             .BufPos = p451
+        End If
+        If False Then
+L208:
+            ParseInitList = True
         End If
     End With
 End Function
@@ -2553,15 +2545,13 @@ Private Function ParsePrefixTypeOp() As Boolean
     With ctx
         p885 = .BufPos
         If ParseQUESTIONMARK() Then
-            ParsePrefixTypeOp = True
-            Exit Function
+            GoTo L215
         Else
             .BufPos = p885
         End If
         If ParseKEYWORD_promise() Then
             If ParseMINUSRARROW() Then
-                ParsePrefixTypeOp = True
-                Exit Function
+                GoTo L215
             Else
                 .BufPos = p885
             End If
@@ -2583,82 +2573,64 @@ Private Function ParsePrefixTypeOp() As Boolean
                     End If
                 End If
             Loop
-            ParsePrefixTypeOp = True
-            Exit Function
+            GoTo L215
         Else
             .BufPos = p885
         End If
         If ParsePtrTypeStart() Then
             Do
                 p909 = .BufPos
-                If ParseKEYWORD_align() Then
-                    If ParseLPAREN() Then
-                        If ParseExpr() Then
-                            p903 = .BufPos
-                            If ParseCOLON() Then
-                                If ParseINTEGER() Then
-                                    If ParseCOLON() Then
-                                        If Not (ParseINTEGER()) Then
-                                            .BufPos = p903
-                                        End If
-                                    Else
-                                        .BufPos = p903
-                                    End If
-                                Else
-                                    .BufPos = p903
-                                End If
-                            Else
+                If Not (ParseKEYWORD_align()) Then
+                    .BufPos = p909
+                    GoTo L221
+                End If
+                If Not (ParseLPAREN()) Then
+                    .BufPos = p909
+                    GoTo L221
+                End If
+                If Not (ParseExpr()) Then
+                    .BufPos = p909
+                    GoTo L221
+                End If
+                p903 = .BufPos
+                If ParseCOLON() Then
+                    If ParseINTEGER() Then
+                        If ParseCOLON() Then
+                            If Not (ParseINTEGER()) Then
                                 .BufPos = p903
                             End If
-                            If Not (ParseRPAREN()) Then
-                                .BufPos = p909
-                                If Not (ParseKEYWORD_const()) Then
-                                    .BufPos = p909
-                                    If Not (ParseKEYWORD_volatile()) Then
-                                        .BufPos = p909
-                                        .BufPos = p909
-                                        Exit Do
-                                    End If
-                                End If
-                            End If
                         Else
-                            .BufPos = p909
-                            If Not (ParseKEYWORD_const()) Then
-                                .BufPos = p909
-                                If Not (ParseKEYWORD_volatile()) Then
-                                    .BufPos = p909
-                                    .BufPos = p909
-                                    Exit Do
-                                End If
-                            End If
+                            .BufPos = p903
                         End If
                     Else
-                        .BufPos = p909
-                        If Not (ParseKEYWORD_const()) Then
-                            .BufPos = p909
-                            If Not (ParseKEYWORD_volatile()) Then
-                                .BufPos = p909
-                                .BufPos = p909
-                                Exit Do
-                            End If
-                        End If
+                        .BufPos = p903
                     End If
                 Else
+                    .BufPos = p903
+                End If
+                If Not (ParseRPAREN()) Then
                     .BufPos = p909
-                    If Not (ParseKEYWORD_const()) Then
+                    GoTo L221
+                End If
+                GoTo L220
+L221:
+                If Not (ParseKEYWORD_const()) Then
+                    .BufPos = p909
+                    If Not (ParseKEYWORD_volatile()) Then
                         .BufPos = p909
-                        If Not (ParseKEYWORD_volatile()) Then
-                            .BufPos = p909
-                            .BufPos = p909
-                            Exit Do
-                        End If
+                        .BufPos = p909
+                        Exit Do
                     End If
                 End If
+L220:
             Loop
-            ParsePrefixTypeOp = True
-            Exit Function
+            GoTo L215
         Else
             .BufPos = p885
+        End If
+        If False Then
+L215:
+            ParsePrefixTypeOp = True
         End If
     End With
 End Function
@@ -2698,8 +2670,7 @@ Private Function ParseSuffixExpr() As Boolean
                     End If
                 Loop
                 If ParseFnCallArgumnets() Then
-                    ParseSuffixExpr = True
-                    Exit Function
+                    GoTo L227
                 Else
                     .BufPos = p484
                 End If
@@ -2721,10 +2692,13 @@ Private Function ParseSuffixExpr() As Boolean
                     End If
                 End If
             Loop
-            ParseSuffixExpr = True
-            Exit Function
+            GoTo L227
         Else
             .BufPos = p484
+        End If
+        If False Then
+L227:
+            ParseSuffixExpr = True
         End If
     End With
 End Function
@@ -2758,8 +2732,7 @@ Private Function ParsePrimaryTypeExpr() As Boolean
         p491 = .BufPos
         If ParseBUILTININDENTIFIER() Then
             If ParseFnCallArgumnets() Then
-                ParsePrimaryTypeExpr = True
-                Exit Function
+                GoTo L234
             Else
                 .BufPos = p491
             End If
@@ -2767,69 +2740,58 @@ Private Function ParsePrimaryTypeExpr() As Boolean
             .BufPos = p491
         End If
         If ParseCHAR_LITERAL() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseContainerDecl() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseErrorSetDecl() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseFLOAT() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseFnProto() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseGroupedExpr() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseIDENTIFIER() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseIfTypeExpr() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseINTEGER() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseKEYWORD_anyerror() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseKEYWORD_comptime() Then
             If ParseTypeExpr() Then
-                ParsePrimaryTypeExpr = True
-                Exit Function
+                GoTo L234
             Else
                 .BufPos = p491
             End If
@@ -2839,8 +2801,7 @@ Private Function ParsePrimaryTypeExpr() As Boolean
         If ParseKEYWORD_error() Then
             If ParseDOT() Then
                 If ParseIDENTIFIER() Then
-                    ParsePrimaryTypeExpr = True
-                    Exit Function
+                    GoTo L234
                 Else
                     .BufPos = p491
                 End If
@@ -2851,58 +2812,53 @@ Private Function ParsePrimaryTypeExpr() As Boolean
             .BufPos = p491
         End If
         If ParseKEYWORD_false() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseKEYWORD_null() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseKEYWORD_promise() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseKEYWORD_true() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseKEYWORD_undefined() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseKEYWORD_unreachable() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseLabeledTypeExpr() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseSTRINGLITERAL() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
         End If
         If ParseSwitchExpr() Then
-            ParsePrimaryTypeExpr = True
-            Exit Function
+            GoTo L234
         Else
             .BufPos = p491
+        End If
+        If False Then
+L234:
+            ParsePrimaryTypeExpr = True
         End If
     End With
 End Function
@@ -2926,8 +2882,7 @@ Private Function ParseSuffixOp() As Boolean
                     .BufPos = p920
                 End If
                 If ParseRBRACKET() Then
-                    ParseSuffixOp = True
-                    Exit Function
+                    GoTo L238
                 Else
                     .BufPos = p926
                 End If
@@ -2939,8 +2894,7 @@ Private Function ParseSuffixOp() As Boolean
         End If
         If ParseDOT() Then
             If ParseIDENTIFIER() Then
-                ParseSuffixOp = True
-                Exit Function
+                GoTo L238
             Else
                 .BufPos = p926
             End If
@@ -2948,16 +2902,18 @@ Private Function ParseSuffixOp() As Boolean
             .BufPos = p926
         End If
         If ParseDOTASTERISK() Then
-            ParseSuffixOp = True
-            Exit Function
+            GoTo L238
         Else
             .BufPos = p926
         End If
         If ParseDOTQUESTIONMARK() Then
-            ParseSuffixOp = True
-            Exit Function
+            GoTo L238
         Else
             .BufPos = p926
+        End If
+        If False Then
+L238:
+            ParseSuffixOp = True
         End If
     End With
 End Function
@@ -3022,18 +2978,13 @@ Private Function ParseContainerDecl() As Boolean
 
     With ctx
         p536 = .BufPos
-        If ParseKEYWORD_extern() Then
-            GoTo L103
-        Else
+        If Not (ParseKEYWORD_extern()) Then
             .BufPos = p536
+            If Not (ParseKEYWORD_packed()) Then
+                .BufPos = p536
+                .BufPos = p536
+            End If
         End If
-        If ParseKEYWORD_packed() Then
-            GoTo L103
-        Else
-            .BufPos = p536
-        End If
-        .BufPos = p536
-L103:
         If ParseContainerDeclAuto() Then
             ParseContainerDecl = True
         End If
@@ -3082,7 +3033,48 @@ Private Function ParseFLOAT() As Boolean
         p1138 = .BufPos
         If .BufData(.BufPos) = 48 And .BufData(.BufPos + 1) = 98 Then ' "0b"
             .BufPos = .BufPos + 2
-            For i1110 = 0 To LNG_MAXINT
+        Else
+            GoTo L276
+        End If
+        For i1110 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48, 49                             ' [01]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1110 = 0 Then
+            .BufPos = p1138
+            GoTo L276
+        End If
+        If .BufData(.BufPos) = 46 Then              ' "."
+            .BufPos = .BufPos + 1
+        Else
+            .BufPos = p1138
+            GoTo L276
+        End If
+        For i1114 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48, 49                             ' [01]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1114 = 0 Then
+            .BufPos = p1138
+            GoTo L276
+        End If
+        p1118 = .BufPos
+        Select Case .BufData(.BufPos)
+        Case 101, 69                                ' [eE]
+            .BufPos = .BufPos + 1
+            Select Case .BufData(.BufPos)
+            Case 45, 43                             ' [-+]
+                .BufPos = .BufPos + 1
+            End Select
+            For i1120 = 0 To LNG_MAXINT
                 Select Case .BufData(.BufPos)
                 Case 48, 49                         ' [01]
                     .BufPos = .BufPos + 1
@@ -3090,56 +3082,59 @@ Private Function ParseFLOAT() As Boolean
                     Exit For
                 End Select
             Next
-            If i1110 <> 0 Then
-                If .BufData(.BufPos) = 46 Then      ' "."
-                    .BufPos = .BufPos + 1
-                    For i1114 = 0 To LNG_MAXINT
-                        Select Case .BufData(.BufPos)
-                        Case 48, 49                 ' [01]
-                            .BufPos = .BufPos + 1
-                        Case Else
-                            Exit For
-                        End Select
-                    Next
-                    If i1114 <> 0 Then
-                        p1118 = .BufPos
-                        Select Case .BufData(.BufPos)
-                        Case 101, 69                ' [eE]
-                            .BufPos = .BufPos + 1
-                            Select Case .BufData(.BufPos)
-                            Case 45, 43             ' [-+]
-                                .BufPos = .BufPos + 1
-                            End Select
-                            For i1120 = 0 To LNG_MAXINT
-                                Select Case .BufData(.BufPos)
-                                Case 48, 49         ' [01]
-                                    .BufPos = .BufPos + 1
-                                Case Else
-                                    Exit For
-                                End Select
-                            Next
-                            If i1120 <> 0 Then
-                            Else
-                                .BufPos = p1118
-                            End If
-                        End Select
-                        Call Parseskip
-                        Call pvSetAdvance
-                        ParseFLOAT = True
-                        Exit Function
-                    Else
-                        .BufPos = p1138
-                    End If
-                Else
-                    .BufPos = p1138
-                End If
-            Else
-                .BufPos = p1138
+            If Not (i1120 <> 0) Then
+                .BufPos = p1118
             End If
-        End If
+        End Select
+        Call Parseskip
+        Call pvSetAdvance
+        ParseFLOAT = True
+        Exit Function
+L276:
         If .BufData(.BufPos) = 48 And .BufData(.BufPos + 1) = 111 Then ' "0o"
             .BufPos = .BufPos + 2
-            For i1125 = 0 To LNG_MAXINT
+        Else
+            GoTo L272
+        End If
+        For i1125 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 55                           ' [0-7]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1125 = 0 Then
+            .BufPos = p1138
+            GoTo L272
+        End If
+        If .BufData(.BufPos) = 46 Then              ' "."
+            .BufPos = .BufPos + 1
+        Else
+            .BufPos = p1138
+            GoTo L272
+        End If
+        For i1129 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 55                           ' [0-7]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1129 = 0 Then
+            .BufPos = p1138
+            GoTo L272
+        End If
+        p1133 = .BufPos
+        Select Case .BufData(.BufPos)
+        Case 101, 69                                ' [eE]
+            .BufPos = .BufPos + 1
+            Select Case .BufData(.BufPos)
+            Case 45, 43                             ' [-+]
+                .BufPos = .BufPos + 1
+            End Select
+            For i1135 = 0 To LNG_MAXINT
                 Select Case .BufData(.BufPos)
                 Case 48 To 55                       ' [0-7]
                     .BufPos = .BufPos + 1
@@ -3147,56 +3142,59 @@ Private Function ParseFLOAT() As Boolean
                     Exit For
                 End Select
             Next
-            If i1125 <> 0 Then
-                If .BufData(.BufPos) = 46 Then      ' "."
-                    .BufPos = .BufPos + 1
-                    For i1129 = 0 To LNG_MAXINT
-                        Select Case .BufData(.BufPos)
-                        Case 48 To 55               ' [0-7]
-                            .BufPos = .BufPos + 1
-                        Case Else
-                            Exit For
-                        End Select
-                    Next
-                    If i1129 <> 0 Then
-                        p1133 = .BufPos
-                        Select Case .BufData(.BufPos)
-                        Case 101, 69                ' [eE]
-                            .BufPos = .BufPos + 1
-                            Select Case .BufData(.BufPos)
-                            Case 45, 43             ' [-+]
-                                .BufPos = .BufPos + 1
-                            End Select
-                            For i1135 = 0 To LNG_MAXINT
-                                Select Case .BufData(.BufPos)
-                                Case 48 To 55       ' [0-7]
-                                    .BufPos = .BufPos + 1
-                                Case Else
-                                    Exit For
-                                End Select
-                            Next
-                            If i1135 <> 0 Then
-                            Else
-                                .BufPos = p1133
-                            End If
-                        End Select
-                        Call Parseskip
-                        Call pvSetAdvance
-                        ParseFLOAT = True
-                        Exit Function
-                    Else
-                        .BufPos = p1138
-                    End If
-                Else
-                    .BufPos = p1138
-                End If
-            Else
-                .BufPos = p1138
+            If Not (i1135 <> 0) Then
+                .BufPos = p1133
             End If
-        End If
+        End Select
+        Call Parseskip
+        Call pvSetAdvance
+        ParseFLOAT = True
+        Exit Function
+L272:
         If .BufData(.BufPos) = 48 And .BufData(.BufPos + 1) = 120 Then ' "0x"
             .BufPos = .BufPos + 2
-            For i1141 = 0 To LNG_MAXINT
+        Else
+            GoTo L268
+        End If
+        For i1141 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 57, 97 To 102, 65 To 70      ' [0-9a-fA-F]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1141 = 0 Then
+            .BufPos = p1138
+            GoTo L268
+        End If
+        If .BufData(.BufPos) = 46 Then              ' "."
+            .BufPos = .BufPos + 1
+        Else
+            .BufPos = p1138
+            GoTo L268
+        End If
+        For i1145 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 57, 97 To 102, 65 To 70      ' [0-9a-fA-F]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1145 = 0 Then
+            .BufPos = p1138
+            GoTo L268
+        End If
+        p1149 = .BufPos
+        Select Case .BufData(.BufPos)
+        Case 112, 80                                ' [pP]
+            .BufPos = .BufPos + 1
+            Select Case .BufData(.BufPos)
+            Case 45, 43                             ' [-+]
+                .BufPos = .BufPos + 1
+            End Select
+            For i1151 = 0 To LNG_MAXINT
                 Select Case .BufData(.BufPos)
                 Case 48 To 57, 97 To 102, 65 To 70  ' [0-9a-fA-F]
                     .BufPos = .BufPos + 1
@@ -3204,53 +3202,15 @@ Private Function ParseFLOAT() As Boolean
                     Exit For
                 End Select
             Next
-            If i1141 <> 0 Then
-                If .BufData(.BufPos) = 46 Then      ' "."
-                    .BufPos = .BufPos + 1
-                    For i1145 = 0 To LNG_MAXINT
-                        Select Case .BufData(.BufPos)
-                        Case 48 To 57, 97 To 102, 65 To 70 ' [0-9a-fA-F]
-                            .BufPos = .BufPos + 1
-                        Case Else
-                            Exit For
-                        End Select
-                    Next
-                    If i1145 <> 0 Then
-                        p1149 = .BufPos
-                        Select Case .BufData(.BufPos)
-                        Case 112, 80                ' [pP]
-                            .BufPos = .BufPos + 1
-                            Select Case .BufData(.BufPos)
-                            Case 45, 43             ' [-+]
-                                .BufPos = .BufPos + 1
-                            End Select
-                            For i1151 = 0 To LNG_MAXINT
-                                Select Case .BufData(.BufPos)
-                                Case 48 To 57, 97 To 102, 65 To 70 ' [0-9a-fA-F]
-                                    .BufPos = .BufPos + 1
-                                Case Else
-                                    Exit For
-                                End Select
-                            Next
-                            If i1151 <> 0 Then
-                            Else
-                                .BufPos = p1149
-                            End If
-                        End Select
-                        Call Parseskip
-                        Call pvSetAdvance
-                        ParseFLOAT = True
-                        Exit Function
-                    Else
-                        .BufPos = p1138
-                    End If
-                Else
-                    .BufPos = p1138
-                End If
-            Else
-                .BufPos = p1138
+            If Not (i1151 <> 0) Then
+                .BufPos = p1149
             End If
-        End If
+        End Select
+        Call Parseskip
+        Call pvSetAdvance
+        ParseFLOAT = True
+        Exit Function
+L268:
         For i1155 = 0 To LNG_MAXINT
             Select Case .BufData(.BufPos)
             Case 48 To 57                           ' [0-9]
@@ -3259,184 +3219,197 @@ Private Function ParseFLOAT() As Boolean
                 Exit For
             End Select
         Next
-        If i1155 <> 0 Then
-            If .BufData(.BufPos) = 46 Then          ' "."
-                .BufPos = .BufPos + 1
-                For i1159 = 0 To LNG_MAXINT
-                    Select Case .BufData(.BufPos)
-                    Case 48 To 57                   ' [0-9]
-                        .BufPos = .BufPos + 1
-                    Case Else
-                        Exit For
-                    End Select
-                Next
-                If i1159 <> 0 Then
-                    p1163 = .BufPos
-                    Select Case .BufData(.BufPos)
-                    Case 101, 69                    ' [eE]
-                        .BufPos = .BufPos + 1
-                        Select Case .BufData(.BufPos)
-                        Case 45, 43                 ' [-+]
-                            .BufPos = .BufPos + 1
-                        End Select
-                        For i1165 = 0 To LNG_MAXINT
-                            Select Case .BufData(.BufPos)
-                            Case 48 To 57           ' [0-9]
-                                .BufPos = .BufPos + 1
-                            Case Else
-                                Exit For
-                            End Select
-                        Next
-                        If i1165 <> 0 Then
-                        Else
-                            .BufPos = p1163
-                        End If
-                    End Select
-                    Call Parseskip
-                    Call pvSetAdvance
-                    ParseFLOAT = True
-                    Exit Function
-                Else
-                    .BufPos = p1138
-                End If
-            Else
-                .BufPos = p1138
-            End If
+        If i1155 = 0 Then
+            .BufPos = p1138
+            GoTo L264
+        End If
+        If .BufData(.BufPos) = 46 Then              ' "."
+            .BufPos = .BufPos + 1
         Else
             .BufPos = p1138
+            GoTo L264
         End If
+        For i1159 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 57                           ' [0-9]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1159 = 0 Then
+            .BufPos = p1138
+            GoTo L264
+        End If
+        p1163 = .BufPos
+        Select Case .BufData(.BufPos)
+        Case 101, 69                                ' [eE]
+            .BufPos = .BufPos + 1
+            Select Case .BufData(.BufPos)
+            Case 45, 43                             ' [-+]
+                .BufPos = .BufPos + 1
+            End Select
+            For i1165 = 0 To LNG_MAXINT
+                Select Case .BufData(.BufPos)
+                Case 48 To 57                       ' [0-9]
+                    .BufPos = .BufPos + 1
+                Case Else
+                    Exit For
+                End Select
+            Next
+            If Not (i1165 <> 0) Then
+                .BufPos = p1163
+            End If
+        End Select
+        Call Parseskip
+        Call pvSetAdvance
+        ParseFLOAT = True
+        Exit Function
+L264:
         If .BufData(.BufPos) = 48 And .BufData(.BufPos + 1) = 98 Then ' "0b"
             .BufPos = .BufPos + 2
-            For i1170 = 0 To LNG_MAXINT
-                Select Case .BufData(.BufPos)
-                Case 48, 49                         ' [01]
-                    .BufPos = .BufPos + 1
-                Case Else
-                    Exit For
-                End Select
-            Next
-            If i1170 <> 0 Then
-                If .BufData(.BufPos) = 46 Then      ' "."
-                    .BufPos = .BufPos + 1
-                End If
-                Select Case .BufData(.BufPos)
-                Case 101, 69                        ' [eE]
-                    .BufPos = .BufPos + 1
-                    Select Case .BufData(.BufPos)
-                    Case 45, 43                     ' [-+]
-                        .BufPos = .BufPos + 1
-                    End Select
-                    For i1178 = 0 To LNG_MAXINT
-                        Select Case .BufData(.BufPos)
-                        Case 48, 49                 ' [01]
-                            .BufPos = .BufPos + 1
-                        Case Else
-                            Exit For
-                        End Select
-                    Next
-                    If i1178 <> 0 Then
-                        Call Parseskip
-                        Call pvSetAdvance
-                        ParseFLOAT = True
-                        Exit Function
-                    Else
-                        .BufPos = p1138
-                    End If
-                Case Else
-                    .BufPos = p1138
-                End Select
-            Else
-                .BufPos = p1138
-            End If
+        Else
+            GoTo L261
         End If
+        For i1170 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48, 49                             ' [01]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1170 = 0 Then
+            .BufPos = p1138
+            GoTo L261
+        End If
+        If .BufData(.BufPos) = 46 Then              ' "."
+            .BufPos = .BufPos + 1
+        End If
+        Select Case .BufData(.BufPos)
+        Case 101, 69                                ' [eE]
+            .BufPos = .BufPos + 1
+        Case Else
+            .BufPos = p1138
+            GoTo L261
+        End Select
+        Select Case .BufData(.BufPos)
+        Case 45, 43                                 ' [-+]
+            .BufPos = .BufPos + 1
+        End Select
+        For i1178 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48, 49                             ' [01]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1178 = 0 Then
+            .BufPos = p1138
+            GoTo L261
+        End If
+        Call Parseskip
+        Call pvSetAdvance
+        ParseFLOAT = True
+        Exit Function
+L261:
         If .BufData(.BufPos) = 48 And .BufData(.BufPos + 1) = 111 Then ' "0o"
             .BufPos = .BufPos + 2
-            For i1182 = 0 To LNG_MAXINT
-                Select Case .BufData(.BufPos)
-                Case 48 To 55                       ' [0-7]
-                    .BufPos = .BufPos + 1
-                Case Else
-                    Exit For
-                End Select
-            Next
-            If i1182 <> 0 Then
-                If .BufData(.BufPos) = 46 Then      ' "."
-                    .BufPos = .BufPos + 1
-                End If
-                Select Case .BufData(.BufPos)
-                Case 101, 69                        ' [eE]
-                    .BufPos = .BufPos + 1
-                    Select Case .BufData(.BufPos)
-                    Case 45, 43                     ' [-+]
-                        .BufPos = .BufPos + 1
-                    End Select
-                    For i1190 = 0 To LNG_MAXINT
-                        Select Case .BufData(.BufPos)
-                        Case 48 To 55               ' [0-7]
-                            .BufPos = .BufPos + 1
-                        Case Else
-                            Exit For
-                        End Select
-                    Next
-                    If i1190 <> 0 Then
-                        Call Parseskip
-                        Call pvSetAdvance
-                        ParseFLOAT = True
-                        Exit Function
-                    Else
-                        .BufPos = p1138
-                    End If
-                Case Else
-                    .BufPos = p1138
-                End Select
-            Else
-                .BufPos = p1138
-            End If
+        Else
+            GoTo L258
         End If
+        For i1182 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 55                           ' [0-7]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1182 = 0 Then
+            .BufPos = p1138
+            GoTo L258
+        End If
+        If .BufData(.BufPos) = 46 Then              ' "."
+            .BufPos = .BufPos + 1
+        End If
+        Select Case .BufData(.BufPos)
+        Case 101, 69                                ' [eE]
+            .BufPos = .BufPos + 1
+        Case Else
+            .BufPos = p1138
+            GoTo L258
+        End Select
+        Select Case .BufData(.BufPos)
+        Case 45, 43                                 ' [-+]
+            .BufPos = .BufPos + 1
+        End Select
+        For i1190 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 55                           ' [0-7]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1190 = 0 Then
+            .BufPos = p1138
+            GoTo L258
+        End If
+        Call Parseskip
+        Call pvSetAdvance
+        ParseFLOAT = True
+        Exit Function
+L258:
         If .BufData(.BufPos) = 48 And .BufData(.BufPos + 1) = 120 Then ' "0x"
             .BufPos = .BufPos + 2
-            For i1194 = 0 To LNG_MAXINT
-                Select Case .BufData(.BufPos)
-                Case 48 To 57, 97 To 102, 65 To 70  ' [0-9a-fA-F]
-                    .BufPos = .BufPos + 1
-                Case Else
-                    Exit For
-                End Select
-            Next
-            If i1194 <> 0 Then
-                If .BufData(.BufPos) = 46 Then      ' "."
-                    .BufPos = .BufPos + 1
-                End If
-                Select Case .BufData(.BufPos)
-                Case 112, 80                        ' [pP]
-                    .BufPos = .BufPos + 1
-                    Select Case .BufData(.BufPos)
-                    Case 45, 43                     ' [-+]
-                        .BufPos = .BufPos + 1
-                    End Select
-                    For i1202 = 0 To LNG_MAXINT
-                        Select Case .BufData(.BufPos)
-                        Case 48 To 57, 97 To 102, 65 To 70 ' [0-9a-fA-F]
-                            .BufPos = .BufPos + 1
-                        Case Else
-                            Exit For
-                        End Select
-                    Next
-                    If i1202 <> 0 Then
-                        Call Parseskip
-                        Call pvSetAdvance
-                        ParseFLOAT = True
-                        Exit Function
-                    Else
-                        .BufPos = p1138
-                    End If
-                Case Else
-                    .BufPos = p1138
-                End Select
-            Else
-                .BufPos = p1138
-            End If
+        Else
+            GoTo L255
         End If
+        For i1194 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 57, 97 To 102, 65 To 70      ' [0-9a-fA-F]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1194 = 0 Then
+            .BufPos = p1138
+            GoTo L255
+        End If
+        If .BufData(.BufPos) = 46 Then              ' "."
+            .BufPos = .BufPos + 1
+        End If
+        Select Case .BufData(.BufPos)
+        Case 112, 80                                ' [pP]
+            .BufPos = .BufPos + 1
+        Case Else
+            .BufPos = p1138
+            GoTo L255
+        End Select
+        Select Case .BufData(.BufPos)
+        Case 45, 43                                 ' [-+]
+            .BufPos = .BufPos + 1
+        End Select
+        For i1202 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 57, 97 To 102, 65 To 70      ' [0-9a-fA-F]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1202 = 0 Then
+            .BufPos = p1138
+            GoTo L255
+        End If
+        Call Parseskip
+        Call pvSetAdvance
+        ParseFLOAT = True
+        Exit Function
+L255:
         For i1205 = 0 To LNG_MAXINT
             Select Case .BufData(.BufPos)
             Case 48 To 57                           ' [0-9]
@@ -3445,39 +3418,41 @@ Private Function ParseFLOAT() As Boolean
                 Exit For
             End Select
         Next
-        If i1205 <> 0 Then
-            If .BufData(.BufPos) = 46 Then          ' "."
-                .BufPos = .BufPos + 1
-            End If
-            Select Case .BufData(.BufPos)
-            Case 101, 69                            ' [eE]
-                .BufPos = .BufPos + 1
-                Select Case .BufData(.BufPos)
-                Case 45, 43                         ' [-+]
-                    .BufPos = .BufPos + 1
-                End Select
-                For i1213 = 0 To LNG_MAXINT
-                    Select Case .BufData(.BufPos)
-                    Case 48 To 57                   ' [0-9]
-                        .BufPos = .BufPos + 1
-                    Case Else
-                        Exit For
-                    End Select
-                Next
-                If i1213 <> 0 Then
-                    Call Parseskip
-                    Call pvSetAdvance
-                    ParseFLOAT = True
-                    Exit Function
-                Else
-                    .BufPos = p1138
-                End If
-            Case Else
-                .BufPos = p1138
-            End Select
-        Else
+        If i1205 = 0 Then
             .BufPos = p1138
+            GoTo L252
         End If
+        If .BufData(.BufPos) = 46 Then              ' "."
+            .BufPos = .BufPos + 1
+        End If
+        Select Case .BufData(.BufPos)
+        Case 101, 69                                ' [eE]
+            .BufPos = .BufPos + 1
+        Case Else
+            .BufPos = p1138
+            GoTo L252
+        End Select
+        Select Case .BufData(.BufPos)
+        Case 45, 43                                 ' [-+]
+            .BufPos = .BufPos + 1
+        End Select
+        For i1213 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 57                           ' [0-9]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1213 = 0 Then
+            .BufPos = p1138
+            GoTo L252
+        End If
+        Call Parseskip
+        Call pvSetAdvance
+        ParseFLOAT = True
+        Exit Function
+L252:
         Call pvSetExpected("FLOAT")
     End With
 End Function
@@ -3528,61 +3503,70 @@ Private Function ParseINTEGER() As Boolean
         p1225 = .BufPos
         If .BufData(.BufPos) = 48 And .BufData(.BufPos + 1) = 98 Then ' "0b"
             .BufPos = .BufPos + 2
-            For i1217 = 0 To LNG_MAXINT
-                Select Case .BufData(.BufPos)
-                Case 48, 49                         ' [01]
-                    .BufPos = .BufPos + 1
-                Case Else
-                    Exit For
-                End Select
-            Next
-            If i1217 <> 0 Then
-                Call Parseskip
-                Call pvSetAdvance
-                ParseINTEGER = True
-                Exit Function
-            Else
-                .BufPos = p1225
-            End If
+        Else
+            GoTo L289
         End If
+        For i1217 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48, 49                             ' [01]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1217 = 0 Then
+            .BufPos = p1225
+            GoTo L289
+        End If
+        Call Parseskip
+        Call pvSetAdvance
+        ParseINTEGER = True
+        Exit Function
+L289:
         If .BufData(.BufPos) = 48 And .BufData(.BufPos + 1) = 111 Then ' "0o"
             .BufPos = .BufPos + 2
-            For i1222 = 0 To LNG_MAXINT
-                Select Case .BufData(.BufPos)
-                Case 48 To 55                       ' [0-7]
-                    .BufPos = .BufPos + 1
-                Case Else
-                    Exit For
-                End Select
-            Next
-            If i1222 <> 0 Then
-                Call Parseskip
-                Call pvSetAdvance
-                ParseINTEGER = True
-                Exit Function
-            Else
-                .BufPos = p1225
-            End If
+        Else
+            GoTo L288
         End If
+        For i1222 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 55                           ' [0-7]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1222 = 0 Then
+            .BufPos = p1225
+            GoTo L288
+        End If
+        Call Parseskip
+        Call pvSetAdvance
+        ParseINTEGER = True
+        Exit Function
+L288:
         If .BufData(.BufPos) = 48 And .BufData(.BufPos + 1) = 120 Then ' "0x"
             .BufPos = .BufPos + 2
-            For i1228 = 0 To LNG_MAXINT
-                Select Case .BufData(.BufPos)
-                Case 48 To 57, 97 To 102, 65 To 70  ' [0-9a-fA-F]
-                    .BufPos = .BufPos + 1
-                Case Else
-                    Exit For
-                End Select
-            Next
-            If i1228 <> 0 Then
-                Call Parseskip
-                Call pvSetAdvance
-                ParseINTEGER = True
-                Exit Function
-            Else
-                .BufPos = p1225
-            End If
+        Else
+            GoTo L287
         End If
+        For i1228 = 0 To LNG_MAXINT
+            Select Case .BufData(.BufPos)
+            Case 48 To 57, 97 To 102, 65 To 70      ' [0-9a-fA-F]
+                .BufPos = .BufPos + 1
+            Case Else
+                Exit For
+            End Select
+        Next
+        If i1228 = 0 Then
+            .BufPos = p1225
+            GoTo L287
+        End If
+        Call Parseskip
+        Call pvSetAdvance
+        ParseINTEGER = True
+        Exit Function
+L287:
         For i1232 = 0 To LNG_MAXINT
             Select Case .BufData(.BufPos)
             Case 48 To 57                           ' [0-9]
@@ -3591,14 +3575,15 @@ Private Function ParseINTEGER() As Boolean
                 Exit For
             End Select
         Next
-        If i1232 <> 0 Then
-            Call Parseskip
-            Call pvSetAdvance
-            ParseINTEGER = True
-            Exit Function
-        Else
+        If i1232 = 0 Then
             .BufPos = p1225
+            GoTo L286
         End If
+        Call Parseskip
+        Call pvSetAdvance
+        ParseINTEGER = True
+        Exit Function
+L286:
         Call pvSetExpected("INTEGER")
     End With
 End Function
@@ -3727,8 +3712,7 @@ Private Function ParseLabeledTypeExpr() As Boolean
         p568 = .BufPos
         If ParseBlockLabel() Then
             If ParseBlock() Then
-                ParseLabeledTypeExpr = True
-                Exit Function
+                GoTo L299
             Else
                 .BufPos = p568
             End If
@@ -3740,10 +3724,13 @@ Private Function ParseLabeledTypeExpr() As Boolean
             .BufPos = p563
         End If
         If ParseLoopTypeExpr() Then
-            ParseLabeledTypeExpr = True
-            Exit Function
+            GoTo L299
         Else
             .BufPos = p568
+        End If
+        If False Then
+L299:
+            ParseLabeledTypeExpr = True
         End If
     End With
 End Function
@@ -3805,17 +3792,19 @@ Private Function ParseLoopTypeExpr() As Boolean
         End If
         p575 = .BufPos
         If ParseForTypeExpr() Then
-            ParseLoopTypeExpr = True
-            Exit Function
+            GoTo L308
         Else
             .BufPos = p575
         End If
         If ParseWhileTypeExpr() Then
-            ParseLoopTypeExpr = True
-            Exit Function
+            GoTo L308
         Else
             .BufPos = p575
         End If
+        GoTo L307
+L308:
+        ParseLoopTypeExpr = True
+L307:
     End With
 End Function
 
@@ -3988,10 +3977,7 @@ Private Function ParseAsmOutputItem() As Boolean
                             p636 = .BufPos
                             If ParseMINUSRARROW() Then
                                 If ParseTypeExpr() Then
-                                    If ParseRPAREN() Then
-                                        ParseAsmOutputItem = True
-                                        Exit Function
-                                    End If
+                                    GoTo L329
                                 Else
                                     .BufPos = p636
                                 End If
@@ -3999,18 +3985,21 @@ Private Function ParseAsmOutputItem() As Boolean
                                 .BufPos = p636
                             End If
                             If ParseIDENTIFIER() Then
-                                If ParseRPAREN() Then
-                                    ParseAsmOutputItem = True
-                                    Exit Function
-                                End If
+                                GoTo L329
                             Else
                                 .BufPos = p636
+                            End If
+                            GoTo L328
+L329:
+                            If ParseRPAREN() Then
+                                ParseAsmOutputItem = True
                             End If
                         End If
                     End If
                 End If
             End If
         End If
+L328:
     End With
 End Function
 
@@ -4224,18 +4213,13 @@ Private Function ParseParamDecl() As Boolean
 
     With ctx
         p701 = .BufPos
-        If ParseKEYWORD_noalias() Then
-            GoTo L140
-        Else
+        If Not (ParseKEYWORD_noalias()) Then
             .BufPos = p701
+            If Not (ParseKEYWORD_comptime()) Then
+                .BufPos = p701
+                .BufPos = p701
+            End If
         End If
-        If ParseKEYWORD_comptime() Then
-            GoTo L140
-        Else
-            .BufPos = p701
-        End If
-        .BufPos = p701
-L140:
         p705 = .BufPos
         If ParseIDENTIFIER() Then
             If Not (ParseCOLON()) Then
@@ -4268,22 +4252,23 @@ Private Function ParseParamType() As Boolean
     With ctx
         p713 = .BufPos
         If ParseKEYWORD_var() Then
-            ParseParamType = True
-            Exit Function
+            GoTo L353
         Else
             .BufPos = p713
         End If
         If ParseDOT3() Then
-            ParseParamType = True
-            Exit Function
+            GoTo L353
         Else
             .BufPos = p713
         End If
         If ParseTypeExpr() Then
-            ParseParamType = True
-            Exit Function
+            GoTo L353
         Else
             .BufPos = p713
+        End If
+        If False Then
+L353:
+            ParseParamType = True
         End If
     End With
 End Function
@@ -4461,16 +4446,18 @@ Private Function ParseSwitchCase() As Boolean
             If Not (ParseCOMMA()) Then
                 .BufPos = p780
             End If
-            ParseSwitchCase = True
-            Exit Function
+            GoTo L368
         Else
             .BufPos = p783
         End If
         If ParseKEYWORD_else() Then
-            ParseSwitchCase = True
-            Exit Function
+            GoTo L368
         Else
             .BufPos = p783
+        End If
+        If False Then
+L368:
+            ParseSwitchCase = True
         End If
     End With
 End Function
@@ -4997,22 +4984,19 @@ Private Function ParsePtrTypeStart() As Boolean
     With ctx
         p950 = .BufPos
         If ParseASTERISK() Then
-            ParsePtrTypeStart = True
-            Exit Function
+            GoTo L413
         Else
             .BufPos = p950
         End If
         If ParseASTERISK2() Then
-            ParsePtrTypeStart = True
-            Exit Function
+            GoTo L413
         Else
             .BufPos = p950
         End If
         If ParseLBRACKET() Then
             If ParseASTERISK() Then
                 If ParseRBRACKET() Then
-                    ParsePtrTypeStart = True
-                    Exit Function
+                    GoTo L413
                 Else
                     .BufPos = p950
                 End If
@@ -5021,6 +5005,10 @@ Private Function ParsePtrTypeStart() As Boolean
             End If
         Else
             .BufPos = p950
+        End If
+        If False Then
+L413:
+            ParsePtrTypeStart = True
         End If
     End With
 End Function
@@ -5111,42 +5099,32 @@ Private Function ParseContainerDeclType() As Boolean
         p988 = .BufPos
         p965 = .BufPos
         If ParseKEYWORD_struct() Then
-            p968 = .BufPos
-            If ParseLPAREN() Then
-                If ParseExpr() Then
-                    If Not (ParseRPAREN()) Then
-                        .BufPos = p968
-                    End If
-                Else
-                    .BufPos = p968
-                End If
-            Else
-                .BufPos = p968
-            End If
-            ParseContainerDeclType = True
-            Exit Function
+            GoTo L425
         Else
             .BufPos = p965
         End If
         If ParseKEYWORD_enum() Then
-            p968 = .BufPos
-            If ParseLPAREN() Then
-                If ParseExpr() Then
-                    If Not (ParseRPAREN()) Then
-                        .BufPos = p968
-                    End If
-                Else
+            GoTo L425
+        Else
+            .BufPos = p965
+        End If
+        .BufPos = p988
+        GoTo L422
+L425:
+        p968 = .BufPos
+        If ParseLPAREN() Then
+            If ParseExpr() Then
+                If Not (ParseRPAREN()) Then
                     .BufPos = p968
                 End If
             Else
                 .BufPos = p968
             End If
-            ParseContainerDeclType = True
-            Exit Function
         Else
-            .BufPos = p965
+            .BufPos = p968
         End If
-        .BufPos = p988
+        GoTo L421
+L422:
         If ParseKEYWORD_union() Then
             p984 = .BufPos
             If ParseLPAREN() Then
@@ -5164,35 +5142,32 @@ Private Function ParseContainerDeclType() As Boolean
                     Else
                         .BufPos = p978
                     End If
-                    If ParseRPAREN() Then
-                        GoTo L153
-                    Else
-                        .BufPos = p984
-                    End If
-                    GoTo L154
+                    GoTo L429
                 Else
                     .BufPos = p983
                 End If
                 If ParseExpr() Then
-                    If ParseRPAREN() Then
-                        GoTo L153
-                    Else
-                        .BufPos = p984
-                    End If
-                    GoTo L154
+                    GoTo L429
                 Else
                     .BufPos = p983
                 End If
                 .BufPos = p984
-L154:
+                GoTo L428
+L429:
+                If Not (ParseRPAREN()) Then
+                    .BufPos = p984
+                End If
             Else
                 .BufPos = p984
             End If
-L153:
-            ParseContainerDeclType = True
-            Exit Function
+L428:
+            GoTo L421
         Else
             .BufPos = p988
+        End If
+        If False Then
+L421:
+            ParseContainerDeclType = True
         End If
     End With
 End Function
@@ -5246,9 +5221,7 @@ Private Function Parsechar_escape() As Boolean
                 Select Case .BufData(.BufPos)
                 Case 48 To 57, 97 To 102, 65 To 70  ' [0-9a-fA-F]
                     .BufPos = .BufPos + 1
-                    Call pvSetAdvance
-                    Parsechar_escape = True
-                    Exit Function
+                    GoTo L436
                 End Select
             End Select
         End If
@@ -5266,9 +5239,7 @@ Private Function Parsechar_escape() As Boolean
                         Select Case .BufData(.BufPos)
                         Case 48 To 57, 97 To 102, 65 To 70 ' [0-9a-fA-F]
                             .BufPos = .BufPos + 1
-                            Call pvSetAdvance
-                            Parsechar_escape = True
-                            Exit Function
+                            GoTo L436
                         End Select
                     End Select
                 End Select
@@ -5294,9 +5265,7 @@ Private Function Parsechar_escape() As Boolean
                                 Select Case .BufData(.BufPos)
                                 Case 48 To 57, 97 To 102, 65 To 70 ' [0-9a-fA-F]
                                     .BufPos = .BufPos + 1
-                                    Call pvSetAdvance
-                                    Parsechar_escape = True
-                                    Exit Function
+                                    GoTo L436
                                 End Select
                             End Select
                         End Select
@@ -5309,9 +5278,13 @@ Private Function Parsechar_escape() As Boolean
             Select Case .BufData(.BufPos)
             Case 110, 114, 92, 116, 39, 34          ' [nr\\t'"]
                 .BufPos = .BufPos + 1
-                Call pvSetAdvance
-                Parsechar_escape = True
+                GoTo L436
             End Select
+        End If
+        If False Then
+L436:
+            Call pvSetAdvance
+            Parsechar_escape = True
         End If
     End With
 End Function
@@ -5322,9 +5295,7 @@ Private Function Parsechar_char() As Boolean
     With ctx
         p1073 = .BufPos
         If Parsechar_escape() Then
-            Call pvSetAdvance
-            Parsechar_char = True
-            Exit Function
+            GoTo L441
         Else
             .BufPos = p1073
         End If
@@ -5334,10 +5305,14 @@ Private Function Parsechar_char() As Boolean
         Case Else
             If .BufPos < .BufSize Then
                 .BufPos = .BufPos + 1
-                Call pvSetAdvance
-                Parsechar_char = True
+                GoTo L441
             End If
         End Select
+        If False Then
+L441:
+            Call pvSetAdvance
+            Parsechar_char = True
+        End If
     End With
 End Function
 
@@ -5347,9 +5322,7 @@ Private Function Parsestring_char() As Boolean
     With ctx
         p1077 = .BufPos
         If Parsechar_escape() Then
-            Call pvSetAdvance
-            Parsestring_char = True
-            Exit Function
+            GoTo L442
         Else
             .BufPos = p1077
         End If
@@ -5359,10 +5332,14 @@ Private Function Parsestring_char() As Boolean
         Case Else
             If .BufPos < .BufSize Then
                 .BufPos = .BufPos + 1
-                Call pvSetAdvance
-                Parsestring_char = True
+                GoTo L442
             End If
         End Select
+        If False Then
+L442:
+            Call pvSetAdvance
+            Parsestring_char = True
+        End If
     End With
 End Function
 
@@ -5474,298 +5451,253 @@ Private Function Parsekeyword() As Boolean
     With ctx
         p1633 = .BufPos
         If ParseKEYWORD_align() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_and() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_anyerror() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_asm() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_async() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_await() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_break() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_cancel() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_catch() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_comptime() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_const() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_continue() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_defer() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_else() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_enum() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_errdefer() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_error() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_export() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_extern() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_false() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_fn() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_for() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_if() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_inline() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_nakedcc() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_noalias() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_null() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_or() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_orelse() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_packed() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_promise() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_pub() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_resume() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_return() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_section() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_stdcallcc() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_struct() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_suspend() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_switch() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_test() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_true() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_try() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_undefined() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_union() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_unreachable() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_use() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_var() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_volatile() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
         End If
         If ParseKEYWORD_while() Then
-            Parsekeyword = True
-            Exit Function
+            GoTo L444
         Else
             .BufPos = p1633
+        End If
+        If False Then
+L444:
+            Parsekeyword = True
         End If
     End With
 End Function

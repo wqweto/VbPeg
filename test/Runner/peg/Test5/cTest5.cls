@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 3.12.2018 1:29:29
+' Auto-generated on 5.3.2019 1:30:19
 Option Explicit
 DefObj A-Z
 
@@ -19,15 +19,31 @@ DefObj A-Z
 ' API
 '=========================================================================
 
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
+Private Const NULL_PTR                  As LongPtr = 0
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+Private Const NULL_PTR                  As Long = 0
+#End If
+#If Win64 Then
+Private Const PTR_SIZE                  As Long = 8
+#Else
+Private Const PTR_SIZE                  As Long = 4
+#End If
 
 Private Type SAFEARRAY1D
     cDims               As Integer
     fFeatures           As Integer
     cbElements          As Long
     cLocks              As Long
+#If VBA7 Then
+    pvData              As LongPtr
+#Else
     pvData              As Long
+#End If
     cElements           As Long
     lLbound             As Long
 End Type
@@ -78,7 +94,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "3.12.2018 1:29:29"
+    ParserVersion = "5.3.2019 1:30:19"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -114,15 +130,15 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), PTR_SIZE)
         With .BufArray
             .cDims = 1
-            .cbElements = 2
             .fFeatures = 1 ' FADF_AUTO
+            .cbElements = 2
             .pvData = StrPtr(sSubject)
             .cElements = Len(sSubject) + 2 '-- look-ahead chars
         End With
-        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), PTR_SIZE)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
@@ -146,8 +162,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
-        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), NULL_PTR, PTR_SIZE)
+        Call CopyMemory(ByVal ArrPtr(.BufData), NULL_PTR, PTR_SIZE)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData

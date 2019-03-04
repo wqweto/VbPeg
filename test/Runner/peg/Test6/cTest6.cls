@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 3.12.2018 1:29:29
+' Auto-generated on 5.3.2019 1:30:19
 Option Explicit
 DefObj A-Z
 
@@ -19,15 +19,31 @@ DefObj A-Z
 ' API
 '=========================================================================
 
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
+Private Const NULL_PTR                  As LongPtr = 0
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+Private Const NULL_PTR                  As Long = 0
+#End If
+#If Win64 Then
+Private Const PTR_SIZE                  As Long = 8
+#Else
+Private Const PTR_SIZE                  As Long = 4
+#End If
 
 Private Type SAFEARRAY1D
     cDims               As Integer
     fFeatures           As Integer
     cbElements          As Long
     cLocks              As Long
+#If VBA7 Then
+    pvData              As LongPtr
+#Else
     pvData              As Long
+#End If
     cElements           As Long
     lLbound             As Long
 End Type
@@ -78,7 +94,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "3.12.2018 1:29:29"
+    ParserVersion = "5.3.2019 1:30:19"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -114,15 +130,15 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), PTR_SIZE)
         With .BufArray
             .cDims = 1
-            .cbElements = 2
             .fFeatures = 1 ' FADF_AUTO
+            .cbElements = 2
             .pvData = StrPtr(sSubject)
             .cElements = Len(sSubject) + 2 '-- look-ahead chars
         End With
-        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), PTR_SIZE)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
@@ -146,8 +162,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
-        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), NULL_PTR, PTR_SIZE)
+        Call CopyMemory(ByVal ArrPtr(.BufData), NULL_PTR, PTR_SIZE)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -200,41 +216,33 @@ Public Function Parsestart() As Boolean
             e5 = .LastExpected
             If ParseEndline() Then
                 .BufPos = p13
-                If ParseEndline() Then
-                    p11 = .BufPos
-                    If ParseInline() Then
-                        .BufPos = p11
-                    Else
-                        .BufPos = p13
-                        .BufPos = p13
-                        Exit For
-                    End If
-                Else
-                    .BufPos = p13
-                    .BufPos = p13
-                    Exit For
-                End If
+                GoTo L7
             Else
                 .BufPos = p5
                 .LastExpected = e5
-                If Not (ParseInline()) Then
-                    .BufPos = p13
-                    If ParseEndline() Then
-                        p11 = .BufPos
-                        If ParseInline() Then
-                            .BufPos = p11
-                        Else
-                            .BufPos = p13
-                            .BufPos = p13
-                            Exit For
-                        End If
-                    Else
-                        .BufPos = p13
-                        .BufPos = p13
-                        Exit For
-                    End If
-                End If
             End If
+            If Not (ParseInline()) Then
+                .BufPos = p13
+                GoTo L7
+            End If
+            GoTo L5
+L7:
+            If Not (ParseEndline()) Then
+                .BufPos = p13
+                GoTo L6
+            End If
+            p11 = .BufPos
+            If ParseInline() Then
+                .BufPos = p11
+            Else
+                .BufPos = p13
+                GoTo L6
+            End If
+            GoTo L5
+L6:
+            .BufPos = p13
+            Exit For
+L5:
         Next
         If i14 <> 0 Then
             p19 = .BufPos
@@ -242,20 +250,27 @@ Public Function Parsestart() As Boolean
             If .BufData(.BufPos) = 33 Then          ' "!"
                 .BufPos = .BufPos + 1
                 Call ConsoleTrace(ctx.BufPos + 1, """!""", 2, ctx.UserData)
-                Call ConsoleTrace(ctx.BufPos + 1, "start", 2, ctx.UserData)
-                Call pvSetAdvance
-                Parsestart = True
-                Exit Function
+                GoTo L3
             End If
             If ConsoleTrace(ctx.BufPos + 1, """!""", 3, ctx.UserData) And False Then
                 '--- do nothing
             End If
             .BufPos = p25
+            GoTo L2
+L3:
+            Call ConsoleTrace(ctx.BufPos + 1, "start", 2, ctx.UserData)
+            GoTo L1
         Else
             .BufPos = p25
         End If
+L2:
         If ConsoleTrace(ctx.BufPos + 1, "start", 3, ctx.UserData) And False Then
             '--- do nothing
+        End If
+        If False Then
+L1:
+            Call pvSetAdvance
+            Parsestart = True
         End If
     End With
 End Function
@@ -272,20 +287,25 @@ Private Function ParseEndline() As Boolean
         Select Case .BufData(.BufPos)
         Case 32, 13, 10                             ' [ \r\n]
             .BufPos = .BufPos + 1
-            Call ConsoleTrace(ctx.BufPos + 1, "[ \r\n]", 2, ctx.UserData)
-            Call ConsoleTrace(ctx.BufPos + 1, "Endline", 2, ctx.UserData)
-            Call pvSetAdvance
-            ParseEndline = True
-            Exit Function
+        Case Else
+            GoTo L11
         End Select
-        If ConsoleTrace(ctx.BufPos + 1, "[ \r\n]", 3, ctx.UserData) And False Then
-            '--- do nothing
+        Call ConsoleTrace(ctx.BufPos + 1, "[ \r\n]", 2, ctx.UserData)
+        GoTo L10
+L11:
+        If Not (ConsoleTrace(ctx.BufPos + 1, "[ \r\n]", 3, ctx.UserData) And False) Then
+            .BufPos = p36
+            GoTo L9
         End If
-        .BufPos = p36
-        If ConsoleTrace(ctx.BufPos + 1, "Endline", 3, ctx.UserData) And False Then
-            '--- do nothing
+L10:
+        Call ConsoleTrace(ctx.BufPos + 1, "Endline", 2, ctx.UserData)
+        Call pvSetAdvance
+        ParseEndline = True
+        Exit Function
+L9:
+        If Not (ConsoleTrace(ctx.BufPos + 1, "Endline", 3, ctx.UserData) And False) Then
+            Call pvSetExpected("EndLine")
         End If
-        Call pvSetExpected("EndLine")
     End With
 End Function
 
@@ -303,26 +323,30 @@ Private Function ParseInline() As Boolean
             Select Case .BufData(.BufPos)
             Case 97 To 122                          ' [a-z]
                 .BufPos = .BufPos + 1
-                Call ConsoleTrace(ctx.BufPos + 1, "[a-z]", 2, ctx.UserData)
             Case Else
-                If Not (ConsoleTrace(ctx.BufPos + 1, "[a-z]", 3, ctx.UserData) And False) Then
-                    .BufPos = p42
-                    Exit For
-                End If
+                GoTo L15
             End Select
+            Call ConsoleTrace(ctx.BufPos + 1, "[a-z]", 2, ctx.UserData)
+            GoTo L14
+L15:
+            If Not (ConsoleTrace(ctx.BufPos + 1, "[a-z]", 3, ctx.UserData) And False) Then
+                .BufPos = p42
+                Exit For
+            End If
+L14:
         Next
-        If i44 <> 0 Then
-            Call ConsoleTrace(ctx.BufPos + 1, "Inline", 2, ctx.UserData)
-            Call pvSetAdvance
-            ParseInline = True
-            Exit Function
-        Else
+        If i44 = 0 Then
             .BufPos = p48
+            GoTo L13
         End If
-        If ConsoleTrace(ctx.BufPos + 1, "Inline", 3, ctx.UserData) And False Then
-            '--- do nothing
+        Call ConsoleTrace(ctx.BufPos + 1, "Inline", 2, ctx.UserData)
+        Call pvSetAdvance
+        ParseInline = True
+        Exit Function
+L13:
+        If Not (ConsoleTrace(ctx.BufPos + 1, "Inline", 3, ctx.UserData) And False) Then
+            Call pvSetExpected("Inline")
         End If
-        Call pvSetExpected("Inline")
     End With
 End Function
 

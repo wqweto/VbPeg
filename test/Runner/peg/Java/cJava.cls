@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 3.12.2018 1:29:27
+' Auto-generated on 5.3.2019 1:30:17
 Option Explicit
 DefObj A-Z
 
@@ -24,15 +24,31 @@ Private Const NORM_IGNORECASE               As Long = 1
 Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
+Private Const NULL_PTR                  As LongPtr = 0
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+Private Const NULL_PTR                  As Long = 0
+#End If
+#If Win64 Then
+Private Const PTR_SIZE                  As Long = 8
+#Else
+Private Const PTR_SIZE                  As Long = 4
+#End If
 
 Private Type SAFEARRAY1D
     cDims               As Integer
     fFeatures           As Integer
     cbElements          As Long
     cLocks              As Long
+#If VBA7 Then
+    pvData              As LongPtr
+#Else
     pvData              As Long
+#End If
     cElements           As Long
     lLbound             As Long
 End Type
@@ -83,7 +99,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "3.12.2018 1:29:27"
+    ParserVersion = "5.3.2019 1:30:17"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -119,15 +135,15 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), PTR_SIZE)
         With .BufArray
             .cDims = 1
-            .cbElements = 2
             .fFeatures = 1 ' FADF_AUTO
+            .cbElements = 2
             .pvData = StrPtr(sSubject)
             .cElements = Len(sSubject) + 2 '-- look-ahead chars
         End With
-        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), PTR_SIZE)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
@@ -151,8 +167,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
-        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), NULL_PTR, PTR_SIZE)
+        Call CopyMemory(ByVal ArrPtr(.BufData), NULL_PTR, PTR_SIZE)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -385,18 +401,20 @@ Private Function ParseBlockStmt() As Boolean
             Loop
             p39 = .BufPos
             If ParseRCUR() Then
-                ParseBlockStmt = True
-                Exit Function
+                GoTo L15
             Else
                 .BufPos = p39
             End If
             If ParseErrRcblk() Then
-                ParseBlockStmt = True
-                Exit Function
+                GoTo L15
             Else
                 .BufPos = p39
             End If
+            GoTo L14
+L15:
+            ParseBlockStmt = True
         End If
+L14:
     End With
 End Function
 
@@ -417,40 +435,38 @@ Private Function ParseStmt() As Boolean
     With ctx
         p46 = .BufPos
         If ParseIfStmt() Then
-            ParseStmt = True
-            Exit Function
+            GoTo L17
         Else
             .BufPos = p46
         End If
         If ParseWhileStmt() Then
-            ParseStmt = True
-            Exit Function
+            GoTo L17
         Else
             .BufPos = p46
         End If
         If ParsePrintStmt() Then
-            ParseStmt = True
-            Exit Function
+            GoTo L17
         Else
             .BufPos = p46
         End If
         If ParseDecStmt() Then
-            ParseStmt = True
-            Exit Function
+            GoTo L17
         Else
             .BufPos = p46
         End If
         If ParseAssignStmt() Then
-            ParseStmt = True
-            Exit Function
+            GoTo L17
         Else
             .BufPos = p46
         End If
         If ParseBlockStmt() Then
-            ParseStmt = True
-            Exit Function
+            GoTo L17
         Else
             .BufPos = p46
+        End If
+        If False Then
+L17:
+            ParseStmt = True
         End If
     End With
 End Function
@@ -479,57 +495,65 @@ Private Function ParseIfStmt() As Boolean
         If ParseIF() Then
             p57 = .BufPos
             If ParseLPAR() Then
-                p63 = .BufPos
-                If ParseExp() Then
-                    p67 = .BufPos
-                    If ParseRPAR() Then
-                        p71 = .BufPos
-                        If ParseStmt() Then
-                            p83 = .BufPos
-                            If ParseELSE() Then
-                                p77 = .BufPos
-                                If ParseStmt() Then
-                                    ParseIfStmt = True
-                                    Exit Function
-                                Else
-                                    .BufPos = p77
-                                End If
-                                Call pvSetError("ErrElse")
-                                .BufPos = p77
-                                .BufPos = p83
-                            Else
-                                .BufPos = p83
-                            End If
-                            Call ParseEPSILON
-                            ParseIfStmt = True
-                            Exit Function
-                        Else
-                            .BufPos = p71
-                        End If
-                        Call pvSetError("ErrThen")
-                        .BufPos = p71
-                        GoTo L6
-                    Else
-                        .BufPos = p67
-                    End If
-                    Call pvSetError("ErrRpif")
-                    .BufPos = p67
-L6:
-                    GoTo L7
-                Else
-                    .BufPos = p63
-                End If
-                Call pvSetError("ErrCondi")
-                .BufPos = p63
-L7:
-                GoTo L5
+                GoTo L26
             Else
                 .BufPos = p57
             End If
             Call pvSetError("ErrLpif")
             .BufPos = p57
-L5:
+            GoTo L19
+L26:
+            p63 = .BufPos
+            If ParseExp() Then
+                GoTo L25
+            Else
+                .BufPos = p63
+            End If
+            Call pvSetError("ErrCondi")
+            .BufPos = p63
+            GoTo L19
+L25:
+            p67 = .BufPos
+            If ParseRPAR() Then
+                GoTo L24
+            Else
+                .BufPos = p67
+            End If
+            Call pvSetError("ErrRpif")
+            .BufPos = p67
+            GoTo L19
+L24:
+            p71 = .BufPos
+            If ParseStmt() Then
+                GoTo L23
+            Else
+                .BufPos = p71
+            End If
+            Call pvSetError("ErrThen")
+            .BufPos = p71
+            GoTo L19
+L23:
+            p83 = .BufPos
+            If ParseELSE() Then
+                p77 = .BufPos
+                If ParseStmt() Then
+                    GoTo L20
+                Else
+                    .BufPos = p77
+                End If
+                Call pvSetError("ErrElse")
+                .BufPos = p77
+                .BufPos = p83
+            Else
+                .BufPos = p83
+            End If
+            Call ParseEPSILON
+            GoTo L20
+            GoTo L19
+L20:
+            ParseIfStmt = True
         End If
+L19:
     End With
 End Function
 
@@ -543,41 +567,47 @@ Private Function ParseWhileStmt() As Boolean
         If ParseWHILE() Then
             p87 = .BufPos
             If ParseLPAR() Then
-                p92 = .BufPos
-                If ParseExp() Then
-                    p96 = .BufPos
-                    If ParseRPAR() Then
-                        p100 = .BufPos
-                        If ParseStmt() Then
-                            ParseWhileStmt = True
-                            Exit Function
-                        Else
-                            .BufPos = p100
-                        End If
-                        Call pvSetError("ErrBody")
-                        .BufPos = p100
-                        GoTo L15
-                    Else
-                        .BufPos = p96
-                    End If
-                    Call pvSetError("ErrRpw")
-                    .BufPos = p96
-L15:
-                    GoTo L16
-                Else
-                    .BufPos = p92
-                End If
-                Call pvSetError("ErrCondw")
-                .BufPos = p92
-L16:
-                GoTo L14
+                GoTo L31
             Else
                 .BufPos = p87
             End If
             Call pvSetError("ErrLpw")
             .BufPos = p87
-L14:
+            GoTo L27
+L31:
+            p92 = .BufPos
+            If ParseExp() Then
+                GoTo L30
+            Else
+                .BufPos = p92
+            End If
+            Call pvSetError("ErrCondw")
+            .BufPos = p92
+            GoTo L27
+L30:
+            p96 = .BufPos
+            If ParseRPAR() Then
+                GoTo L29
+            Else
+                .BufPos = p96
+            End If
+            Call pvSetError("ErrRpw")
+            .BufPos = p96
+            GoTo L27
+L29:
+            p100 = .BufPos
+            If ParseStmt() Then
+                GoTo L28
+            Else
+                .BufPos = p100
+            End If
+            Call pvSetError("ErrBody")
+            .BufPos = p100
+            GoTo L27
+L28:
+            ParseWhileStmt = True
         End If
+L27:
     End With
 End Function
 
@@ -591,41 +621,47 @@ Private Function ParsePrintStmt() As Boolean
         If ParsePRINTLN() Then
             p141 = .BufPos
             If ParseLPAR() Then
-                p146 = .BufPos
-                If ParseExp() Then
-                    p150 = .BufPos
-                    If ParseRPAR() Then
-                        p154 = .BufPos
-                        If ParseSEMI() Then
-                            ParsePrintStmt = True
-                            Exit Function
-                        Else
-                            .BufPos = p154
-                        End If
-                        Call pvSetError("ErrSemip")
-                        .BufPos = p154
-                        GoTo L24
-                    Else
-                        .BufPos = p150
-                    End If
-                    Call pvSetError("ErrRpp")
-                    .BufPos = p150
-L24:
-                    GoTo L25
-                Else
-                    .BufPos = p146
-                End If
-                Call pvSetError("ErrEprint")
-                .BufPos = p146
-L25:
-                GoTo L23
+                GoTo L36
             Else
                 .BufPos = p141
             End If
             Call pvSetError("ErrLpp")
             .BufPos = p141
-L23:
+            GoTo L32
+L36:
+            p146 = .BufPos
+            If ParseExp() Then
+                GoTo L35
+            Else
+                .BufPos = p146
+            End If
+            Call pvSetError("ErrEprint")
+            .BufPos = p146
+            GoTo L32
+L35:
+            p150 = .BufPos
+            If ParseRPAR() Then
+                GoTo L34
+            Else
+                .BufPos = p150
+            End If
+            Call pvSetError("ErrRpp")
+            .BufPos = p150
+            GoTo L32
+L34:
+            p154 = .BufPos
+            If ParseSEMI() Then
+                GoTo L33
+            Else
+                .BufPos = p154
+            End If
+            Call pvSetError("ErrSemip")
+            .BufPos = p154
+            GoTo L32
+L33:
+            ParsePrintStmt = True
         End If
+L32:
     End With
 End Function
 
@@ -639,46 +675,45 @@ Private Function ParseDecStmt() As Boolean
         If ParseINT() Then
             p106 = .BufPos
             If ParseNAME() Then
-                p118 = .BufPos
-                If ParseASSIGN() Then
-                    p113 = .BufPos
-                    If ParseExp() Then
-                        p121 = .BufPos
-                        If ParseSEMI() Then
-                            ParseDecStmt = True
-                            Exit Function
-                        Else
-                            .BufPos = p121
-                        End If
-                        Call pvSetError("ErrSemid")
-                        .BufPos = p121
-                    Else
-                        .BufPos = p113
-                    End If
-                    Call pvSetError("ErrEdec")
-                    .BufPos = p113
-                    .BufPos = p118
-                Else
-                    .BufPos = p118
-                End If
-                Call ParseEPSILON
-                p121 = .BufPos
-                If ParseSEMI() Then
-                    ParseDecStmt = True
-                    Exit Function
-                Else
-                    .BufPos = p121
-                End If
-                Call pvSetError("ErrSemid")
-                .BufPos = p121
-                GoTo L29
+                GoTo L42
             Else
                 .BufPos = p106
             End If
             Call pvSetError("ErrNdec")
             .BufPos = p106
-L29:
+            GoTo L37
+L42:
+            p118 = .BufPos
+            If ParseASSIGN() Then
+                p113 = .BufPos
+                If ParseExp() Then
+                    GoTo L39
+                Else
+                    .BufPos = p113
+                End If
+                Call pvSetError("ErrEdec")
+                .BufPos = p113
+                .BufPos = p118
+            Else
+                .BufPos = p118
+            End If
+            Call ParseEPSILON
+            GoTo L39
+            GoTo L37
+L39:
+            p121 = .BufPos
+            If ParseSEMI() Then
+                GoTo L38
+            Else
+                .BufPos = p121
+            End If
+            Call pvSetError("ErrSemid")
+            .BufPos = p121
+            GoTo L37
+L38:
+            ParseDecStmt = True
         End If
+L37:
     End With
 End Function
 
@@ -691,36 +726,40 @@ Private Function ParseAssignStmt() As Boolean
         If ParseNAME() Then
             p126 = .BufPos
             If ParseASSIGN() Then
-                p131 = .BufPos
-                If ParseExp() Then
-                    p135 = .BufPos
-                    If ParseSEMI() Then
-                        ParseAssignStmt = True
-                        Exit Function
-                    Else
-                        .BufPos = p135
-                    End If
-                    If ParseErrSemia() Then
-                        ParseAssignStmt = True
-                        Exit Function
-                    Else
-                        .BufPos = p135
-                    End If
-                    GoTo L34
-                Else
-                    .BufPos = p131
-                End If
-                Call pvSetError("ErrRval")
-                .BufPos = p131
-L34:
-                GoTo L33
+                GoTo L46
             Else
                 .BufPos = p126
             End If
             Call pvSetError("ErrAssign")
             .BufPos = p126
-L33:
+            GoTo L43
+L46:
+            p131 = .BufPos
+            If ParseExp() Then
+                GoTo L45
+            Else
+                .BufPos = p131
+            End If
+            Call pvSetError("ErrRval")
+            .BufPos = p131
+            GoTo L43
+L45:
+            p135 = .BufPos
+            If ParseSEMI() Then
+                GoTo L44
+            Else
+                .BufPos = p135
+            End If
+            If ParseErrSemia() Then
+                GoTo L44
+            Else
+                .BufPos = p135
+            End If
+            GoTo L43
+L44:
+            ParseAssignStmt = True
         End If
+L43:
     End With
 End Function
 
@@ -774,7 +813,6 @@ End Function
 
 Private Sub ParseEPSILON()
     Call Parse_
-L37:
 End Sub
 
 Private Function ParseWHILE() As Boolean
@@ -990,36 +1028,35 @@ Private Function ParseAtomExp() As Boolean
             If ParseExp() Then
                 p214 = .BufPos
                 If ParseRPAR() Then
-                    ParseAtomExp = True
-                    Exit Function
+                    GoTo L70
                 Else
                     .BufPos = p214
                 End If
                 Call pvSetError("ErrRpe")
                 .BufPos = p214
                 .BufPos = p219
-                GoTo L43
             Else
                 .BufPos = p209
+                Call pvSetError("ErrParexp")
+                .BufPos = p209
+                .BufPos = p219
             End If
-            Call pvSetError("ErrParexp")
-            .BufPos = p209
-            .BufPos = p219
-L43:
         Else
             .BufPos = p219
         End If
         If ParseNUMBER() Then
-            ParseAtomExp = True
-            Exit Function
+            GoTo L70
         Else
             .BufPos = p219
         End If
         If ParseNAME() Then
-            ParseAtomExp = True
-            Exit Function
+            GoTo L70
         Else
             .BufPos = p219
+        End If
+        If False Then
+L70:
+            ParseAtomExp = True
         End If
     End With
 End Function

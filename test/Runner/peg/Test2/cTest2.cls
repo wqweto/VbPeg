@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 3.12.2018 1:29:29
+' Auto-generated on 5.3.2019 1:30:19
 Option Explicit
 DefObj A-Z
 
@@ -24,15 +24,31 @@ Private Const NORM_IGNORECASE               As Long = 1
 Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
+Private Const NULL_PTR                  As LongPtr = 0
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+Private Const NULL_PTR                  As Long = 0
+#End If
+#If Win64 Then
+Private Const PTR_SIZE                  As Long = 8
+#Else
+Private Const PTR_SIZE                  As Long = 4
+#End If
 
 Private Type SAFEARRAY1D
     cDims               As Integer
     fFeatures           As Integer
     cbElements          As Long
     cLocks              As Long
+#If VBA7 Then
+    pvData              As LongPtr
+#Else
     pvData              As Long
+#End If
     cElements           As Long
     lLbound             As Long
 End Type
@@ -83,7 +99,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "3.12.2018 1:29:29"
+    ParserVersion = "5.3.2019 1:30:19"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -119,15 +135,15 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), PTR_SIZE)
         With .BufArray
             .cDims = 1
-            .cbElements = 2
             .fFeatures = 1 ' FADF_AUTO
+            .cbElements = 2
             .pvData = StrPtr(sSubject)
             .cElements = Len(sSubject) + 2 '-- look-ahead chars
         End With
-        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), PTR_SIZE)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
@@ -151,8 +167,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
-        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), NULL_PTR, PTR_SIZE)
+        Call CopyMemory(ByVal ArrPtr(.BufData), NULL_PTR, PTR_SIZE)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -303,11 +319,7 @@ Private Function ParseScope() As Boolean
             .BufPos = .BufPos + 1
             p74 = .BufPos
             If ParseScope() Then
-                If .BufData(.BufPos) = 125 Then     ' "}"
-                    .BufPos = .BufPos + 1
-                    Call pvSetAdvance
-                    ParseScope = True
-                End If
+                GoTo L6
             Else
                 .BufPos = p74
             End If
@@ -329,13 +341,17 @@ Private Function ParseScope() As Boolean
                 End If
             Next
             If i73 <> 0 Then
-                If .BufData(.BufPos) = 125 Then     ' "}"
-                    .BufPos = .BufPos + 1
-                    Call pvSetAdvance
-                    ParseScope = True
-                End If
+                GoTo L6
+            End If
+            GoTo L5
+L6:
+            If .BufData(.BufPos) = 125 Then         ' "}"
+                .BufPos = .BufPos + 1
+                Call pvSetAdvance
+                ParseScope = True
             End If
         End If
+L5:
     End With
 End Function
 
@@ -412,9 +428,7 @@ Private Function ParseStatement() As Boolean
             If ParseExpression() Then
                 If .BufData(.BufPos) = 59 Then      ' ";"
                     .BufPos = .BufPos + 1
-                    Call pvSetAdvance
-                    ParseStatement = True
-                    Exit Function
+                    GoTo L10
                 Else
                     .BufPos = p37
                 End If
@@ -422,13 +436,16 @@ Private Function ParseStatement() As Boolean
                 .BufPos = p37
             End If
             If ParseFile() Then
-                Call pvSetAdvance
-                ParseStatement = True
-                Exit Function
+                GoTo L10
             Else
                 .BufPos = p37
             End If
+            GoTo L9
+L10:
+            Call pvSetAdvance
+            ParseStatement = True
         End If
+L9:
     End With
 End Function
 
@@ -492,22 +509,22 @@ Private Function ParseEndOfLine() As Boolean
             .BufPos = p120
             If .BufData(.BufPos) = 13 And .BufData(.BufPos + 1) = 10 Then ' "\r\n"
                 .BufPos = .BufPos + 2
-                Call pvSetAdvance
-                ParseEndOfLine = True
-                Exit Function
+                GoTo L15
             End If
             If .BufData(.BufPos) = 10 Then          ' "\n"
                 .BufPos = .BufPos + 1
-                Call pvSetAdvance
-                ParseEndOfLine = True
-                Exit Function
+                GoTo L15
             End If
             If .BufData(.BufPos) = 13 Then          ' "\r"
                 .BufPos = .BufPos + 1
-                Call pvSetAdvance
-                ParseEndOfLine = True
+                GoTo L15
             End If
+            GoTo L14
+L15:
+            Call pvSetAdvance
+            ParseEndOfLine = True
         End If
+L14:
     End With
 End Function
 
@@ -599,27 +616,28 @@ Private Function ParseType() As Boolean
                         If .BufData(.BufPos) = 38 Then ' "&"
                             .BufPos = .BufPos + 1
                         Else
-                            If ParseSpacing() Then
-                                If pvMatchString("const") Then ' "const"
-                                    .BufPos = .BufPos + 5
-                                    If Not (ParseSpacing()) Then
-                                        .BufPos = p95
-                                        .BufPos = p95
-                                        Exit For
-                                    End If
-                                Else
-                                    .BufPos = p95
-                                    .BufPos = p95
-                                    Exit For
-                                End If
+                            If Not (ParseSpacing()) Then
+                                .BufPos = p95
+                                GoTo L22
+                            End If
+                            If pvMatchString("const") Then ' "const"
+                                .BufPos = .BufPos + 5
                             Else
                                 .BufPos = p95
-                                .BufPos = p95
-                                Exit For
+                                GoTo L22
                             End If
+                            If Not (ParseSpacing()) Then
+                                .BufPos = p95
+                                GoTo L22
+                            End If
+                            GoTo L21
+L22:
+                            .BufPos = p95
+                            Exit For
                         End If
                     End If
                 End If
+L21:
             Next
             If i101 = 0 Then
                 .BufPos = p88

@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 3.12.2018 1:29:30
+' Auto-generated on 5.3.2019 1:30:20
 Option Explicit
 DefObj A-Z
 
@@ -19,15 +19,31 @@ DefObj A-Z
 ' API
 '=========================================================================
 
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
+Private Const NULL_PTR                  As LongPtr = 0
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+Private Const NULL_PTR                  As Long = 0
+#End If
+#If Win64 Then
+Private Const PTR_SIZE                  As Long = 8
+#Else
+Private Const PTR_SIZE                  As Long = 4
+#End If
 
 Private Type SAFEARRAY1D
     cDims               As Integer
     fFeatures           As Integer
     cbElements          As Long
     cLocks              As Long
+#If VBA7 Then
+    pvData              As LongPtr
+#Else
     pvData              As Long
+#End If
     cElements           As Long
     lLbound             As Long
 End Type
@@ -99,7 +115,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "3.12.2018 1:29:30"
+    ParserVersion = "5.3.2019 1:30:20"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -135,15 +151,15 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), PTR_SIZE)
         With .BufArray
             .cDims = 1
-            .cbElements = 2
             .fFeatures = 1 ' FADF_AUTO
+            .cbElements = 2
             .pvData = StrPtr(sSubject)
             .cElements = Len(sSubject) + 2 '-- look-ahead chars
         End With
-        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), PTR_SIZE)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
@@ -192,8 +208,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
-        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), NULL_PTR, PTR_SIZE)
+        Call CopyMemory(ByVal ArrPtr(.BufData), NULL_PTR, PTR_SIZE)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -369,9 +385,7 @@ Private Function Parseunexpr() As Boolean
             If Parseunexpr() Then
                 pvPushThunk ucsActVarSet, 2
                 pvPushThunk ucsAct_1_unexpr, .CaptureBegin, .CaptureEnd
-                pvPushThunk ucsActVarAlloc, -2
-                Parseunexpr = True
-                Exit Function
+                GoTo L7
             Else
                 .BufPos = p56
                 .ThunkPos = q56
@@ -381,12 +395,15 @@ Private Function Parseunexpr() As Boolean
             .ThunkPos = q56
         End If
         If Parseprimary() Then
-            pvPushThunk ucsActVarAlloc, -2
-            Parseunexpr = True
-            Exit Function
+            GoTo L7
         Else
             .BufPos = p56
             .ThunkPos = q56
+        End If
+        If False Then
+L7:
+            pvPushThunk ucsActVarAlloc, -2
+            Parseunexpr = True
         End If
     End With
 End Function
@@ -441,8 +458,7 @@ Private Function Parseprimary() As Boolean
         p65 = .BufPos
         q65 = .ThunkPos
         If ParseDOUBLE() Then
-            Parseprimary = True
-            Exit Function
+            GoTo L12
         Else
             .BufPos = p65
             .ThunkPos = q65
@@ -450,8 +466,7 @@ Private Function Parseprimary() As Boolean
         If ParseLPAREN() Then
             If Parsebinexpr() Then
                 If ParseRPAREN() Then
-                    Parseprimary = True
-                    Exit Function
+                    GoTo L12
                 Else
                     .BufPos = p65
                     .ThunkPos = q65
@@ -465,11 +480,14 @@ Private Function Parseprimary() As Boolean
             .ThunkPos = q65
         End If
         If ParseIDENT() Then
-            Parseprimary = True
-            Exit Function
+            GoTo L12
         Else
             .BufPos = p65
             .ThunkPos = q65
+        End If
+        If False Then
+L12:
+            Parseprimary = True
         End If
     End With
 End Function
@@ -478,8 +496,8 @@ Private Function ParseDOUBLE() As Boolean
     Dim lCaptureBegin As Long
     Dim p91 As Long
     Dim i79 As Long
-    Dim lCaptureEnd As Long
     Dim i90 As Long
+    Dim lCaptureEnd As Long
 
     With ctx
         lCaptureBegin = .BufPos
@@ -504,14 +522,7 @@ Private Function ParseDOUBLE() As Boolean
                     Exit Do
                 End Select
             Loop
-            lCaptureEnd = .BufPos
-            Call Parse_
-            .CaptureBegin = lCaptureBegin
-            .CaptureEnd = lCaptureEnd
-            pvPushThunk ucsAct_1_DOUBLE, lCaptureBegin, lCaptureEnd
-            Call pvSetAdvance
-            ParseDOUBLE = True
-            Exit Function
+            GoTo L15
         Else
             .BufPos = p91
         End If
@@ -534,20 +545,23 @@ Private Function ParseDOUBLE() As Boolean
                 End Select
             Next
             If i90 <> 0 Then
-                lCaptureEnd = .BufPos
-                Call Parse_
-                .CaptureBegin = lCaptureBegin
-                .CaptureEnd = lCaptureEnd
-                pvPushThunk ucsAct_1_DOUBLE, lCaptureBegin, lCaptureEnd
-                Call pvSetAdvance
-                ParseDOUBLE = True
-                Exit Function
+                GoTo L15
             Else
                 .BufPos = p91
             End If
         Else
             .BufPos = p91
         End If
+        GoTo L14
+L15:
+        lCaptureEnd = .BufPos
+        Call Parse_
+        .CaptureBegin = lCaptureBegin
+        .CaptureEnd = lCaptureEnd
+        pvPushThunk ucsAct_1_DOUBLE, lCaptureBegin, lCaptureEnd
+        Call pvSetAdvance
+        ParseDOUBLE = True
+L14:
     End With
 End Function
 
@@ -629,35 +643,35 @@ Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As
     With ctx
     Select Case eAction
     Case ucsAct_3_start
-           Set ctx.VarResult = ctx.VarStack(ctx.VarPos - 1)
+           Set .VarResult = .VarStack(.VarPos - 1)
     Case ucsAct_2_start
-           Set oJson = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 2)
+           Set oJson = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, -1) = .VarStack(.VarPos - 2)
     Case ucsAct_1_start
            JsonItem(oJson, -1) = Empty
-                                                                            Set ctx.VarStack(ctx.VarPos - 1) = oJson
+                                                                            Set .VarStack(.VarPos - 1) = oJson
     Case ucsAct_2_binexpr
-           AssignVariant ctx.VarResult, ctx.VarStack(ctx.VarPos - 1)
+           AssignVariant .VarResult, .VarStack(.VarPos - 1)
     Case ucsAct_1_binexpr
            JsonItem(oJson, "Tag") = "BinOp"
-                                                                            JsonItem(oJson, "Left") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Oper") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "Right") = ctx.VarStack(ctx.VarPos - 3)
-                                                                            JsonItem(oJson, "BinopInfo") = GetBinopInfo(C_Str(ctx.VarStack(ctx.VarPos - 2)))
-                                                                            Set ctx.VarStack(ctx.VarPos - 1) = oJson
+                                                                            JsonItem(oJson, "Left") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Oper") = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "Right") = .VarStack(.VarPos - 3)
+                                                                            JsonItem(oJson, "BinopInfo") = GetBinopInfo(C_Str(.VarStack(.VarPos - 2)))
+                                                                            Set .VarStack(.VarPos - 1) = oJson
     Case ucsAct_1_unexpr
            JsonItem(oJson, "Tag") = "UnOp"
-                                                                            JsonItem(oJson, "Oper") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Expr") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Oper") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Expr") = .VarStack(.VarPos - 2)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_BINOP
-         ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+         .VarResult = Mid$(.Contents, lOffset, lSize)
     Case ucsAct_1_UNOP
-         ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+         .VarResult = Mid$(.Contents, lOffset, lSize)
     Case ucsAct_1_DOUBLE
-         ctx.VarResult = C_Dbl(Mid$(ctx.Contents, lOffset, lSize))
+         .VarResult = C_Dbl(Mid$(.Contents, lOffset, lSize))
     Case ucsAct_1_IDENT
-         ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+         .VarResult = Mid$(.Contents, lOffset, lSize)
     End Select
     End With
 End Sub

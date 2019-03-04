@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 3.12.2018 1:29:28
+' Auto-generated on 5.3.2019 1:30:18
 Option Explicit
 DefObj A-Z
 
@@ -24,15 +24,31 @@ Private Const NORM_IGNORECASE               As Long = 1
 Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
+Private Const NULL_PTR                  As LongPtr = 0
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+Private Const NULL_PTR                  As Long = 0
+#End If
+#If Win64 Then
+Private Const PTR_SIZE                  As Long = 8
+#Else
+Private Const PTR_SIZE                  As Long = 4
+#End If
 
 Private Type SAFEARRAY1D
     cDims               As Integer
     fFeatures           As Integer
     cbElements          As Long
     cLocks              As Long
+#If VBA7 Then
+    pvData              As LongPtr
+#Else
     pvData              As Long
+#End If
     cElements           As Long
     lLbound             As Long
 End Type
@@ -125,7 +141,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "3.12.2018 1:29:28"
+    ParserVersion = "5.3.2019 1:30:18"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -161,15 +177,15 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), PTR_SIZE)
         With .BufArray
             .cDims = 1
-            .cbElements = 2
             .fFeatures = 1 ' FADF_AUTO
+            .cbElements = 2
             .pvData = StrPtr(sSubject)
             .cElements = Len(sSubject) + 2 '-- look-ahead chars
         End With
-        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), PTR_SIZE)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
@@ -218,8 +234,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
-        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), NULL_PTR, PTR_SIZE)
+        Call CopyMemory(ByVal ArrPtr(.BufData), NULL_PTR, PTR_SIZE)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -336,8 +352,7 @@ Private Function Parsestmt() As Boolean
                 .BufPos = p19
                 .ThunkPos = q19
             End If
-            Parsestmt = True
-            Exit Function
+            GoTo L3
         Else
             .BufPos = p27
             .ThunkPos = q27
@@ -349,8 +364,7 @@ Private Function Parsestmt() As Boolean
                 .BufPos = p24
                 .ThunkPos = q24
             End If
-            Parsestmt = True
-            Exit Function
+            GoTo L3
         Else
             .BufPos = p27
             .ThunkPos = q27
@@ -362,18 +376,20 @@ Private Function Parsestmt() As Boolean
                 .BufPos = p30
                 .ThunkPos = q30
             End If
-            Parsestmt = True
-            Exit Function
+            GoTo L3
         Else
             .BufPos = p27
             .ThunkPos = q27
         End If
         If ParseSEMI() Then
-            Parsestmt = True
-            Exit Function
+            GoTo L3
         Else
             .BufPos = p27
             .ThunkPos = q27
+        End If
+        If False Then
+L3:
+            Parsestmt = True
         End If
     End With
 End Function
@@ -470,10 +486,7 @@ Private Function Parseprototype() As Boolean
         p79 = .BufPos
         q79 = .ThunkPos
         If Parsebinopproto() Then
-            pvPushThunk ucsActVarAlloc, -2
-            Call pvSetAdvance
-            Parseprototype = True
-            Exit Function
+            GoTo L15
         Else
             .BufPos = p79
             .ThunkPos = q79
@@ -490,10 +503,7 @@ Private Function Parseprototype() As Boolean
                             pvPushThunk ucsActVarSet, 2
                             If ParseRPAREN() Then
                                 pvPushThunk ucsAct_1_prototype, .CaptureBegin, .CaptureEnd
-                                pvPushThunk ucsActVarAlloc, -2
-                                Call pvSetAdvance
-                                Parseprototype = True
-                                Exit Function
+                                GoTo L15
                             Else
                                 .BufPos = p79
                                 .ThunkPos = q79
@@ -534,10 +544,7 @@ Private Function Parseprototype() As Boolean
                         pvPushThunk ucsActVarSet, 2
                         If ParseRPAREN() Then
                             pvPushThunk ucsAct_2_prototype, .CaptureBegin, .CaptureEnd
-                            pvPushThunk ucsActVarAlloc, -2
-                            Call pvSetAdvance
-                            Parseprototype = True
-                            Exit Function
+                            GoTo L15
                         Else
                             .BufPos = p79
                             .ThunkPos = q79
@@ -554,6 +561,12 @@ Private Function Parseprototype() As Boolean
                 .BufPos = p79
                 .ThunkPos = q79
             End If
+        End If
+        If False Then
+L15:
+            pvPushThunk ucsActVarAlloc, -2
+            Call pvSetAdvance
+            Parseprototype = True
         End If
     End With
 End Function
@@ -683,124 +696,56 @@ Private Function ParseKEYWORD() As Boolean
     With ctx
         If pvMatchString("def") Then                ' "def"
             .BufPos = .BufPos + 3
-            p335 = .BufPos
-            Select Case .BufData(.BufPos)
-            Case 97 To 122, 65 To 90, 95, 48 To 57  ' [a-zA-Z_0-9]
-                '--- do nothing
-            Case Else
-                .BufPos = p335
-                Call pvSetAdvance
-                ParseKEYWORD = True
-            End Select
+            GoTo L25
         End If
         If pvMatchString("extern") Then             ' "extern"
             .BufPos = .BufPos + 6
-            p335 = .BufPos
-            Select Case .BufData(.BufPos)
-            Case 97 To 122, 65 To 90, 95, 48 To 57  ' [a-zA-Z_0-9]
-                '--- do nothing
-            Case Else
-                .BufPos = p335
-                Call pvSetAdvance
-                ParseKEYWORD = True
-            End Select
+            GoTo L25
         End If
         If .BufData(.BufPos) = 105 And .BufData(.BufPos + 1) = 102 Then ' "if"
             .BufPos = .BufPos + 2
-            p335 = .BufPos
-            Select Case .BufData(.BufPos)
-            Case 97 To 122, 65 To 90, 95, 48 To 57  ' [a-zA-Z_0-9]
-                '--- do nothing
-            Case Else
-                .BufPos = p335
-                Call pvSetAdvance
-                ParseKEYWORD = True
-            End Select
+            GoTo L25
         End If
         If pvMatchString("then") Then               ' "then"
             .BufPos = .BufPos + 4
-            p335 = .BufPos
-            Select Case .BufData(.BufPos)
-            Case 97 To 122, 65 To 90, 95, 48 To 57  ' [a-zA-Z_0-9]
-                '--- do nothing
-            Case Else
-                .BufPos = p335
-                Call pvSetAdvance
-                ParseKEYWORD = True
-            End Select
+            GoTo L25
         End If
         If pvMatchString("else") Then               ' "else"
             .BufPos = .BufPos + 4
-            p335 = .BufPos
-            Select Case .BufData(.BufPos)
-            Case 97 To 122, 65 To 90, 95, 48 To 57  ' [a-zA-Z_0-9]
-                '--- do nothing
-            Case Else
-                .BufPos = p335
-                Call pvSetAdvance
-                ParseKEYWORD = True
-            End Select
+            GoTo L25
         End If
         If pvMatchString("unary") Then              ' "unary"
             .BufPos = .BufPos + 5
-            p335 = .BufPos
-            Select Case .BufData(.BufPos)
-            Case 97 To 122, 65 To 90, 95, 48 To 57  ' [a-zA-Z_0-9]
-                '--- do nothing
-            Case Else
-                .BufPos = p335
-                Call pvSetAdvance
-                ParseKEYWORD = True
-            End Select
+            GoTo L25
         End If
         If pvMatchString("for") Then                ' "for"
             .BufPos = .BufPos + 3
-            p335 = .BufPos
-            Select Case .BufData(.BufPos)
-            Case 97 To 122, 65 To 90, 95, 48 To 57  ' [a-zA-Z_0-9]
-                '--- do nothing
-            Case Else
-                .BufPos = p335
-                Call pvSetAdvance
-                ParseKEYWORD = True
-            End Select
+            GoTo L25
         End If
         If pvMatchString("binary") Then             ' "binary"
             .BufPos = .BufPos + 6
-            p335 = .BufPos
-            Select Case .BufData(.BufPos)
-            Case 97 To 122, 65 To 90, 95, 48 To 57  ' [a-zA-Z_0-9]
-                '--- do nothing
-            Case Else
-                .BufPos = p335
-                Call pvSetAdvance
-                ParseKEYWORD = True
-            End Select
+            GoTo L25
         End If
         If .BufData(.BufPos) = 105 And .BufData(.BufPos + 1) = 110 Then ' "in"
             .BufPos = .BufPos + 2
-            p335 = .BufPos
-            Select Case .BufData(.BufPos)
-            Case 97 To 122, 65 To 90, 95, 48 To 57  ' [a-zA-Z_0-9]
-                '--- do nothing
-            Case Else
-                .BufPos = p335
-                Call pvSetAdvance
-                ParseKEYWORD = True
-            End Select
+            GoTo L25
         End If
         If pvMatchString("var") Then                ' "var"
             .BufPos = .BufPos + 3
-            p335 = .BufPos
-            Select Case .BufData(.BufPos)
-            Case 97 To 122, 65 To 90, 95, 48 To 57  ' [a-zA-Z_0-9]
-                '--- do nothing
-            Case Else
-                .BufPos = p335
-                Call pvSetAdvance
-                ParseKEYWORD = True
-            End Select
+            GoTo L25
         End If
+        GoTo L24
+L25:
+        p335 = .BufPos
+        Select Case .BufData(.BufPos)
+        Case 97 To 122, 65 To 90, 95, 48 To 57      ' [a-zA-Z_0-9]
+            '--- do nothing
+        Case Else
+            .BufPos = p335
+            Call pvSetAdvance
+            ParseKEYWORD = True
+        End Select
+L24:
     End With
 End Function
 
@@ -946,9 +891,7 @@ Private Function Parseunexpr() As Boolean
             If Parseunexpr() Then
                 pvPushThunk ucsActVarSet, 2
                 pvPushThunk ucsAct_1_unexpr, .CaptureBegin, .CaptureEnd
-                pvPushThunk ucsActVarAlloc, -2
-                Parseunexpr = True
-                Exit Function
+                GoTo L31
             Else
                 .BufPos = p155
                 .ThunkPos = q155
@@ -958,12 +901,15 @@ Private Function Parseunexpr() As Boolean
             .ThunkPos = q155
         End If
         If Parseprimary() Then
-            pvPushThunk ucsActVarAlloc, -2
-            Parseunexpr = True
-            Exit Function
+            GoTo L31
         Else
             .BufPos = p155
             .ThunkPos = q155
+        End If
+        If False Then
+L31:
+            pvPushThunk ucsActVarAlloc, -2
+            Parseunexpr = True
         End If
     End With
 End Function
@@ -976,8 +922,7 @@ Private Function Parseprimary() As Boolean
         p162 = .BufPos
         q162 = .ThunkPos
         If ParseDOUBLE() Then
-            Parseprimary = True
-            Exit Function
+            GoTo L33
         Else
             .BufPos = p162
             .ThunkPos = q162
@@ -985,8 +930,7 @@ Private Function Parseprimary() As Boolean
         If ParseLPAREN() Then
             If Parseexpr() Then
                 If ParseRPAREN() Then
-                    Parseprimary = True
-                    Exit Function
+                    GoTo L33
                 Else
                     .BufPos = p162
                     .ThunkPos = q162
@@ -1000,39 +944,38 @@ Private Function Parseprimary() As Boolean
             .ThunkPos = q162
         End If
         If Parseinvokeexpr() Then
-            Parseprimary = True
-            Exit Function
+            GoTo L33
         Else
             .BufPos = p162
             .ThunkPos = q162
         End If
         If Parseifexpr() Then
-            Parseprimary = True
-            Exit Function
+            GoTo L33
         Else
             .BufPos = p162
             .ThunkPos = q162
         End If
         If Parseforexpr() Then
-            Parseprimary = True
-            Exit Function
+            GoTo L33
         Else
             .BufPos = p162
             .ThunkPos = q162
         End If
         If Parsevarexpr() Then
-            Parseprimary = True
-            Exit Function
+            GoTo L33
         Else
             .BufPos = p162
             .ThunkPos = q162
         End If
         If ParseIDENT() Then
-            Parseprimary = True
-            Exit Function
+            GoTo L33
         Else
             .BufPos = p162
             .ThunkPos = q162
+        End If
+        If False Then
+L33:
+            Parseprimary = True
         End If
     End With
 End Function
@@ -1041,8 +984,8 @@ Private Function ParseDOUBLE() As Boolean
     Dim lCaptureBegin As Long
     Dim p394 As Long
     Dim i382 As Long
-    Dim lCaptureEnd As Long
     Dim i393 As Long
+    Dim lCaptureEnd As Long
 
     With ctx
         lCaptureBegin = .BufPos
@@ -1067,14 +1010,7 @@ Private Function ParseDOUBLE() As Boolean
                     Exit Do
                 End Select
             Loop
-            lCaptureEnd = .BufPos
-            Call Parse_
-            .CaptureBegin = lCaptureBegin
-            .CaptureEnd = lCaptureEnd
-            pvPushThunk ucsAct_1_DOUBLE, lCaptureBegin, lCaptureEnd
-            Call pvSetAdvance
-            ParseDOUBLE = True
-            Exit Function
+            GoTo L36
         Else
             .BufPos = p394
         End If
@@ -1097,20 +1033,23 @@ Private Function ParseDOUBLE() As Boolean
                 End Select
             Next
             If i393 <> 0 Then
-                lCaptureEnd = .BufPos
-                Call Parse_
-                .CaptureBegin = lCaptureBegin
-                .CaptureEnd = lCaptureEnd
-                pvPushThunk ucsAct_1_DOUBLE, lCaptureBegin, lCaptureEnd
-                Call pvSetAdvance
-                ParseDOUBLE = True
-                Exit Function
+                GoTo L36
             Else
                 .BufPos = p394
             End If
         Else
             .BufPos = p394
         End If
+        GoTo L35
+L36:
+        lCaptureEnd = .BufPos
+        Call Parse_
+        .CaptureBegin = lCaptureBegin
+        .CaptureEnd = lCaptureEnd
+        pvPushThunk ucsAct_1_DOUBLE, lCaptureBegin, lCaptureEnd
+        Call pvSetAdvance
+        ParseDOUBLE = True
+L35:
     End With
 End Function
 
@@ -1381,10 +1320,7 @@ Private Function Parsevar_decl() As Boolean
                 pvPushThunk ucsActResultClear
                 If Parseexpr() Then
                     pvPushThunk ucsActVarSet, 2
-                    pvPushThunk ucsAct_1_var_decl, .CaptureBegin, .CaptureEnd
-                    pvPushThunk ucsActVarAlloc, -2
-                    Parsevar_decl = True
-                    Exit Function
+                    GoTo L55
                 Else
                     .BufPos = p320
                     .ThunkPos = q320
@@ -1396,10 +1332,14 @@ Private Function Parsevar_decl() As Boolean
             pvPushThunk ucsActResultClear
             Call ParseEMPTY
             pvPushThunk ucsActVarSet, 2
+            GoTo L55
+            GoTo L54
+L55:
             pvPushThunk ucsAct_1_var_decl, .CaptureBegin, .CaptureEnd
             pvPushThunk ucsActVarAlloc, -2
             Parsevar_decl = True
         End If
+L54:
     End With
 End Function
 
@@ -1443,114 +1383,114 @@ Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As
     With ctx
     Select Case eAction
     Case ucsAct_3_start
-           Set ctx.VarResult = ctx.VarStack(ctx.VarPos - 1)
+           Set .VarResult = .VarStack(.VarPos - 1)
     Case ucsAct_2_start
-           Set oJson = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 2)
+           Set oJson = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, -1) = .VarStack(.VarPos - 2)
     Case ucsAct_1_start
            JsonItem(oJson, -1) = Empty
-                                                                            Set ctx.VarStack(ctx.VarPos - 1) = oJson
+                                                                            Set .VarStack(.VarPos - 1) = oJson
     Case ucsAct_1_definition
            JsonItem(oJson, "Tag") = "Def"
-                                                                            JsonItem(oJson, "Proto") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Body") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Proto") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Body") = .VarStack(.VarPos - 2)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_extern
            JsonItem(oJson, "Tag") = "Extern"
-                                                                            JsonItem(oJson, "Proto") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Proto") = .VarStack(.VarPos - 1)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_prototype
            JsonItem(oJson, "Tag") = "UnOpProto"
-                                                                            JsonItem(oJson, "Oper") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Params") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Oper") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Params") = .VarStack(.VarPos - 2)
+                                                                            Set .VarResult = oJson
     Case ucsAct_2_prototype
            JsonItem(oJson, "Tag") = "FuncProto"
-                                                                            JsonItem(oJson, "Name") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Params") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Name") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Params") = .VarStack(.VarPos - 2)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_binopproto
            JsonItem(oJson, "Tag") = "BinOpProto"
-                                                                            JsonItem(oJson, "Oper") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Precedence") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "Params") = ctx.VarStack(ctx.VarPos - 3)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Oper") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Precedence") = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "Params") = .VarStack(.VarPos - 3)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_UNOP
-         ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+         .VarResult = Mid$(.Contents, lOffset, lSize)
     Case ucsAct_3_param_list
-           Set ctx.VarResult = ctx.VarStack(ctx.VarPos - 1)
+           Set .VarResult = .VarStack(.VarPos - 1)
     Case ucsAct_2_param_list
-           Set oJson = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 2)
+           Set oJson = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, -1) = .VarStack(.VarPos - 2)
     Case ucsAct_1_param_list
-           JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 1)
-                                                                            Set ctx.VarStack(ctx.VarPos - 1) = oJson
+           JsonItem(oJson, -1) = .VarStack(.VarPos - 1)
+                                                                            Set .VarStack(.VarPos - 1) = oJson
     Case ucsAct_1_IDENT
-         ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+         .VarResult = Mid$(.Contents, lOffset, lSize)
     Case ucsAct_1_BINOP
-         ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+         .VarResult = Mid$(.Contents, lOffset, lSize)
     Case ucsAct_1_NUMBER
-         ctx.VarResult = C_Lng(Mid$(ctx.Contents, lOffset, lSize))
+         .VarResult = C_Lng(Mid$(.Contents, lOffset, lSize))
     Case ucsAct_2_binexpr
-           AssignVariant ctx.VarResult, ctx.VarStack(ctx.VarPos - 1)
+           AssignVariant .VarResult, .VarStack(.VarPos - 1)
     Case ucsAct_1_binexpr
            JsonItem(oJson, "Tag") = "BinOp"
-                                                                            JsonItem(oJson, "Left") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Oper") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "Right") = ctx.VarStack(ctx.VarPos - 3)
-                                                                            JsonItem(oJson, "BinopInfo") = GetBinopInfo(C_Str(ctx.VarStack(ctx.VarPos - 2)))
-                                                                            Set ctx.VarStack(ctx.VarPos - 1) = oJson
+                                                                            JsonItem(oJson, "Left") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Oper") = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "Right") = .VarStack(.VarPos - 3)
+                                                                            JsonItem(oJson, "BinopInfo") = GetBinopInfo(C_Str(.VarStack(.VarPos - 2)))
+                                                                            Set .VarStack(.VarPos - 1) = oJson
     Case ucsAct_1_unexpr
            JsonItem(oJson, "Tag") = "UnOp"
-                                                                            JsonItem(oJson, "Oper") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Expr") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Oper") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Expr") = .VarStack(.VarPos - 2)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_DOUBLE
-         ctx.VarResult = C_Dbl(Mid$(ctx.Contents, lOffset, lSize))
+         .VarResult = C_Dbl(Mid$(.Contents, lOffset, lSize))
     Case ucsAct_1_invokeexpr
            JsonItem(oJson, "Tag") = "InvokeExpr"
-                                                                            JsonItem(oJson, "Func") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Args") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Func") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Args") = .VarStack(.VarPos - 2)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_ifexpr
            JsonItem(oJson, "Tag") = "IfExpr"
-                                                                            JsonItem(oJson, "Cond") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Then") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "Else") = ctx.VarStack(ctx.VarPos - 3)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Cond") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Then") = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "Else") = .VarStack(.VarPos - 3)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_forexpr
            JsonItem(oJson, "Tag") = "ForExpr"
-                                                                            JsonItem(oJson, "Var") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Init") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "Last") = ctx.VarStack(ctx.VarPos - 3)
-                                                                            JsonItem(oJson, "Step") = ctx.VarStack(ctx.VarPos - 4)
-                                                                            JsonItem(oJson, "Body") = ctx.VarStack(ctx.VarPos - 5)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Var") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Init") = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "Last") = .VarStack(.VarPos - 3)
+                                                                            JsonItem(oJson, "Step") = .VarStack(.VarPos - 4)
+                                                                            JsonItem(oJson, "Body") = .VarStack(.VarPos - 5)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_varexpr
            JsonItem(oJson, "Tag") = "VarExpr"
-                                                                            JsonItem(oJson, "Vars") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Body") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Vars") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Body") = .VarStack(.VarPos - 2)
+                                                                            Set .VarResult = oJson
     Case ucsAct_3_arg_list
-           Set ctx.VarResult = ctx.VarStack(ctx.VarPos - 1)
+           Set .VarResult = .VarStack(.VarPos - 1)
     Case ucsAct_2_arg_list
-           Set oJson = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 2)
+           Set oJson = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, -1) = .VarStack(.VarPos - 2)
     Case ucsAct_1_arg_list
-           JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 1)
-                                                                            Set ctx.VarStack(ctx.VarPos - 1) = oJson
+           JsonItem(oJson, -1) = .VarStack(.VarPos - 1)
+                                                                            Set .VarStack(.VarPos - 1) = oJson
     Case ucsAct_3_var_list
-           Set ctx.VarResult = ctx.VarStack(ctx.VarPos - 1)
+           Set .VarResult = .VarStack(.VarPos - 1)
     Case ucsAct_2_var_list
-           Set oJson = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 2)
+           Set oJson = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, -1) = .VarStack(.VarPos - 2)
     Case ucsAct_1_var_list
-           JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 1)
-                                                                            Set ctx.VarStack(ctx.VarPos - 1) = oJson
+           JsonItem(oJson, -1) = .VarStack(.VarPos - 1)
+                                                                            Set .VarStack(.VarPos - 1) = oJson
     Case ucsAct_1_var_decl
            JsonItem(oJson, "Tag") = "VarDecl"
-                                                                            JsonItem(oJson, "Name") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Expr") = ctx.VarStack(ctx.VarPos - 2)
+                                                                            JsonItem(oJson, "Name") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Expr") = .VarStack(.VarPos - 2)
     End Select
     End With
 End Sub

@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 2.3.2019 18:40:13
+' Auto-generated on 5.3.2019 1:30:18
 Option Explicit
 DefObj A-Z
 
@@ -110,7 +110,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "2.3.2019 18:40:13"
+    ParserVersion = "5.3.2019 1:30:18"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -260,140 +260,126 @@ Public Function Parseblock(Optional ByVal Level As Long) As Boolean
             p53 = .BufPos
             q53 = .ThunkPos
             Call ParseSPACE
-            If .CaptureEnd - .CaptureBegin = Level Then
-                p42 = .BufPos
-                q42 = .ThunkPos
-                pvPushThunk ucsActResultClear
-                If ParseIDENT() Then
-                    pvPushThunk ucsActVarSet, 2
-                    If ParseEQ() Then
-                        pvPushThunk ucsActResultClear
-                        If ParseLINE() Then
-                            pvPushThunk ucsActVarSet, 3
-                            Do
-                                Select Case .BufData(.BufPos)
-                                Case 13, 10         ' [\r\n]
-                                    .BufPos = .BufPos + 1
-                                Case Else
-                                    Exit Do
-                                End Select
-                            Loop
-                            pvPushThunk ucsAct_2_block, .CaptureBegin, .CaptureEnd
-                            GoTo L1
-                        Else
-                            .BufPos = p42
-                            .ThunkPos = q42
-                        End If
-                    Else
-                        .BufPos = p42
-                        .ThunkPos = q42
-                    End If
-                Else
-                    .BufPos = p42
-                    .ThunkPos = q42
-                End If
-                pvPushThunk ucsActResultClear
-                If ParseLINE() Then
-                    pvPushThunk ucsActVarSet, 2
-                    Do
-                        Select Case .BufData(.BufPos)
-                        Case 13, 10                 ' [\r\n]
-                            .BufPos = .BufPos + 1
-                        Case Else
-                            Exit Do
-                        End Select
-                    Loop
-                    p41 = .BufPos
-                    q41 = .ThunkPos
-                    p31 = .BufPos
-                    q31 = .ThunkPos
-                    Call ParseSPACE
-                    .BufPos = p31
-                    .ThunkPos = q31
-                    If .CaptureEnd - .CaptureBegin > Level Then
-                        pvPushThunk ucsActResultClear
-                        If Parseblock(.CaptureEnd - .CaptureBegin) Then
-                            pvPushThunk ucsActVarSet, 3
-                            pvPushThunk ucsAct_2_block, .CaptureBegin, .CaptureEnd
-                            GoTo L1
-                        Else
-                            .BufPos = p41
-                            .ThunkPos = q41
-                        End If
-                    Else
-                        .BufPos = p41
-                        .ThunkPos = q41
-                    End If
-                    pvPushThunk ucsActResultClear
-                    Call ParseEMPTY
-                    pvPushThunk ucsActVarSet, 3
-                    pvPushThunk ucsAct_2_block, .CaptureBegin, .CaptureEnd
-                    GoTo L1
-                    .BufPos = p42
-                    .ThunkPos = q42
-                Else
-                    .BufPos = p42
-                    .ThunkPos = q42
-                End If
+            If Not (.CaptureEnd - .CaptureBegin = Level) Then
                 .BufPos = p53
                 .ThunkPos = q53
-                If .CaptureEnd - .CaptureBegin > Level Then
-                    Call ParseSPACE
-                    pvPushThunk ucsActResultClear
-                    If ParseLINE() Then
-                        pvPushThunk ucsActVarSet, 2
-                        Do
-                            Select Case .BufData(.BufPos)
-                            Case 13, 10             ' [\r\n]
-                                .BufPos = .BufPos + 1
-                            Case Else
-                                Exit Do
-                            End Select
-                        Loop
-                        pvPushThunk ucsAct_3_block, .CaptureBegin, .CaptureEnd
-                    Else
-                        .BufPos = p53
-                        .ThunkPos = q53
-                        .BufPos = p53
-                        .ThunkPos = q53
-                        Exit For
-                    End If
-                Else
-                    .BufPos = p53
-                    .ThunkPos = q53
-                    Exit For
-                End If
+                GoTo L4
+            End If
+            p42 = .BufPos
+            q42 = .ThunkPos
+            pvPushThunk ucsActResultClear
+            If ParseIDENT() Then
+                pvPushThunk ucsActVarSet, 2
+            Else
+                .BufPos = p42
+                .ThunkPos = q42
+                GoTo L10
+            End If
+            If Not (ParseEQ()) Then
+                .BufPos = p42
+                .ThunkPos = q42
+                GoTo L10
+            End If
+            pvPushThunk ucsActResultClear
+            If ParseLINE() Then
+                pvPushThunk ucsActVarSet, 3
+            Else
+                .BufPos = p42
+                .ThunkPos = q42
+                GoTo L10
+            End If
+            Do
+                Select Case .BufData(.BufPos)
+                Case 13, 10                         ' [\r\n]
+                    .BufPos = .BufPos + 1
+                Case Else
+                    Exit Do
+                End Select
+            Loop
+            GoTo L5
+L10:
+            pvPushThunk ucsActResultClear
+            If ParseLINE() Then
+                pvPushThunk ucsActVarSet, 2
+            Else
+                .BufPos = p42
+                .ThunkPos = q42
+                GoTo L6
+            End If
+            Do
+                Select Case .BufData(.BufPos)
+                Case 13, 10                         ' [\r\n]
+                    .BufPos = .BufPos + 1
+                Case Else
+                    Exit Do
+                End Select
+            Loop
+            p41 = .BufPos
+            q41 = .ThunkPos
+            p31 = .BufPos
+            q31 = .ThunkPos
+            Call ParseSPACE
+            .BufPos = p31
+            .ThunkPos = q31
+            If Not (.CaptureEnd - .CaptureBegin > Level) Then
+                .BufPos = p41
+                .ThunkPos = q41
+                GoTo L9
+            End If
+            pvPushThunk ucsActResultClear
+            If Parseblock(.CaptureEnd - .CaptureBegin) Then
+                pvPushThunk ucsActVarSet, 3
+            Else
+                .BufPos = p41
+                .ThunkPos = q41
+                GoTo L9
+            End If
+            GoTo L7
+L9:
+            pvPushThunk ucsActResultClear
+            Call ParseEMPTY
+            pvPushThunk ucsActVarSet, 3
+            GoTo L7
+            .BufPos = p42
+            .ThunkPos = q42
+            GoTo L6
+L7:
+            GoTo L5
+L6:
+            .BufPos = p53
+            .ThunkPos = q53
+            GoTo L4
+L5:
+            pvPushThunk ucsAct_2_block, .CaptureBegin, .CaptureEnd
+            GoTo L2
+L4:
+            If Not (.CaptureEnd - .CaptureBegin > Level) Then
+                GoTo L3
+            End If
+            Call ParseSPACE
+            pvPushThunk ucsActResultClear
+            If ParseLINE() Then
+                pvPushThunk ucsActVarSet, 2
             Else
                 .BufPos = p53
                 .ThunkPos = q53
-                If .CaptureEnd - .CaptureBegin > Level Then
-                    Call ParseSPACE
-                    pvPushThunk ucsActResultClear
-                    If ParseLINE() Then
-                        pvPushThunk ucsActVarSet, 2
-                        Do
-                            Select Case .BufData(.BufPos)
-                            Case 13, 10             ' [\r\n]
-                                .BufPos = .BufPos + 1
-                            Case Else
-                                Exit Do
-                            End Select
-                        Loop
-                        pvPushThunk ucsAct_3_block, .CaptureBegin, .CaptureEnd
-                    Else
-                        .BufPos = p53
-                        .ThunkPos = q53
-                        .BufPos = p53
-                        .ThunkPos = q53
-                        Exit For
-                    End If
-                Else
-                    .BufPos = p53
-                    .ThunkPos = q53
-                    Exit For
-                End If
+                GoTo L3
             End If
-L1:
+            Do
+                Select Case .BufData(.BufPos)
+                Case 13, 10                         ' [\r\n]
+                    .BufPos = .BufPos + 1
+                Case Else
+                    Exit Do
+                End Select
+            Loop
+            pvPushThunk ucsAct_3_block, .CaptureBegin, .CaptureEnd
+            GoTo L2
+L3:
+            .BufPos = p53
+            .ThunkPos = q53
+            Exit For
+L2:
         Next
         If i54 <> 0 Then
             pvPushThunk ucsAct_4_block, .CaptureBegin, .CaptureEnd
@@ -502,7 +488,6 @@ Private Sub ParseEMPTY()
         .CaptureBegin = lCaptureBegin
         .CaptureEnd = lCaptureEnd
         pvPushThunk ucsAct_1_EMPTY, lCaptureBegin, lCaptureEnd
-L3:
     End With
 End Sub
 

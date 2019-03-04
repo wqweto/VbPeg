@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 3.12.2018 1:29:27
+' Auto-generated on 5.3.2019 1:30:17
 Option Explicit
 DefObj A-Z
 
@@ -24,15 +24,31 @@ Private Const NORM_IGNORECASE               As Long = 1
 Private Const CSTR_EQUAL                    As Long = 2
 
 Private Declare Function CompareStringW Lib "kernel32" (ByVal Locale As Long, ByVal dwCmpFlags As Long, lpString1 As Any, ByVal cchCount1 As Long, lpString2 As Any, ByVal cchCount2 As Long) As Long
+#If VBA7 Then
+Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As LongPtr)
+Private Declare PtrSafe Function ArrPtr Lib "vbe7" Alias "VarPtr" (Ptr() As Any) As LongPtr
+Private Const NULL_PTR                  As LongPtr = 0
+#Else
 Private Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (Destination As Any, Source As Any, ByVal Length As Long)
 Private Declare Function ArrPtr Lib "msvbvm60" Alias "VarPtr" (Ptr() As Any) As Long
+Private Const NULL_PTR                  As Long = 0
+#End If
+#If Win64 Then
+Private Const PTR_SIZE                  As Long = 8
+#Else
+Private Const PTR_SIZE                  As Long = 4
+#End If
 
 Private Type SAFEARRAY1D
     cDims               As Integer
     fFeatures           As Integer
     cbElements          As Long
     cLocks              As Long
+#If VBA7 Then
+    pvData              As LongPtr
+#Else
     pvData              As Long
+#End If
     cElements           As Long
     lLbound             As Long
 End Type
@@ -119,7 +135,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "3.12.2018 1:29:27"
+    ParserVersion = "5.3.2019 1:30:17"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -155,15 +171,15 @@ Public Function BeginMatch(sSubject As String, Optional ByVal StartPos As Long, 
             .LastError = "Cannot match empty input"
             Exit Function
         End If
-        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), ByVal VarPtr(sSubject), PTR_SIZE)
         With .BufArray
             .cDims = 1
-            .cbElements = 2
             .fFeatures = 1 ' FADF_AUTO
+            .cbElements = 2
             .pvData = StrPtr(sSubject)
             .cElements = Len(sSubject) + 2 '-- look-ahead chars
         End With
-        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), 4)
+        Call CopyMemory(ByVal ArrPtr(.BufData), VarPtr(.BufArray), PTR_SIZE)
         .BufPos = StartPos
         .BufSize = Len(sSubject)
         ReDim .ThunkData(0 To 4) As UcsParserThunkType
@@ -212,8 +228,8 @@ Public Function EndMatch(Optional Result As Variant) As Long
             Result = .VarResult
         End If
         EndMatch = .BufPos + 1
-        Call CopyMemory(ByVal VarPtr(.Contents), 0&, 4)
-        Call CopyMemory(ByVal ArrPtr(.BufData), 0&, 4)
+        Call CopyMemory(ByVal VarPtr(.Contents), NULL_PTR, PTR_SIZE)
+        Call CopyMemory(ByVal ArrPtr(.BufData), NULL_PTR, PTR_SIZE)
         .BufPos = 0
         .BufSize = 0
         Erase .ThunkData
@@ -276,50 +292,43 @@ Public Function ParseStmt() As Boolean
             q12 = .ThunkPos
             If ParseTypedefDecl() Then
                 pvPushThunk ucsActVarSet, 2
-                GoTo L1
             Else
                 .BufPos = p12
                 .ThunkPos = q12
+                If ParseTypedefCallback() Then
+                    pvPushThunk ucsActVarSet, 2
+                Else
+                    .BufPos = p12
+                    .ThunkPos = q12
+                    If ParseEnumDecl() Then
+                        pvPushThunk ucsActVarSet, 2
+                    Else
+                        .BufPos = p12
+                        .ThunkPos = q12
+                        If ParseStructDecl() Then
+                            pvPushThunk ucsActVarSet, 2
+                        Else
+                            .BufPos = p12
+                            .ThunkPos = q12
+                            If ParseFunDecl() Then
+                                pvPushThunk ucsActVarSet, 2
+                            Else
+                                .BufPos = p12
+                                .ThunkPos = q12
+                                If ParseSkipStmt() Then
+                                    pvPushThunk ucsActVarSet, 2
+                                Else
+                                    .BufPos = p12
+                                    .ThunkPos = q12
+                                    .BufPos = p22
+                                    .ThunkPos = q22
+                                    Exit Do
+                                End If
+                            End If
+                        End If
+                    End If
+                End If
             End If
-            If ParseTypedefCallback() Then
-                pvPushThunk ucsActVarSet, 2
-                GoTo L1
-            Else
-                .BufPos = p12
-                .ThunkPos = q12
-            End If
-            If ParseEnumDecl() Then
-                pvPushThunk ucsActVarSet, 2
-                GoTo L1
-            Else
-                .BufPos = p12
-                .ThunkPos = q12
-            End If
-            If ParseStructDecl() Then
-                pvPushThunk ucsActVarSet, 2
-                GoTo L1
-            Else
-                .BufPos = p12
-                .ThunkPos = q12
-            End If
-            If ParseFunDecl() Then
-                pvPushThunk ucsActVarSet, 2
-                GoTo L1
-            Else
-                .BufPos = p12
-                .ThunkPos = q12
-            End If
-            If ParseSkipStmt() Then
-                pvPushThunk ucsActVarSet, 2
-                GoTo L1
-            Else
-                .BufPos = p12
-                .ThunkPos = q12
-            End If
-            .BufPos = p22
-            .ThunkPos = q22
-            Exit Do
-L1:
             pvPushThunk ucsAct_2_Stmt, .CaptureBegin, .CaptureEnd
         Loop
         If ParseEOL() Then
@@ -447,10 +456,18 @@ Private Function ParseEnumDecl() As Boolean
                     Else
                         .BufPos = p103
                         .ThunkPos = q103
-                        pvPushThunk ucsActResultClear
-                        Call ParseEMPTY
-                        pvPushThunk ucsActVarSet, 4
+                        GoTo L11
                     End If
+                    GoTo L9
+L11:
+                    pvPushThunk ucsActResultClear
+                    Call ParseEMPTY
+                    pvPushThunk ucsActVarSet, 4
+                    GoTo L9
+                    .BufPos = p93
+                    .ThunkPos = q93
+                    Exit For
+L9:
                     p105 = .BufPos
                     q105 = .ThunkPos
                     If Not (ParseCOMMA()) Then
@@ -594,28 +611,28 @@ Private Function ParseFunDecl() As Boolean
                             p173 = .BufPos
                             q173 = .ThunkPos
                             If ParseSEMI() Then
-                                pvPushThunk ucsAct_1_FunDecl, .CaptureBegin, .CaptureEnd
-                                pvPushThunk ucsActVarAlloc, -3
-                                ParseFunDecl = True
-                                Exit Function
+                                GoTo L21
                             Else
                                 .BufPos = p173
                                 .ThunkPos = q173
                             End If
                             If ParseLBRACE() Then
-                                pvPushThunk ucsAct_1_FunDecl, .CaptureBegin, .CaptureEnd
-                                pvPushThunk ucsActVarAlloc, -3
-                                ParseFunDecl = True
-                                Exit Function
+                                GoTo L21
                             Else
                                 .BufPos = p173
                                 .ThunkPos = q173
                             End If
+                            GoTo L20
+L21:
+                            pvPushThunk ucsAct_1_FunDecl, .CaptureBegin, .CaptureEnd
+                            pvPushThunk ucsActVarAlloc, -3
+                            ParseFunDecl = True
                         End If
                     End If
                 End If
             End If
         End If
+L20:
     End With
 End Function
 
@@ -639,14 +656,14 @@ Private Function ParseSkipStmt() As Boolean
                 Exit Do
             Else
                 .BufPos = p179
+                If ParseSEMI() Then
+                    .BufPos = p189
+                    Exit Do
+                Else
+                    .BufPos = p179
+                    .BufPos = p180
+                End If
             End If
-            If ParseSEMI() Then
-                .BufPos = p189
-                Exit Do
-            Else
-                .BufPos = p179
-            End If
-            .BufPos = p180
             p185 = .BufPos
             If Not (ParseBLOCKCOMMENT()) Then
                 .BufPos = p185
@@ -666,27 +683,24 @@ Private Function ParseSkipStmt() As Boolean
         Loop
         p194 = .BufPos
         If ParseNL() Then
-            Call Parse_
-            lCaptureEnd = .BufPos
-            .CaptureBegin = lCaptureBegin
-            .CaptureEnd = lCaptureEnd
-            pvPushThunk ucsAct_1_SkipStmt, lCaptureBegin, lCaptureEnd
-            ParseSkipStmt = True
-            Exit Function
+            GoTo L26
         Else
             .BufPos = p194
         End If
         If ParseSEMI() Then
-            Call Parse_
-            lCaptureEnd = .BufPos
-            .CaptureBegin = lCaptureBegin
-            .CaptureEnd = lCaptureEnd
-            pvPushThunk ucsAct_1_SkipStmt, lCaptureBegin, lCaptureEnd
-            ParseSkipStmt = True
-            Exit Function
+            GoTo L26
         Else
             .BufPos = p194
         End If
+        GoTo L25
+L26:
+        Call Parse_
+        lCaptureEnd = .BufPos
+        .CaptureBegin = lCaptureBegin
+        .CaptureEnd = lCaptureEnd
+        pvPushThunk ucsAct_1_SkipStmt, lCaptureBegin, lCaptureEnd
+        ParseSkipStmt = True
+L25:
     End With
 End Function
 
@@ -732,15 +746,15 @@ Private Function ParseType() As Boolean
     Dim p208 As Long
     Dim q208 As Long
     Dim e208 As String
-    Dim p218 As Long
-    Dim q218 As Long
-    Dim lCaptureEnd As Long
     Dim p211 As Long
     Dim q211 As Long
     Dim e211 As String
     Dim p214 As Long
     Dim q214 As Long
     Dim e214 As String
+    Dim p218 As Long
+    Dim q218 As Long
+    Dim lCaptureEnd As Long
 
     With ctx
         lCaptureBegin = .BufPos
@@ -768,15 +782,7 @@ Private Function ParseType() As Boolean
                         .BufPos = p208
                         .ThunkPos = q208
                         .LastExpected = e208
-                        p218 = .BufPos
-                        q218 = .ThunkPos
-                        Call ParseTypeSuffix
-                        lCaptureEnd = .BufPos
-                        .CaptureBegin = lCaptureBegin
-                        .CaptureEnd = lCaptureEnd
-                        pvPushThunk ucsAct_1_Type, lCaptureBegin, lCaptureEnd
-                        ParseType = True
-                        Exit Function
+                        GoTo L32
                     End If
                 End If
             Else
@@ -808,21 +814,24 @@ Private Function ParseType() As Boolean
                     .BufPos = p214
                     .ThunkPos = q214
                     .LastExpected = e214
-                    p218 = .BufPos
-                    q218 = .ThunkPos
-                    Call ParseTypeSuffix
-                    lCaptureEnd = .BufPos
-                    .CaptureBegin = lCaptureBegin
-                    .CaptureEnd = lCaptureEnd
-                    pvPushThunk ucsAct_1_Type, lCaptureBegin, lCaptureEnd
-                    ParseType = True
-                    Exit Function
+                    GoTo L32
                 End If
             End If
         Else
             .BufPos = p215
             .ThunkPos = q215
         End If
+        GoTo L30
+L32:
+        p218 = .BufPos
+        q218 = .ThunkPos
+        Call ParseTypeSuffix
+        lCaptureEnd = .BufPos
+        .CaptureBegin = lCaptureBegin
+        .CaptureEnd = lCaptureEnd
+        pvPushThunk ucsAct_1_Type, lCaptureBegin, lCaptureEnd
+        ParseType = True
+L30:
     End With
 End Function
 
@@ -879,15 +888,7 @@ Private Function ParseTypeUnlimited() As Boolean
         q227 = .ThunkPos
         If ParseTypePrefix() Then
             If ParseTypeBody() Then
-                p229 = .BufPos
-                q229 = .ThunkPos
-                Call ParseTypeSuffix
-                lCaptureEnd = .BufPos
-                .CaptureBegin = lCaptureBegin
-                .CaptureEnd = lCaptureEnd
-                pvPushThunk ucsAct_1_TypeUnlimited, lCaptureBegin, lCaptureEnd
-                ParseTypeUnlimited = True
-                Exit Function
+                GoTo L39
             Else
                 .BufPos = p227
                 .ThunkPos = q227
@@ -897,19 +898,22 @@ Private Function ParseTypeUnlimited() As Boolean
             .ThunkPos = q227
         End If
         If ParseTypeBody() Then
-            p229 = .BufPos
-            q229 = .ThunkPos
-            Call ParseTypeSuffix
-            lCaptureEnd = .BufPos
-            .CaptureBegin = lCaptureBegin
-            .CaptureEnd = lCaptureEnd
-            pvPushThunk ucsAct_1_TypeUnlimited, lCaptureBegin, lCaptureEnd
-            ParseTypeUnlimited = True
-            Exit Function
+            GoTo L39
         Else
             .BufPos = p227
             .ThunkPos = q227
         End If
+        GoTo L37
+L39:
+        p229 = .BufPos
+        q229 = .ThunkPos
+        Call ParseTypeSuffix
+        lCaptureEnd = .BufPos
+        .CaptureBegin = lCaptureBegin
+        .CaptureEnd = lCaptureEnd
+        pvPushThunk ucsAct_1_TypeUnlimited, lCaptureBegin, lCaptureEnd
+        ParseTypeUnlimited = True
+L37:
     End With
 End Function
 
@@ -1077,7 +1081,6 @@ Private Sub ParseEMPTY()
         .CaptureBegin = lCaptureBegin
         .CaptureEnd = lCaptureEnd
         pvPushThunk ucsAct_1_EMPTY, lCaptureBegin, lCaptureEnd
-L20:
     End With
 End Sub
 
@@ -1130,25 +1133,23 @@ Private Function ParseLinkage() As Boolean
     With ctx
         p359 = .BufPos
         If ParseEXTERN() Then
-            p361 = .BufPos
-            If Not (ParseINLINE()) Then
-                .BufPos = p361
-            End If
-            ParseLinkage = True
-            Exit Function
+            GoTo L55
         Else
             .BufPos = p359
         End If
         If ParseSTATIC() Then
-            p361 = .BufPos
-            If Not (ParseINLINE()) Then
-                .BufPos = p361
-            End If
-            ParseLinkage = True
-            Exit Function
+            GoTo L55
         Else
             .BufPos = p359
         End If
+        GoTo L53
+L55:
+        p361 = .BufPos
+        If Not (ParseINLINE()) Then
+            .BufPos = p361
+        End If
+        ParseLinkage = True
+L53:
     End With
 End Function
 
@@ -1193,24 +1194,23 @@ Private Function ParseBLOCKCOMMENT() As Boolean
                 p531 = .BufPos
                 If .BufData(.BufPos) = 47 And .BufData(.BufPos + 1) = 42 Then ' "/*"
                     .BufPos = p531
-                    If Not (ParseBLOCKCOMMENT()) Then
-                        .BufPos = p535
-                        If .BufPos < .BufSize Then
-                            .BufPos = .BufPos + 1
-                        Else
-                            .BufPos = p536
-                            Exit Do
-                        End If
-                    End If
                 Else
                     .BufPos = p535
-                    If .BufPos < .BufSize Then
-                        .BufPos = .BufPos + 1
-                    Else
-                        .BufPos = p536
-                        Exit Do
-                    End If
+                    GoTo L61
                 End If
+                If Not (ParseBLOCKCOMMENT()) Then
+                    .BufPos = p535
+                    GoTo L61
+                End If
+                GoTo L60
+L61:
+                If .BufPos < .BufSize Then
+                    .BufPos = .BufPos + 1
+                Else
+                    .BufPos = p536
+                    Exit Do
+                End If
+L60:
             Loop
             If .BufData(.BufPos) = 42 And .BufData(.BufPos + 1) = 47 Then ' "*/"
                 .BufPos = .BufPos + 2
@@ -1297,28 +1297,28 @@ Private Function ParseTypePrefix() As Boolean
     With ctx
         p237 = .BufPos
         If ParseCONST() Then
-            ParseTypePrefix = True
-            Exit Function
+            GoTo L65
         Else
             .BufPos = p237
         End If
         If ParseUNSIGNED() Then
-            ParseTypePrefix = True
-            Exit Function
+            GoTo L65
         Else
             .BufPos = p237
         End If
         If ParseSTRUCT() Then
-            ParseTypePrefix = True
-            Exit Function
+            GoTo L65
         Else
             .BufPos = p237
         End If
         If ParseENUM() Then
-            ParseTypePrefix = True
-            Exit Function
+            GoTo L65
         Else
             .BufPos = p237
+        End If
+        If False Then
+L65:
+            ParseTypePrefix = True
         End If
     End With
 End Function
@@ -1331,95 +1331,86 @@ Private Function ParseTypeBody() As Boolean
         p244 = .BufPos
         q244 = .ThunkPos
         If ParseINT() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseCHAR() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseUNSIGNED() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseVOID() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseUINT_A_T() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseUINT_B_T() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseUINT_C_T() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseUINTPTR_T() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseSIZE_T() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseDOUBLE() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseLONG_LONG() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseBOOL() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
         End If
         If ParseRefType() Then
-            ParseTypeBody = True
-            Exit Function
+            GoTo L66
         Else
             .BufPos = p244
             .ThunkPos = q244
+        End If
+        If False Then
+L66:
+            ParseTypeBody = True
         End If
     End With
 End Function
@@ -1826,26 +1817,27 @@ Private Function ParseEnumValueToken() As Boolean
                 Exit For
             Else
                 .BufPos = p330
+                If ParseLINECOMMENT() Then
+                    .BufPos = p335
+                    Exit For
+                Else
+                    .BufPos = p330
+                    If ParseWS() Then
+                        .BufPos = p335
+                        Exit For
+                    Else
+                        .BufPos = p330
+                        Select Case .BufData(.BufPos)
+                        Case 44, 125                ' [,}]
+                            .BufPos = .BufPos + 1
+                            .BufPos = p335
+                            Exit For
+                        Case Else
+                            .BufPos = p333
+                        End Select
+                    End If
+                End If
             End If
-            If ParseLINECOMMENT() Then
-                .BufPos = p335
-                Exit For
-            Else
-                .BufPos = p330
-            End If
-            If ParseWS() Then
-                .BufPos = p335
-                Exit For
-            Else
-                .BufPos = p330
-            End If
-            Select Case .BufData(.BufPos)
-            Case 44, 125                            ' [,}]
-                .BufPos = .BufPos + 1
-                .BufPos = p335
-                Exit For
-            End Select
-            .BufPos = p333
             If .BufPos < .BufSize Then
                 .BufPos = .BufPos + 1
             Else
@@ -1978,90 +1970,90 @@ Private Sub pvImplAction(ByVal eAction As UcsParserActionsEnum, ByVal lOffset As
     With ctx
     Select Case eAction
     Case ucsAct_3_Stmt
-           Set ctx.VarResult = ctx.VarStack(ctx.VarPos - 1)
+           Set .VarResult = .VarStack(.VarPos - 1)
     Case ucsAct_2_Stmt
-           Set oJson = ctx.VarStack(ctx.VarPos - 1) : JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 2)
+           Set oJson = .VarStack(.VarPos - 1) : JsonItem(oJson, -1) = .VarStack(.VarPos - 2)
     Case ucsAct_1_Stmt
            JsonItem(oJson, -1) = Empty
-                                                                            Set ctx.VarStack(ctx.VarPos - 1) = oJson
+                                                                            Set .VarStack(.VarPos - 1) = oJson
     Case ucsAct_1_TypedefDecl
            JsonItem(oJson, "Tag") = "TypedefDecl"
-                                                                            JsonItem(oJson, "Name") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "Type") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Name") = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "Type") = .VarStack(.VarPos - 1)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_TypedefCallback
            JsonItem(oJson, "Tag") = "TypedefCallback"
-                                                                            JsonItem(oJson, "Name") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "Type") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Params") = ctx.VarStack(ctx.VarPos - 3)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Name") = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "Type") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Params") = .VarStack(.VarPos - 3)
+                                                                            Set .VarResult = oJson
     Case ucsAct_3_EnumDecl
-           Set oJson = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "Name") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            Set ctx.VarResult = oJson
+           Set oJson = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "Name") = .VarStack(.VarPos - 1)
+                                                                            Set .VarResult = oJson
     Case ucsAct_2_EnumDecl
-           JsonItem(oEl, "Name") = ctx.VarStack(ctx.VarPos - 3)
-                                                                            JsonItem(oEl, "Value") = zn(CStr(ctx.VarStack(ctx.VarPos - 4)), Empty)
-                                                                            Set oJson = ctx.VarStack(ctx.VarPos - 2)
+           JsonItem(oEl, "Name") = .VarStack(.VarPos - 3)
+                                                                            JsonItem(oEl, "Value") = zn(CStr(.VarStack(.VarPos - 4)), Empty)
+                                                                            Set oJson = .VarStack(.VarPos - 2)
                                                                             JsonItem(oJson, "Items/-1") = oEl
     Case ucsAct_1_EnumDecl
            JsonItem(oJson, "Tag") = "EnumDecl" 
                                                                             JsonItem(oJson, "Items/-1") = Empty
-                                                                            Set ctx.VarStack(ctx.VarPos - 2) = oJson
+                                                                            Set .VarStack(.VarPos - 2) = oJson
     Case ucsAct_3_StructDecl
-           Set oJson = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "Name") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            Set ctx.VarResult = oJson
+           Set oJson = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "Name") = .VarStack(.VarPos - 1)
+                                                                            Set .VarResult = oJson
     Case ucsAct_2_StructDecl
-           JsonItem(oEl, "Name") = ctx.VarStack(ctx.VarPos - 4)
-                                                                            JsonItem(oEl, "Type") = ctx.VarStack(ctx.VarPos - 3)
-                                                                            Set oJson = ctx.VarStack(ctx.VarPos - 2)
+           JsonItem(oEl, "Name") = .VarStack(.VarPos - 4)
+                                                                            JsonItem(oEl, "Type") = .VarStack(.VarPos - 3)
+                                                                            Set oJson = .VarStack(.VarPos - 2)
                                                                             JsonItem(oJson, "Items/-1") = oEl
     Case ucsAct_1_StructDecl
            JsonItem(oJson, "Tag") = "StructDecl" 
                                                                             JsonItem(oJson, "Items/-1") = Empty
-                                                                            Set ctx.VarStack(ctx.VarPos - 2) = oJson
+                                                                            Set .VarStack(.VarPos - 2) = oJson
     Case ucsAct_1_FunDecl
            JsonItem(oJson, "Tag") = "FunDecl"
-                                                                            JsonItem(oJson, "Name") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "Type") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Params") = ctx.VarStack(ctx.VarPos - 3)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Name") = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "Type") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Params") = .VarStack(.VarPos - 3)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_SkipStmt
            JsonItem(oJson, "Tag") = "SkipStmt"
-                                                                            JsonItem(oJson, "Text") = Mid$(ctx.Contents, lOffset, lSize)
-                                                                            Set ctx.VarResult = oJson
+                                                                            JsonItem(oJson, "Text") = Mid$(.Contents, lOffset, lSize)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_Type
-         ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+         .VarResult = Mid$(.Contents, lOffset, lSize)
     Case ucsAct_1_ID
-           ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+           .VarResult = Mid$(.Contents, lOffset, lSize)
     Case ucsAct_1_TypeUnlimited
-         ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+         .VarResult = Mid$(.Contents, lOffset, lSize)
     Case ucsAct_3_Params
-           Set ctx.VarResult = ctx.VarStack(ctx.VarPos - 1)
+           Set .VarResult = .VarStack(.VarPos - 1)
     Case ucsAct_2_Params
-           Set oJson = ctx.VarStack(ctx.VarPos - 1) : JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 2)
+           Set oJson = .VarStack(.VarPos - 1) : JsonItem(oJson, -1) = .VarStack(.VarPos - 2)
     Case ucsAct_1_Params
-           JsonItem(oJson, -1) = ctx.VarStack(ctx.VarPos - 1) : Set ctx.VarStack(ctx.VarPos - 1) = oJson
+           JsonItem(oJson, -1) = .VarStack(.VarPos - 1) : Set .VarStack(.VarPos - 1) = oJson
     Case ucsAct_4_EnumValue
-           Set oJson = ctx.VarStack(ctx.VarPos - 1) : ctx.VarResult = ConcatCollection(oJson, " ")
+           Set oJson = .VarStack(.VarPos - 1) : .VarResult = ConcatCollection(oJson, " ")
     Case ucsAct_3_EnumValue
-           ctx.VarStack(ctx.VarPos - 1).Add ctx.VarStack(ctx.VarPos - 2)
+           .VarStack(.VarPos - 1).Add .VarStack(.VarPos - 2)
     Case ucsAct_2_EnumValue
-           ctx.VarStack(ctx.VarPos - 1).Add ctx.VarStack(ctx.VarPos - 2)
+           .VarStack(.VarPos - 1).Add .VarStack(.VarPos - 2)
     Case ucsAct_1_EnumValue
-           Set ctx.VarStack(ctx.VarPos - 1) = New Collection
+           Set .VarStack(.VarPos - 1) = New Collection
     Case ucsAct_1_EMPTY
-           ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+           .VarResult = Mid$(.Contents, lOffset, lSize)
     Case ucsAct_1_Param
-           JsonItem(oJson, "Type") = ctx.VarStack(ctx.VarPos - 1)
-                                                                            JsonItem(oJson, "Name") = ctx.VarStack(ctx.VarPos - 2)
-                                                                            JsonItem(oJson, "ArraySuffix") = zn(CStr(ctx.VarStack(ctx.VarPos - 3)), Empty)
-                                                                            Set ctx.VarResult = oJson
+           JsonItem(oJson, "Type") = .VarStack(.VarPos - 1)
+                                                                            JsonItem(oJson, "Name") = .VarStack(.VarPos - 2)
+                                                                            JsonItem(oJson, "ArraySuffix") = zn(CStr(.VarStack(.VarPos - 3)), Empty)
+                                                                            Set .VarResult = oJson
     Case ucsAct_1_ArraySuffix
-           ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+           .VarResult = Mid$(.Contents, lOffset, lSize)
     Case ucsAct_1_EnumValueToken
-           ctx.VarResult = Mid$(ctx.Contents, lOffset, lSize)
+           .VarResult = Mid$(.Contents, lOffset, lSize)
     End Select
     End With
 End Sub
