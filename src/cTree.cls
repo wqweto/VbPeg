@@ -853,7 +853,7 @@ Private Function pvOptimizePass1(ByVal lNode As Long) As Boolean
                     .Flags = lFlags
                     pvOptimizePass1 = True
                 End If
-                If .NodeType = ucsNdtRule And LenB(.Description) = 0 Then
+                If .NodeType = ucsNdtRule And LenB(.Description) = 0 And (.Flags And ucsNdfPublic) = 0 Then
                     If pvSetFlag(.Flags, ucsNdfCanInline, UBound(m_uTree.Nodes(.Children(0)).Children) < 0) Then
                         pvOptimizePass1 = True
                     End If
@@ -923,7 +923,7 @@ Private Function pvOptimizePass2(ByVal lNode As Long) As Boolean
                 pvOptimizePass2 = True
                 Exit Function
             End If
-            If .NodeType = ucsNdtRule Then
+            If .NodeType = ucsNdtRule And LenB(.Description) = 0 And (.Flags And ucsNdfPublic) = 0 Then
                 If (.Flags And ucsNdfCanInline) = 0 Then
                     If UBound(m_uTree.Nodes(.Children(0)).Children) < 0 Then
                         .Flags = .Flags Or ucsNdfCanInline
