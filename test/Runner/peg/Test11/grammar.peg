@@ -1,0 +1,55 @@
+#
+# PEG for Python style indentation
+# https://stackoverflow.com/questions/4205442/peg-for-python-style-indentation
+#
+# @trace ConsoleTrace
+
+block(Optional ByVal Level As Long)
+    = r:''                                                              { JsonItem(oJson, vbNullString) = Empty : Set $r = oJson }
+                                                                       &{   Dim oRollback As Object
+                                                                            Set oRollback = ModifyStack(.FlowLevelStack, 1)
+                                                                            'ConsolePrint "FlowLevel=%1" & vbCrLf, .FlowLevelStack(1) }
+      (   (   SPACE &{ .CaptureEnd - .CaptureBegin = Level } 
+              ( id:IDENT EQ v:LINE [\r\n]*
+              | id:LINE [\r\n]* ( &SPACE &{ .CaptureEnd - .CaptureBegin > Level } v:block(.CaptureEnd - .CaptureBegin)
+                                |                                                 v:EMPTY )
+              )
+          )                                                             {   Set oJson = $r
+                                                                            JsonItem(oJson, $id) = $v }
+      |   (   &{ .CaptureEnd - .CaptureBegin > Level } 
+              SPACE id:LINE [\r\n]*
+          )                                                             { Set oJson = $r : JsonItem(oJson, $id) = Array("Error baddent") }
+      )+                                                                { Set $$ = $r }
+
+SPACE   = < [ ]* >
+EMPTY   = < '' >                                                        { $$ = $$text }
+LINE    = < [^\r\n]+ >                                                  { $$ = $$text }
+IDENT   = < [a-zA-Z]+ > -                                               { $$ = $$text }
+EQ      = '=' -
+-       = [ \t]*
+
+@members {
+    FlowLevelStack      As Collection
+}
+
+@prolog {
+    Dim oJson As Object
+
+    With ctx
+}
+
+@epilog {
+    End With
+}
+
+@{
+Private Function ModifyStack(oStack As Collection, ByVal lDelta As Long) As Object
+    If oStack Is Nothing Then
+        Set oStack = New Collection
+        oStack.Add 0
+    End If
+    oStack.Add oStack(1) + lDelta, Before:=1
+    Set ModifyStack = New cPopStack
+    Set ModifyStack.Stack =  oStack
+End Function
+}
