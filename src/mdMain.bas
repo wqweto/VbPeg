@@ -1,7 +1,7 @@
 Attribute VB_Name = "mdMain"
 '=========================================================================
 '
-' VbPeg (c) 2018 by wqweto@gmail.com
+' VbPeg (c) 2018-2019 by wqweto@gmail.com
 '
 ' PEG parser generator for VB6
 '
@@ -38,7 +38,7 @@ Private Declare Function VirtualProtect Lib "kernel32" (ByVal lpAddress As Long,
 ' Constants and member variables
 '=========================================================================
 
-Private Const STR_VERSION           As String = "0.4.3"
+Private Const STR_VERSION           As String = "0.4.4"
 
 Private m_oParser               As cParser
 Private m_oOpt                  As Dictionary
