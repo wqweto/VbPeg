@@ -13,7 +13,7 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 '=========================================================================
 '
-' VbPeg (c) 2018 by wqweto@gmail.com
+' VbPeg (c) 2018-2019 by wqweto@gmail.com
 '
 ' PEG parser generator for VB6
 '
@@ -1082,6 +1082,16 @@ Private Function pvSetSequenceRestoreFlag( _
                     If pvSetSequenceRestoreFlag(vElem, bValue, lRestoreFrom) Then
                         pvSetSequenceRestoreFlag = True
                     End If
+                ElseIf .NodeType = ucsNdtPeekFor Then
+                    Debug.Assert UBound(.Children) = 0
+                    Select Case NodeType(.Children(0))
+                    Case ucsNdtClass, ucsNdtString
+                        '--- do nothing
+                    Case Else
+                        If pvSetFlag(.Flags, ucsNdfRestorePos, bValue) Then
+                            pvSetSequenceRestoreFlag = True
+                        End If
+                    End Select
                 ElseIf pvSetFlag(.Flags, ucsNdfRestorePos, bValue) Then
                     pvSetSequenceRestoreFlag = True
                 End If
