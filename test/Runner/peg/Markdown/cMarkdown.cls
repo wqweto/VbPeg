@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 5.3.2019 1:30:18
+' Auto-generated on 5.3.2019 16:44:41
 Option Explicit
 DefObj A-Z
 
@@ -219,7 +219,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "5.3.2019 1:30:18"
+    ParserVersion = "5.3.2019 16:44:41"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -417,80 +417,67 @@ Private Function ParseBlock() As Boolean
         q24 = .ThunkPos
         If ParseBlockQuote() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParseVerbatim() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParseNote() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParseReference() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParseHorizontalRule() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParseHeading() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParseOrderedList() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParseBulletList() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParseHtmlBlock() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParseStyleBlock() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParsePara() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
+        .BufPos = p24
+        .ThunkPos = q24
         If ParsePlain() Then
             GoTo L5
-        Else
-            .BufPos = p24
-            .ThunkPos = q24
         End If
-        GoTo L4
+        .BufPos = p24
+        .ThunkPos = q24
+        Exit Function
 L5:
         ParseBlock = True
-L4:
     End With
 End Function
 
@@ -672,9 +659,8 @@ Private Function ParseHorizontalRule() As Boolean
                         End If
                     Loop
                     GoTo L12
-                Else
-                    .BufPos = p251
                 End If
+                .BufPos = p251
             Else
                 .BufPos = p251
             End If
@@ -698,9 +684,8 @@ Private Function ParseHorizontalRule() As Boolean
                         End If
                     Loop
                     GoTo L12
-                Else
-                    .BufPos = p251
                 End If
+                .BufPos = p251
             Else
                 .BufPos = p251
             End If
@@ -724,14 +709,13 @@ Private Function ParseHorizontalRule() As Boolean
                         End If
                     Loop
                     GoTo L12
-                Else
-                    .BufPos = p251
                 End If
+                .BufPos = p251
             Else
                 .BufPos = p251
             End If
         End If
-        GoTo L11
+        Exit Function
 L12:
         Call ParseSp
         If ParseNewline() Then
@@ -748,7 +732,6 @@ L12:
                 ParseHorizontalRule = True
             End If
         End If
-L11:
     End With
 End Function
 
@@ -761,20 +744,17 @@ Private Function ParseHeading() As Boolean
         q169 = .ThunkPos
         If ParseSetextHeading() Then
             GoTo L16
-        Else
-            .BufPos = p169
-            .ThunkPos = q169
         End If
+        .BufPos = p169
+        .ThunkPos = q169
         If ParseAtxHeading() Then
             GoTo L16
-        Else
-            .BufPos = p169
-            .ThunkPos = q169
         End If
-        If False Then
+        .BufPos = p169
+        .ThunkPos = q169
+        Exit Function
 L16:
-            ParseHeading = True
-        End If
+        ParseHeading = True
     End With
 End Function
 
@@ -791,22 +771,19 @@ Private Function ParseOrderedList() As Boolean
             q398 = .ThunkPos
             If ParseListTight() Then
                 GoTo L18
-            Else
-                .BufPos = p398
-                .ThunkPos = q398
             End If
+            .BufPos = p398
+            .ThunkPos = q398
             If ParseListLoose() Then
                 GoTo L18
-            Else
-                .BufPos = p398
-                .ThunkPos = q398
             End If
-            GoTo L17
+            .BufPos = p398
+            .ThunkPos = q398
+            Exit Function
 L18:
             pvPushThunk ucsAct_1_OrderedList, .CaptureBegin, .CaptureEnd
             ParseOrderedList = True
         End If
-L17:
     End With
 End Function
 
@@ -826,22 +803,19 @@ Private Function ParseBulletList() As Boolean
             q286 = .ThunkPos
             If ParseListTight() Then
                 GoTo L20
-            Else
-                .BufPos = p286
-                .ThunkPos = q286
             End If
+            .BufPos = p286
+            .ThunkPos = q286
             If ParseListLoose() Then
                 GoTo L20
-            Else
-                .BufPos = p286
-                .ThunkPos = q286
             End If
-            GoTo L19
+            .BufPos = p286
+            .ThunkPos = q286
+            Exit Function
 L20:
             pvPushThunk ucsAct_1_BulletList, .CaptureBegin, .CaptureEnd
             ParseBulletList = True
         End If
-L19:
     End With
 End Function
 
@@ -857,20 +831,17 @@ Private Function ParseHtmlBlock() As Boolean
         p1541 = .BufPos
         If ParseHtmlBlockInTags() Then
             GoTo L22
-        Else
-            .BufPos = p1541
         End If
+        .BufPos = p1541
         If ParseHtmlComment() Then
             GoTo L22
-        Else
-            .BufPos = p1541
         End If
+        .BufPos = p1541
         If ParseHtmlBlockSelfClosing() Then
             GoTo L22
-        Else
-            .BufPos = p1541
         End If
-        GoTo L21
+        .BufPos = p1541
+        Exit Function
 L22:
         lCaptureEnd = .BufPos
         For i1547 = 0 To LNG_MAXINT
@@ -886,7 +857,6 @@ L22:
             pvPushThunk ucsAct_1_HtmlBlock, lCaptureBegin, lCaptureEnd
             ParseHtmlBlock = True
         End If
-L21:
     End With
 End Function
 
@@ -971,10 +941,9 @@ Private Sub ParseNonindentSpace()
             GoTo L26
         End If
         GoTo L26
-        If False Then
+        Exit Sub
 L26:
-            Call pvSetAdvance
-        End If
+        Call pvSetAdvance
     End With
 End Sub
 
@@ -1005,11 +974,10 @@ Private Function ParseInlines() As Boolean
                     .BufPos = p1684
                     .ThunkPos = q1684
                     GoTo L31
-                Else
-                    .BufPos = p1673
-                    .ThunkPos = q1673
-                    .LastExpected = e1673
                 End If
+                .BufPos = p1673
+                .ThunkPos = q1673
+                .LastExpected = e1673
                 If Not (ParseInline()) Then
                     .BufPos = p1684
                     .ThunkPos = q1684
@@ -1083,7 +1051,7 @@ Private Function ParseAtxInline() As Boolean
             If Not (ParseNewline()) Then
                 GoTo L33
             End If
-            GoTo L32
+            Exit Function
 L33:
             .BufPos = p73
             If ParseInline() Then
@@ -1091,7 +1059,6 @@ L33:
                 ParseAtxInline = True
             End If
         End If
-L32:
     End With
 End Function
 
@@ -1111,11 +1078,10 @@ Private Function ParseNewline() As Boolean
             End If
             GoTo L34
         End If
-        If False Then
+        Exit Function
 L34:
-            Call pvSetAdvance
-            ParseNewline = True
-        End If
+        Call pvSetAdvance
+        ParseNewline = True
     End With
 End Function
 
@@ -1142,110 +1108,92 @@ Private Function ParseInline() As Boolean
         q1692 = .ThunkPos
         If ParseStr() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseEndline() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseUlOrStarLine() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseSpace() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseStrong() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseEmph() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseStrike() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseImage() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseLink() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseNoteReference() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseInlineNote() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseCode() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseRawHtml() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseEntity() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseEscapedChar() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseSmart() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
+        .BufPos = p1692
+        .ThunkPos = q1692
         If ParseSymbol() Then
             GoTo L37
-        Else
-            .BufPos = p1692
-            .ThunkPos = q1692
         End If
-        If False Then
+        .BufPos = p1692
+        .ThunkPos = q1692
+        Exit Function
 L37:
-            ParseInline = True
-        End If
+        ParseInline = True
     End With
 End Function
 
@@ -1279,7 +1227,7 @@ Private Function ParseAtxStart() As Boolean
             .BufPos = .BufPos + 1
             GoTo L39
         End If
-        GoTo L38
+        Exit Function
 L39:
         lCaptureEnd = .BufPos
         .CaptureBegin = lCaptureBegin
@@ -1287,7 +1235,6 @@ L39:
         pvPushThunk ucsAct_1_AtxStart, lCaptureBegin, lCaptureEnd
         Call pvSetAdvance
         ParseAtxStart = True
-L38:
     End With
 End Function
 
@@ -1350,20 +1297,17 @@ Private Function ParseSetextHeading() As Boolean
         q116 = .ThunkPos
         If ParseSetextHeading1() Then
             GoTo L43
-        Else
-            .BufPos = p116
-            .ThunkPos = q116
         End If
+        .BufPos = p116
+        .ThunkPos = q116
         If ParseSetextHeading2() Then
             GoTo L43
-        Else
-            .BufPos = p116
-            .ThunkPos = q116
         End If
-        If False Then
+        .BufPos = p116
+        .ThunkPos = q116
+        Exit Function
 L43:
-            ParseSetextHeading = True
-        End If
+        ParseSetextHeading = True
     End With
 End Function
 
@@ -1380,10 +1324,10 @@ Private Function ParseSetextHeading1() As Boolean
         pvPushThunk ucsActVarAlloc, 1
         p131 = .BufPos
         If Not (ParseRawLine()) Then
-            GoTo L44
+            Exit Function
         End If
         If Not (ParseSetextBottom1()) Then
-            GoTo L44
+            Exit Function
         End If
         .BufPos = p131
         pvPushThunk ucsActResultClear
@@ -1399,11 +1343,10 @@ Private Function ParseSetextHeading1() As Boolean
                     .BufPos = p141
                     .ThunkPos = q141
                     Exit For
-                Else
-                    .BufPos = p139
-                    .ThunkPos = q139
-                    .LastExpected = e139
                 End If
+                .BufPos = p139
+                .ThunkPos = q139
+                .LastExpected = e139
                 If Not (ParseInline()) Then
                     .BufPos = p141
                     .ThunkPos = q141
@@ -1422,7 +1365,6 @@ Private Function ParseSetextHeading1() As Boolean
                 End If
             End If
         End If
-L44:
     End With
 End Function
 
@@ -1439,10 +1381,10 @@ Private Function ParseSetextHeading2() As Boolean
         pvPushThunk ucsActVarAlloc, 1
         p151 = .BufPos
         If Not (ParseRawLine()) Then
-            GoTo L46
+            Exit Function
         End If
         If Not (ParseSetextBottom2()) Then
-            GoTo L46
+            Exit Function
         End If
         .BufPos = p151
         pvPushThunk ucsActResultClear
@@ -1458,11 +1400,10 @@ Private Function ParseSetextHeading2() As Boolean
                     .BufPos = p160
                     .ThunkPos = q160
                     Exit For
-                Else
-                    .BufPos = p158
-                    .ThunkPos = q158
-                    .LastExpected = e158
                 End If
+                .BufPos = p158
+                .ThunkPos = q158
+                .LastExpected = e158
                 If Not (ParseInline()) Then
                     .BufPos = p160
                     .ThunkPos = q160
@@ -1481,7 +1422,6 @@ Private Function ParseSetextHeading2() As Boolean
                 End If
             End If
         End If
-L46:
     End With
 End Function
 
@@ -1541,18 +1481,14 @@ Private Function ParseRawLine() As Boolean
             p2770 = .BufPos
             p2767 = .BufPos
             If .BufData(.BufPos) = 13 Then          ' "\r"
-                .BufPos = p2770
                 Exit Do
-            Else
-                .BufPos = p2767
             End If
+            .BufPos = p2767
             p2769 = .BufPos
             If .BufData(.BufPos) = 10 Then          ' "\n"
-                .BufPos = p2770
                 Exit Do
-            Else
-                .BufPos = p2769
             End If
+            .BufPos = p2769
             If .BufPos < .BufSize Then
                 .BufPos = .BufPos + 1
             Else
@@ -1563,9 +1499,8 @@ Private Function ParseRawLine() As Boolean
         If ParseNewline() Then
             lCaptureEnd = .BufPos
             GoTo L50
-        Else
-            .BufPos = p2782
         End If
+        .BufPos = p2782
         lCaptureBegin = .BufPos
         For i2778 = 0 To LNG_MAXINT
             If .BufPos < .BufSize Then
@@ -1578,19 +1513,17 @@ Private Function ParseRawLine() As Boolean
             lCaptureEnd = .BufPos
             If ParseEof() Then
                 GoTo L50
-            Else
-                .BufPos = p2782
             End If
+            .BufPos = p2782
         Else
             .BufPos = p2782
         End If
-        If False Then
+        Exit Function
 L50:
-            .CaptureBegin = lCaptureBegin
-            .CaptureEnd = lCaptureEnd
-            Call pvSetAdvance
-            ParseRawLine = True
-        End If
+        .CaptureBegin = lCaptureBegin
+        .CaptureEnd = lCaptureEnd
+        Call pvSetAdvance
+        ParseRawLine = True
     End With
 End Function
 
@@ -1603,26 +1536,22 @@ Private Function ParseEndline() As Boolean
         q1786 = .ThunkPos
         If ParseLineBreak() Then
             GoTo L53
-        Else
-            .BufPos = p1786
-            .ThunkPos = q1786
         End If
+        .BufPos = p1786
+        .ThunkPos = q1786
         If ParseTerminalEndline() Then
             GoTo L53
-        Else
-            .BufPos = p1786
-            .ThunkPos = q1786
         End If
+        .BufPos = p1786
+        .ThunkPos = q1786
         If ParseNormalEndline() Then
             GoTo L53
-        Else
-            .BufPos = p1786
-            .ThunkPos = q1786
         End If
-        If False Then
+        .BufPos = p1786
+        .ThunkPos = q1786
+        Exit Function
 L53:
-            ParseEndline = True
-        End If
+        ParseEndline = True
     End With
 End Function
 
@@ -1668,13 +1597,10 @@ Private Function ParseBlockQuoteRaw() As Boolean
                     p188 = .BufPos
                     q188 = .ThunkPos
                     If .BufData(.BufPos) = 62 Then  ' ">"
-                        .BufPos = p191
-                        .ThunkPos = q191
                         Exit Do
-                    Else
-                        .BufPos = p188
-                        .ThunkPos = q188
                     End If
+                    .BufPos = p188
+                    .ThunkPos = q188
                     p190 = .BufPos
                     q190 = .ThunkPos
                     e190 = .LastExpected
@@ -1682,11 +1608,10 @@ Private Function ParseBlockQuoteRaw() As Boolean
                         .BufPos = p191
                         .ThunkPos = q191
                         Exit Do
-                    Else
-                        .BufPos = p190
-                        .ThunkPos = q190
-                        .LastExpected = e190
                     End If
+                    .BufPos = p190
+                    .ThunkPos = q190
+                    .LastExpected = e190
                     If Not (ParseLine()) Then
                         .BufPos = p191
                         .ThunkPos = q191
@@ -1819,7 +1744,7 @@ Private Function ParseBullet() As Boolean
                 .BufPos = .BufPos + 1
                 GoTo L61
             End If
-            GoTo L60
+            Exit Function
 L61:
             For i279 = 0 To LNG_MAXINT
                 p278 = .BufPos
@@ -1835,7 +1760,6 @@ L61:
                 ParseBullet = True
             End If
         End If
-L60:
     End With
 End Function
 
@@ -1849,11 +1773,10 @@ Private Function ParseSpacechar() As Boolean
             .BufPos = .BufPos + 1
             GoTo L62
         End If
-        If False Then
+        Exit Function
 L62:
-            Call pvSetAdvance
-            ParseSpacechar = True
-        End If
+        Call pvSetAdvance
+        ParseSpacechar = True
     End With
 End Function
 
@@ -1898,25 +1821,23 @@ Private Function ParseListTight() As Boolean
                 p303 = .BufPos
                 q303 = .ThunkPos
                 If ParseBullet() Then
-                    GoTo L63
-                Else
-                    .BufPos = p303
-                    .ThunkPos = q303
+                    GoTo L64
                 End If
+                .BufPos = p303
+                .ThunkPos = q303
                 If ParseEnumerator() Then
-                    GoTo L63
-                Else
-                    .BufPos = p303
-                    .ThunkPos = q303
+                    GoTo L64
                 End If
+                .BufPos = p303
+                .ThunkPos = q303
                 .BufPos = p304
                 .ThunkPos = q304
                 pvPushThunk ucsAct_2_ListTight, .CaptureBegin, .CaptureEnd
                 pvPushThunk ucsActVarAlloc, -1
                 ParseListTight = True
+L64:
             End If
         End If
-L63:
     End With
 End Function
 
@@ -1981,17 +1902,15 @@ Private Function ParseListItemTight() As Boolean
         q339 = .ThunkPos
         If ParseBullet() Then
             GoTo L67
-        Else
-            .BufPos = p339
-            .ThunkPos = q339
         End If
+        .BufPos = p339
+        .ThunkPos = q339
         If ParseEnumerator() Then
             GoTo L67
-        Else
-            .BufPos = p339
-            .ThunkPos = q339
         End If
-        GoTo L66
+        .BufPos = p339
+        .ThunkPos = q339
+        Exit Function
 L67:
         pvPushThunk ucsActResultClear
         If ParseStartList() Then
@@ -2008,11 +1927,10 @@ L67:
                         .BufPos = p350
                         .ThunkPos = q350
                         Exit Do
-                    Else
-                        .BufPos = p348
-                        .ThunkPos = q348
-                        .LastExpected = e348
                     End If
+                    .BufPos = p348
+                    .ThunkPos = q348
+                    .LastExpected = e348
                     If Not (ParseListContinuationBlock()) Then
                         .BufPos = p350
                         .ThunkPos = q350
@@ -2033,7 +1951,6 @@ L67:
                 End If
             End If
         End If
-L66:
     End With
 End Function
 
@@ -2083,17 +2000,15 @@ Private Function ParseListItem() As Boolean
         q322 = .ThunkPos
         If ParseBullet() Then
             GoTo L70
-        Else
-            .BufPos = p322
-            .ThunkPos = q322
         End If
+        .BufPos = p322
+        .ThunkPos = q322
         If ParseEnumerator() Then
             GoTo L70
-        Else
-            .BufPos = p322
-            .ThunkPos = q322
         End If
-        GoTo L69
+        .BufPos = p322
+        .ThunkPos = q322
+        Exit Function
 L70:
         pvPushThunk ucsActResultClear
         If ParseStartList() Then
@@ -2115,7 +2030,6 @@ L70:
                 ParseListItem = True
             End If
         End If
-L69:
     End With
 End Function
 
@@ -2250,7 +2164,7 @@ Private Function ParseListBlockLine() As Boolean
                     GoTo L74
                 End If
             End If
-            GoTo L73
+            Exit Function
 L74:
             .BufPos = p409
             .ThunkPos = q409
@@ -2266,7 +2180,6 @@ L74:
                 End If
             End If
         End If
-L73:
     End With
 End Function
 
@@ -2280,11 +2193,10 @@ Private Function ParseIndent() As Boolean
             .BufPos = .BufPos + 4
             GoTo L77
         End If
-        If False Then
+        Exit Function
 L77:
-            Call pvSetAdvance
-            ParseIndent = True
-        End If
+        Call pvSetAdvance
+        ParseIndent = True
     End With
 End Function
 
@@ -2317,7 +2229,7 @@ Private Function ParseHtmlBlockOpenAddress() As Boolean
                 .BufPos = .BufPos + 7
                 GoTo L81
             End If
-            GoTo L80
+            Exit Function
 L81:
             Call ParseSpnl
             Do
@@ -2333,7 +2245,6 @@ L81:
                 ParseHtmlBlockOpenAddress = True
             End If
         End If
-L80:
     End With
 End Function
 
@@ -2384,18 +2295,15 @@ Private Function ParseHtmlAttribute() As Boolean
                 p2509 = .BufPos
                 If ParseQuoted() Then
                     GoTo L86
-                Else
-                    .BufPos = p2509
                 End If
+                .BufPos = p2509
                 For i2508 = 0 To LNG_MAXINT
                     p2507 = .BufPos
                     p2505 = .BufPos
                     If .BufData(.BufPos) = 62 Then  ' ">"
-                        .BufPos = p2507
                         Exit For
-                    Else
-                        .BufPos = p2505
                     End If
+                    .BufPos = p2505
                     If Not (ParseNonspacechar()) Then
                         .BufPos = p2507
                         Exit For
@@ -2429,7 +2337,7 @@ Private Function ParseHtmlBlockCloseAddress() As Boolean
                     .BufPos = .BufPos + 7
                     GoTo L91
                 End If
-                GoTo L90
+                Exit Function
 L91:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -2439,7 +2347,6 @@ L91:
                 End If
             End If
         End If
-L90:
     End With
 End Function
 
@@ -2459,10 +2366,9 @@ Private Function ParseHtmlBlockAddress() As Boolean
                     If ParseHtmlBlockCloseAddress() Then
                         .BufPos = p445
                         GoTo L94
-                    Else
-                        .BufPos = p442
-                        .LastExpected = e442
                     End If
+                    .BufPos = p442
+                    .LastExpected = e442
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -2498,7 +2404,7 @@ Private Function ParseHtmlBlockOpenBlockquote() As Boolean
                 .BufPos = .BufPos + 10
                 GoTo L96
             End If
-            GoTo L95
+            Exit Function
 L96:
             Call ParseSpnl
             Do
@@ -2514,7 +2420,6 @@ L96:
                 ParseHtmlBlockOpenBlockquote = True
             End If
         End If
-L95:
     End With
 End Function
 
@@ -2533,7 +2438,7 @@ Private Function ParseHtmlBlockCloseBlockquote() As Boolean
                     .BufPos = .BufPos + 10
                     GoTo L98
                 End If
-                GoTo L97
+                Exit Function
 L98:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -2543,7 +2448,6 @@ L98:
                 End If
             End If
         End If
-L97:
     End With
 End Function
 
@@ -2563,10 +2467,9 @@ Private Function ParseHtmlBlockBlockquote() As Boolean
                     If ParseHtmlBlockCloseBlockquote() Then
                         .BufPos = p477
                         GoTo L101
-                    Else
-                        .BufPos = p474
-                        .LastExpected = e474
                     End If
+                    .BufPos = p474
+                    .LastExpected = e474
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -2602,7 +2505,7 @@ Private Function ParseHtmlBlockOpenCenter() As Boolean
                 .BufPos = .BufPos + 6
                 GoTo L103
             End If
-            GoTo L102
+            Exit Function
 L103:
             Call ParseSpnl
             Do
@@ -2618,7 +2521,6 @@ L103:
                 ParseHtmlBlockOpenCenter = True
             End If
         End If
-L102:
     End With
 End Function
 
@@ -2637,7 +2539,7 @@ Private Function ParseHtmlBlockCloseCenter() As Boolean
                     .BufPos = .BufPos + 6
                     GoTo L105
                 End If
-                GoTo L104
+                Exit Function
 L105:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -2647,7 +2549,6 @@ L105:
                 End If
             End If
         End If
-L104:
     End With
 End Function
 
@@ -2667,10 +2568,9 @@ Private Function ParseHtmlBlockCenter() As Boolean
                     If ParseHtmlBlockCloseCenter() Then
                         .BufPos = p509
                         GoTo L108
-                    Else
-                        .BufPos = p506
-                        .LastExpected = e506
                     End If
+                    .BufPos = p506
+                    .LastExpected = e506
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -2706,7 +2606,7 @@ Private Function ParseHtmlBlockOpenDir() As Boolean
                 .BufPos = .BufPos + 3
                 GoTo L110
             End If
-            GoTo L109
+            Exit Function
 L110:
             Call ParseSpnl
             Do
@@ -2722,7 +2622,6 @@ L110:
                 ParseHtmlBlockOpenDir = True
             End If
         End If
-L109:
     End With
 End Function
 
@@ -2741,7 +2640,7 @@ Private Function ParseHtmlBlockCloseDir() As Boolean
                     .BufPos = .BufPos + 3
                     GoTo L112
                 End If
-                GoTo L111
+                Exit Function
 L112:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -2751,7 +2650,6 @@ L112:
                 End If
             End If
         End If
-L111:
     End With
 End Function
 
@@ -2771,10 +2669,9 @@ Private Function ParseHtmlBlockDir() As Boolean
                     If ParseHtmlBlockCloseDir() Then
                         .BufPos = p541
                         GoTo L115
-                    Else
-                        .BufPos = p538
-                        .LastExpected = e538
                     End If
+                    .BufPos = p538
+                    .LastExpected = e538
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -2810,7 +2707,7 @@ Private Function ParseHtmlBlockOpenDiv() As Boolean
                 .BufPos = .BufPos + 3
                 GoTo L117
             End If
-            GoTo L116
+            Exit Function
 L117:
             Call ParseSpnl
             Do
@@ -2826,7 +2723,6 @@ L117:
                 ParseHtmlBlockOpenDiv = True
             End If
         End If
-L116:
     End With
 End Function
 
@@ -2845,7 +2741,7 @@ Private Function ParseHtmlBlockCloseDiv() As Boolean
                     .BufPos = .BufPos + 3
                     GoTo L119
                 End If
-                GoTo L118
+                Exit Function
 L119:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -2855,7 +2751,6 @@ L119:
                 End If
             End If
         End If
-L118:
     End With
 End Function
 
@@ -2875,10 +2770,9 @@ Private Function ParseHtmlBlockDiv() As Boolean
                     If ParseHtmlBlockCloseDiv() Then
                         .BufPos = p573
                         GoTo L122
-                    Else
-                        .BufPos = p570
-                        .LastExpected = e570
                     End If
+                    .BufPos = p570
+                    .LastExpected = e570
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -2914,7 +2808,7 @@ Private Function ParseHtmlBlockOpenDl() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L124
             End If
-            GoTo L123
+            Exit Function
 L124:
             Call ParseSpnl
             Do
@@ -2930,7 +2824,6 @@ L124:
                 ParseHtmlBlockOpenDl = True
             End If
         End If
-L123:
     End With
 End Function
 
@@ -2949,7 +2842,7 @@ Private Function ParseHtmlBlockCloseDl() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L126
                 End If
-                GoTo L125
+                Exit Function
 L126:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -2959,7 +2852,6 @@ L126:
                 End If
             End If
         End If
-L125:
     End With
 End Function
 
@@ -2979,10 +2871,9 @@ Private Function ParseHtmlBlockDl() As Boolean
                     If ParseHtmlBlockCloseDl() Then
                         .BufPos = p605
                         GoTo L129
-                    Else
-                        .BufPos = p602
-                        .LastExpected = e602
                     End If
+                    .BufPos = p602
+                    .LastExpected = e602
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -3018,7 +2909,7 @@ Private Function ParseHtmlBlockOpenFieldset() As Boolean
                 .BufPos = .BufPos + 8
                 GoTo L131
             End If
-            GoTo L130
+            Exit Function
 L131:
             Call ParseSpnl
             Do
@@ -3034,7 +2925,6 @@ L131:
                 ParseHtmlBlockOpenFieldset = True
             End If
         End If
-L130:
     End With
 End Function
 
@@ -3053,7 +2943,7 @@ Private Function ParseHtmlBlockCloseFieldset() As Boolean
                     .BufPos = .BufPos + 8
                     GoTo L133
                 End If
-                GoTo L132
+                Exit Function
 L133:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -3063,7 +2953,6 @@ L133:
                 End If
             End If
         End If
-L132:
     End With
 End Function
 
@@ -3083,10 +2972,9 @@ Private Function ParseHtmlBlockFieldset() As Boolean
                     If ParseHtmlBlockCloseFieldset() Then
                         .BufPos = p637
                         GoTo L136
-                    Else
-                        .BufPos = p634
-                        .LastExpected = e634
                     End If
+                    .BufPos = p634
+                    .LastExpected = e634
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -3122,7 +3010,7 @@ Private Function ParseHtmlBlockOpenForm() As Boolean
                 .BufPos = .BufPos + 4
                 GoTo L138
             End If
-            GoTo L137
+            Exit Function
 L138:
             Call ParseSpnl
             Do
@@ -3138,7 +3026,6 @@ L138:
                 ParseHtmlBlockOpenForm = True
             End If
         End If
-L137:
     End With
 End Function
 
@@ -3157,7 +3044,7 @@ Private Function ParseHtmlBlockCloseForm() As Boolean
                     .BufPos = .BufPos + 4
                     GoTo L140
                 End If
-                GoTo L139
+                Exit Function
 L140:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -3167,7 +3054,6 @@ L140:
                 End If
             End If
         End If
-L139:
     End With
 End Function
 
@@ -3187,10 +3073,9 @@ Private Function ParseHtmlBlockForm() As Boolean
                     If ParseHtmlBlockCloseForm() Then
                         .BufPos = p669
                         GoTo L143
-                    Else
-                        .BufPos = p666
-                        .LastExpected = e666
                     End If
+                    .BufPos = p666
+                    .LastExpected = e666
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -3226,7 +3111,7 @@ Private Function ParseHtmlBlockOpenH1() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L145
             End If
-            GoTo L144
+            Exit Function
 L145:
             Call ParseSpnl
             Do
@@ -3242,7 +3127,6 @@ L145:
                 ParseHtmlBlockOpenH1 = True
             End If
         End If
-L144:
     End With
 End Function
 
@@ -3261,7 +3145,7 @@ Private Function ParseHtmlBlockCloseH1() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L147
                 End If
-                GoTo L146
+                Exit Function
 L147:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -3271,7 +3155,6 @@ L147:
                 End If
             End If
         End If
-L146:
     End With
 End Function
 
@@ -3291,10 +3174,9 @@ Private Function ParseHtmlBlockH1() As Boolean
                     If ParseHtmlBlockCloseH1() Then
                         .BufPos = p701
                         GoTo L150
-                    Else
-                        .BufPos = p698
-                        .LastExpected = e698
                     End If
+                    .BufPos = p698
+                    .LastExpected = e698
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -3330,7 +3212,7 @@ Private Function ParseHtmlBlockOpenH2() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L152
             End If
-            GoTo L151
+            Exit Function
 L152:
             Call ParseSpnl
             Do
@@ -3346,7 +3228,6 @@ L152:
                 ParseHtmlBlockOpenH2 = True
             End If
         End If
-L151:
     End With
 End Function
 
@@ -3365,7 +3246,7 @@ Private Function ParseHtmlBlockCloseH2() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L154
                 End If
-                GoTo L153
+                Exit Function
 L154:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -3375,7 +3256,6 @@ L154:
                 End If
             End If
         End If
-L153:
     End With
 End Function
 
@@ -3395,10 +3275,9 @@ Private Function ParseHtmlBlockH2() As Boolean
                     If ParseHtmlBlockCloseH2() Then
                         .BufPos = p733
                         GoTo L157
-                    Else
-                        .BufPos = p730
-                        .LastExpected = e730
                     End If
+                    .BufPos = p730
+                    .LastExpected = e730
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -3434,7 +3313,7 @@ Private Function ParseHtmlBlockOpenH3() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L159
             End If
-            GoTo L158
+            Exit Function
 L159:
             Call ParseSpnl
             Do
@@ -3450,7 +3329,6 @@ L159:
                 ParseHtmlBlockOpenH3 = True
             End If
         End If
-L158:
     End With
 End Function
 
@@ -3469,7 +3347,7 @@ Private Function ParseHtmlBlockCloseH3() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L161
                 End If
-                GoTo L160
+                Exit Function
 L161:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -3479,7 +3357,6 @@ L161:
                 End If
             End If
         End If
-L160:
     End With
 End Function
 
@@ -3499,10 +3376,9 @@ Private Function ParseHtmlBlockH3() As Boolean
                     If ParseHtmlBlockCloseH3() Then
                         .BufPos = p765
                         GoTo L164
-                    Else
-                        .BufPos = p762
-                        .LastExpected = e762
                     End If
+                    .BufPos = p762
+                    .LastExpected = e762
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -3538,7 +3414,7 @@ Private Function ParseHtmlBlockOpenH4() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L166
             End If
-            GoTo L165
+            Exit Function
 L166:
             Call ParseSpnl
             Do
@@ -3554,7 +3430,6 @@ L166:
                 ParseHtmlBlockOpenH4 = True
             End If
         End If
-L165:
     End With
 End Function
 
@@ -3573,7 +3448,7 @@ Private Function ParseHtmlBlockCloseH4() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L168
                 End If
-                GoTo L167
+                Exit Function
 L168:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -3583,7 +3458,6 @@ L168:
                 End If
             End If
         End If
-L167:
     End With
 End Function
 
@@ -3603,10 +3477,9 @@ Private Function ParseHtmlBlockH4() As Boolean
                     If ParseHtmlBlockCloseH4() Then
                         .BufPos = p797
                         GoTo L171
-                    Else
-                        .BufPos = p794
-                        .LastExpected = e794
                     End If
+                    .BufPos = p794
+                    .LastExpected = e794
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -3642,7 +3515,7 @@ Private Function ParseHtmlBlockOpenH5() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L173
             End If
-            GoTo L172
+            Exit Function
 L173:
             Call ParseSpnl
             Do
@@ -3658,7 +3531,6 @@ L173:
                 ParseHtmlBlockOpenH5 = True
             End If
         End If
-L172:
     End With
 End Function
 
@@ -3677,7 +3549,7 @@ Private Function ParseHtmlBlockCloseH5() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L175
                 End If
-                GoTo L174
+                Exit Function
 L175:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -3687,7 +3559,6 @@ L175:
                 End If
             End If
         End If
-L174:
     End With
 End Function
 
@@ -3707,10 +3578,9 @@ Private Function ParseHtmlBlockH5() As Boolean
                     If ParseHtmlBlockCloseH5() Then
                         .BufPos = p829
                         GoTo L178
-                    Else
-                        .BufPos = p826
-                        .LastExpected = e826
                     End If
+                    .BufPos = p826
+                    .LastExpected = e826
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -3746,7 +3616,7 @@ Private Function ParseHtmlBlockOpenH6() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L180
             End If
-            GoTo L179
+            Exit Function
 L180:
             Call ParseSpnl
             Do
@@ -3762,7 +3632,6 @@ L180:
                 ParseHtmlBlockOpenH6 = True
             End If
         End If
-L179:
     End With
 End Function
 
@@ -3781,7 +3650,7 @@ Private Function ParseHtmlBlockCloseH6() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L182
                 End If
-                GoTo L181
+                Exit Function
 L182:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -3791,7 +3660,6 @@ L182:
                 End If
             End If
         End If
-L181:
     End With
 End Function
 
@@ -3811,10 +3679,9 @@ Private Function ParseHtmlBlockH6() As Boolean
                     If ParseHtmlBlockCloseH6() Then
                         .BufPos = p861
                         GoTo L185
-                    Else
-                        .BufPos = p858
-                        .LastExpected = e858
                     End If
+                    .BufPos = p858
+                    .LastExpected = e858
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -3850,7 +3717,7 @@ Private Function ParseHtmlBlockOpenMenu() As Boolean
                 .BufPos = .BufPos + 4
                 GoTo L187
             End If
-            GoTo L186
+            Exit Function
 L187:
             Call ParseSpnl
             Do
@@ -3866,7 +3733,6 @@ L187:
                 ParseHtmlBlockOpenMenu = True
             End If
         End If
-L186:
     End With
 End Function
 
@@ -3885,7 +3751,7 @@ Private Function ParseHtmlBlockCloseMenu() As Boolean
                     .BufPos = .BufPos + 4
                     GoTo L189
                 End If
-                GoTo L188
+                Exit Function
 L189:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -3895,7 +3761,6 @@ L189:
                 End If
             End If
         End If
-L188:
     End With
 End Function
 
@@ -3915,10 +3780,9 @@ Private Function ParseHtmlBlockMenu() As Boolean
                     If ParseHtmlBlockCloseMenu() Then
                         .BufPos = p893
                         GoTo L192
-                    Else
-                        .BufPos = p890
-                        .LastExpected = e890
                     End If
+                    .BufPos = p890
+                    .LastExpected = e890
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -3954,7 +3818,7 @@ Private Function ParseHtmlBlockOpenNoframes() As Boolean
                 .BufPos = .BufPos + 8
                 GoTo L194
             End If
-            GoTo L193
+            Exit Function
 L194:
             Call ParseSpnl
             Do
@@ -3970,7 +3834,6 @@ L194:
                 ParseHtmlBlockOpenNoframes = True
             End If
         End If
-L193:
     End With
 End Function
 
@@ -3989,7 +3852,7 @@ Private Function ParseHtmlBlockCloseNoframes() As Boolean
                     .BufPos = .BufPos + 8
                     GoTo L196
                 End If
-                GoTo L195
+                Exit Function
 L196:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -3999,7 +3862,6 @@ L196:
                 End If
             End If
         End If
-L195:
     End With
 End Function
 
@@ -4019,10 +3881,9 @@ Private Function ParseHtmlBlockNoframes() As Boolean
                     If ParseHtmlBlockCloseNoframes() Then
                         .BufPos = p925
                         GoTo L199
-                    Else
-                        .BufPos = p922
-                        .LastExpected = e922
                     End If
+                    .BufPos = p922
+                    .LastExpected = e922
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -4058,7 +3919,7 @@ Private Function ParseHtmlBlockOpenNoscript() As Boolean
                 .BufPos = .BufPos + 8
                 GoTo L201
             End If
-            GoTo L200
+            Exit Function
 L201:
             Call ParseSpnl
             Do
@@ -4074,7 +3935,6 @@ L201:
                 ParseHtmlBlockOpenNoscript = True
             End If
         End If
-L200:
     End With
 End Function
 
@@ -4093,7 +3953,7 @@ Private Function ParseHtmlBlockCloseNoscript() As Boolean
                     .BufPos = .BufPos + 8
                     GoTo L203
                 End If
-                GoTo L202
+                Exit Function
 L203:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -4103,7 +3963,6 @@ L203:
                 End If
             End If
         End If
-L202:
     End With
 End Function
 
@@ -4123,10 +3982,9 @@ Private Function ParseHtmlBlockNoscript() As Boolean
                     If ParseHtmlBlockCloseNoscript() Then
                         .BufPos = p957
                         GoTo L206
-                    Else
-                        .BufPos = p954
-                        .LastExpected = e954
                     End If
+                    .BufPos = p954
+                    .LastExpected = e954
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -4162,7 +4020,7 @@ Private Function ParseHtmlBlockOpenOl() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L208
             End If
-            GoTo L207
+            Exit Function
 L208:
             Call ParseSpnl
             Do
@@ -4178,7 +4036,6 @@ L208:
                 ParseHtmlBlockOpenOl = True
             End If
         End If
-L207:
     End With
 End Function
 
@@ -4197,7 +4054,7 @@ Private Function ParseHtmlBlockCloseOl() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L210
                 End If
-                GoTo L209
+                Exit Function
 L210:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -4207,7 +4064,6 @@ L210:
                 End If
             End If
         End If
-L209:
     End With
 End Function
 
@@ -4227,10 +4083,9 @@ Private Function ParseHtmlBlockOl() As Boolean
                     If ParseHtmlBlockCloseOl() Then
                         .BufPos = p989
                         GoTo L213
-                    Else
-                        .BufPos = p986
-                        .LastExpected = e986
                     End If
+                    .BufPos = p986
+                    .LastExpected = e986
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -4266,7 +4121,7 @@ Private Function ParseHtmlBlockOpenP() As Boolean
                 .BufPos = .BufPos + 1
                 GoTo L215
             End If
-            GoTo L214
+            Exit Function
 L215:
             Call ParseSpnl
             Do
@@ -4282,7 +4137,6 @@ L215:
                 ParseHtmlBlockOpenP = True
             End If
         End If
-L214:
     End With
 End Function
 
@@ -4301,7 +4155,7 @@ Private Function ParseHtmlBlockCloseP() As Boolean
                     .BufPos = .BufPos + 1
                     GoTo L217
                 End If
-                GoTo L216
+                Exit Function
 L217:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -4311,7 +4165,6 @@ L217:
                 End If
             End If
         End If
-L216:
     End With
 End Function
 
@@ -4331,10 +4184,9 @@ Private Function ParseHtmlBlockP() As Boolean
                     If ParseHtmlBlockCloseP() Then
                         .BufPos = p1021
                         GoTo L220
-                    Else
-                        .BufPos = p1018
-                        .LastExpected = e1018
                     End If
+                    .BufPos = p1018
+                    .LastExpected = e1018
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -4370,7 +4222,7 @@ Private Function ParseHtmlBlockOpenPre() As Boolean
                 .BufPos = .BufPos + 3
                 GoTo L222
             End If
-            GoTo L221
+            Exit Function
 L222:
             Call ParseSpnl
             Do
@@ -4386,7 +4238,6 @@ L222:
                 ParseHtmlBlockOpenPre = True
             End If
         End If
-L221:
     End With
 End Function
 
@@ -4405,7 +4256,7 @@ Private Function ParseHtmlBlockClosePre() As Boolean
                     .BufPos = .BufPos + 3
                     GoTo L224
                 End If
-                GoTo L223
+                Exit Function
 L224:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -4415,7 +4266,6 @@ L224:
                 End If
             End If
         End If
-L223:
     End With
 End Function
 
@@ -4435,10 +4285,9 @@ Private Function ParseHtmlBlockPre() As Boolean
                     If ParseHtmlBlockClosePre() Then
                         .BufPos = p1053
                         GoTo L227
-                    Else
-                        .BufPos = p1050
-                        .LastExpected = e1050
                     End If
+                    .BufPos = p1050
+                    .LastExpected = e1050
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -4474,7 +4323,7 @@ Private Function ParseHtmlBlockOpenTable() As Boolean
                 .BufPos = .BufPos + 5
                 GoTo L229
             End If
-            GoTo L228
+            Exit Function
 L229:
             Call ParseSpnl
             Do
@@ -4490,7 +4339,6 @@ L229:
                 ParseHtmlBlockOpenTable = True
             End If
         End If
-L228:
     End With
 End Function
 
@@ -4509,7 +4357,7 @@ Private Function ParseHtmlBlockCloseTable() As Boolean
                     .BufPos = .BufPos + 5
                     GoTo L231
                 End If
-                GoTo L230
+                Exit Function
 L231:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -4519,7 +4367,6 @@ L231:
                 End If
             End If
         End If
-L230:
     End With
 End Function
 
@@ -4539,10 +4386,9 @@ Private Function ParseHtmlBlockTable() As Boolean
                     If ParseHtmlBlockCloseTable() Then
                         .BufPos = p1085
                         GoTo L234
-                    Else
-                        .BufPos = p1082
-                        .LastExpected = e1082
                     End If
+                    .BufPos = p1082
+                    .LastExpected = e1082
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -4578,7 +4424,7 @@ Private Function ParseHtmlBlockOpenUl() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L236
             End If
-            GoTo L235
+            Exit Function
 L236:
             Call ParseSpnl
             Do
@@ -4594,7 +4440,6 @@ L236:
                 ParseHtmlBlockOpenUl = True
             End If
         End If
-L235:
     End With
 End Function
 
@@ -4613,7 +4458,7 @@ Private Function ParseHtmlBlockCloseUl() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L238
                 End If
-                GoTo L237
+                Exit Function
 L238:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -4623,7 +4468,6 @@ L238:
                 End If
             End If
         End If
-L237:
     End With
 End Function
 
@@ -4643,10 +4487,9 @@ Private Function ParseHtmlBlockUl() As Boolean
                     If ParseHtmlBlockCloseUl() Then
                         .BufPos = p1117
                         GoTo L241
-                    Else
-                        .BufPos = p1114
-                        .LastExpected = e1114
                     End If
+                    .BufPos = p1114
+                    .LastExpected = e1114
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -4682,7 +4525,7 @@ Private Function ParseHtmlBlockOpenDd() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L243
             End If
-            GoTo L242
+            Exit Function
 L243:
             Call ParseSpnl
             Do
@@ -4698,7 +4541,6 @@ L243:
                 ParseHtmlBlockOpenDd = True
             End If
         End If
-L242:
     End With
 End Function
 
@@ -4717,7 +4559,7 @@ Private Function ParseHtmlBlockCloseDd() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L245
                 End If
-                GoTo L244
+                Exit Function
 L245:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -4727,7 +4569,6 @@ L245:
                 End If
             End If
         End If
-L244:
     End With
 End Function
 
@@ -4747,10 +4588,9 @@ Private Function ParseHtmlBlockDd() As Boolean
                     If ParseHtmlBlockCloseDd() Then
                         .BufPos = p1149
                         GoTo L248
-                    Else
-                        .BufPos = p1146
-                        .LastExpected = e1146
                     End If
+                    .BufPos = p1146
+                    .LastExpected = e1146
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -4786,7 +4626,7 @@ Private Function ParseHtmlBlockOpenDt() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L250
             End If
-            GoTo L249
+            Exit Function
 L250:
             Call ParseSpnl
             Do
@@ -4802,7 +4642,6 @@ L250:
                 ParseHtmlBlockOpenDt = True
             End If
         End If
-L249:
     End With
 End Function
 
@@ -4821,7 +4660,7 @@ Private Function ParseHtmlBlockCloseDt() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L252
                 End If
-                GoTo L251
+                Exit Function
 L252:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -4831,7 +4670,6 @@ L252:
                 End If
             End If
         End If
-L251:
     End With
 End Function
 
@@ -4851,10 +4689,9 @@ Private Function ParseHtmlBlockDt() As Boolean
                     If ParseHtmlBlockCloseDt() Then
                         .BufPos = p1181
                         GoTo L255
-                    Else
-                        .BufPos = p1178
-                        .LastExpected = e1178
                     End If
+                    .BufPos = p1178
+                    .LastExpected = e1178
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -4890,7 +4727,7 @@ Private Function ParseHtmlBlockOpenFrameset() As Boolean
                 .BufPos = .BufPos + 8
                 GoTo L257
             End If
-            GoTo L256
+            Exit Function
 L257:
             Call ParseSpnl
             Do
@@ -4906,7 +4743,6 @@ L257:
                 ParseHtmlBlockOpenFrameset = True
             End If
         End If
-L256:
     End With
 End Function
 
@@ -4925,7 +4761,7 @@ Private Function ParseHtmlBlockCloseFrameset() As Boolean
                     .BufPos = .BufPos + 8
                     GoTo L259
                 End If
-                GoTo L258
+                Exit Function
 L259:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -4935,7 +4771,6 @@ L259:
                 End If
             End If
         End If
-L258:
     End With
 End Function
 
@@ -4955,10 +4790,9 @@ Private Function ParseHtmlBlockFrameset() As Boolean
                     If ParseHtmlBlockCloseFrameset() Then
                         .BufPos = p1213
                         GoTo L262
-                    Else
-                        .BufPos = p1210
-                        .LastExpected = e1210
                     End If
+                    .BufPos = p1210
+                    .LastExpected = e1210
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -4994,7 +4828,7 @@ Private Function ParseHtmlBlockOpenLi() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L264
             End If
-            GoTo L263
+            Exit Function
 L264:
             Call ParseSpnl
             Do
@@ -5010,7 +4844,6 @@ L264:
                 ParseHtmlBlockOpenLi = True
             End If
         End If
-L263:
     End With
 End Function
 
@@ -5029,7 +4862,7 @@ Private Function ParseHtmlBlockCloseLi() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L266
                 End If
-                GoTo L265
+                Exit Function
 L266:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -5039,7 +4872,6 @@ L266:
                 End If
             End If
         End If
-L265:
     End With
 End Function
 
@@ -5059,10 +4891,9 @@ Private Function ParseHtmlBlockLi() As Boolean
                     If ParseHtmlBlockCloseLi() Then
                         .BufPos = p1245
                         GoTo L269
-                    Else
-                        .BufPos = p1242
-                        .LastExpected = e1242
                     End If
+                    .BufPos = p1242
+                    .LastExpected = e1242
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -5098,7 +4929,7 @@ Private Function ParseHtmlBlockOpenTbody() As Boolean
                 .BufPos = .BufPos + 5
                 GoTo L271
             End If
-            GoTo L270
+            Exit Function
 L271:
             Call ParseSpnl
             Do
@@ -5114,7 +4945,6 @@ L271:
                 ParseHtmlBlockOpenTbody = True
             End If
         End If
-L270:
     End With
 End Function
 
@@ -5133,7 +4963,7 @@ Private Function ParseHtmlBlockCloseTbody() As Boolean
                     .BufPos = .BufPos + 5
                     GoTo L273
                 End If
-                GoTo L272
+                Exit Function
 L273:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -5143,7 +4973,6 @@ L273:
                 End If
             End If
         End If
-L272:
     End With
 End Function
 
@@ -5163,10 +4992,9 @@ Private Function ParseHtmlBlockTbody() As Boolean
                     If ParseHtmlBlockCloseTbody() Then
                         .BufPos = p1277
                         GoTo L276
-                    Else
-                        .BufPos = p1274
-                        .LastExpected = e1274
                     End If
+                    .BufPos = p1274
+                    .LastExpected = e1274
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -5202,7 +5030,7 @@ Private Function ParseHtmlBlockOpenTd() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L278
             End If
-            GoTo L277
+            Exit Function
 L278:
             Call ParseSpnl
             Do
@@ -5218,7 +5046,6 @@ L278:
                 ParseHtmlBlockOpenTd = True
             End If
         End If
-L277:
     End With
 End Function
 
@@ -5237,7 +5064,7 @@ Private Function ParseHtmlBlockCloseTd() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L280
                 End If
-                GoTo L279
+                Exit Function
 L280:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -5247,7 +5074,6 @@ L280:
                 End If
             End If
         End If
-L279:
     End With
 End Function
 
@@ -5267,10 +5093,9 @@ Private Function ParseHtmlBlockTd() As Boolean
                     If ParseHtmlBlockCloseTd() Then
                         .BufPos = p1309
                         GoTo L283
-                    Else
-                        .BufPos = p1306
-                        .LastExpected = e1306
                     End If
+                    .BufPos = p1306
+                    .LastExpected = e1306
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -5306,7 +5131,7 @@ Private Function ParseHtmlBlockOpenTfoot() As Boolean
                 .BufPos = .BufPos + 5
                 GoTo L285
             End If
-            GoTo L284
+            Exit Function
 L285:
             Call ParseSpnl
             Do
@@ -5322,7 +5147,6 @@ L285:
                 ParseHtmlBlockOpenTfoot = True
             End If
         End If
-L284:
     End With
 End Function
 
@@ -5341,7 +5165,7 @@ Private Function ParseHtmlBlockCloseTfoot() As Boolean
                     .BufPos = .BufPos + 5
                     GoTo L287
                 End If
-                GoTo L286
+                Exit Function
 L287:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -5351,7 +5175,6 @@ L287:
                 End If
             End If
         End If
-L286:
     End With
 End Function
 
@@ -5371,10 +5194,9 @@ Private Function ParseHtmlBlockTfoot() As Boolean
                     If ParseHtmlBlockCloseTfoot() Then
                         .BufPos = p1341
                         GoTo L290
-                    Else
-                        .BufPos = p1338
-                        .LastExpected = e1338
                     End If
+                    .BufPos = p1338
+                    .LastExpected = e1338
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -5410,7 +5232,7 @@ Private Function ParseHtmlBlockOpenTh() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L292
             End If
-            GoTo L291
+            Exit Function
 L292:
             Call ParseSpnl
             Do
@@ -5426,7 +5248,6 @@ L292:
                 ParseHtmlBlockOpenTh = True
             End If
         End If
-L291:
     End With
 End Function
 
@@ -5445,7 +5266,7 @@ Private Function ParseHtmlBlockCloseTh() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L294
                 End If
-                GoTo L293
+                Exit Function
 L294:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -5455,7 +5276,6 @@ L294:
                 End If
             End If
         End If
-L293:
     End With
 End Function
 
@@ -5475,10 +5295,9 @@ Private Function ParseHtmlBlockTh() As Boolean
                     If ParseHtmlBlockCloseTh() Then
                         .BufPos = p1373
                         GoTo L297
-                    Else
-                        .BufPos = p1370
-                        .LastExpected = e1370
                     End If
+                    .BufPos = p1370
+                    .LastExpected = e1370
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -5514,7 +5333,7 @@ Private Function ParseHtmlBlockOpenThead() As Boolean
                 .BufPos = .BufPos + 5
                 GoTo L299
             End If
-            GoTo L298
+            Exit Function
 L299:
             Call ParseSpnl
             Do
@@ -5530,7 +5349,6 @@ L299:
                 ParseHtmlBlockOpenThead = True
             End If
         End If
-L298:
     End With
 End Function
 
@@ -5549,7 +5367,7 @@ Private Function ParseHtmlBlockCloseThead() As Boolean
                     .BufPos = .BufPos + 5
                     GoTo L301
                 End If
-                GoTo L300
+                Exit Function
 L301:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -5559,7 +5377,6 @@ L301:
                 End If
             End If
         End If
-L300:
     End With
 End Function
 
@@ -5579,10 +5396,9 @@ Private Function ParseHtmlBlockThead() As Boolean
                     If ParseHtmlBlockCloseThead() Then
                         .BufPos = p1405
                         GoTo L304
-                    Else
-                        .BufPos = p1402
-                        .LastExpected = e1402
                     End If
+                    .BufPos = p1402
+                    .LastExpected = e1402
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -5618,7 +5434,7 @@ Private Function ParseHtmlBlockOpenTr() As Boolean
                 .BufPos = .BufPos + 2
                 GoTo L306
             End If
-            GoTo L305
+            Exit Function
 L306:
             Call ParseSpnl
             Do
@@ -5634,7 +5450,6 @@ L306:
                 ParseHtmlBlockOpenTr = True
             End If
         End If
-L305:
     End With
 End Function
 
@@ -5653,7 +5468,7 @@ Private Function ParseHtmlBlockCloseTr() As Boolean
                     .BufPos = .BufPos + 2
                     GoTo L308
                 End If
-                GoTo L307
+                Exit Function
 L308:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -5663,7 +5478,6 @@ L308:
                 End If
             End If
         End If
-L307:
     End With
 End Function
 
@@ -5683,10 +5497,9 @@ Private Function ParseHtmlBlockTr() As Boolean
                     If ParseHtmlBlockCloseTr() Then
                         .BufPos = p1437
                         GoTo L311
-                    Else
-                        .BufPos = p1434
-                        .LastExpected = e1434
                     End If
+                    .BufPos = p1434
+                    .LastExpected = e1434
                     If .BufPos < .BufSize Then
                         .BufPos = .BufPos + 1
                     Else
@@ -5722,7 +5535,7 @@ Private Function ParseHtmlBlockOpenScript() As Boolean
                 .BufPos = .BufPos + 6
                 GoTo L313
             End If
-            GoTo L312
+            Exit Function
 L313:
             Call ParseSpnl
             Do
@@ -5738,7 +5551,6 @@ L313:
                 ParseHtmlBlockOpenScript = True
             End If
         End If
-L312:
     End With
 End Function
 
@@ -5757,7 +5569,7 @@ Private Function ParseHtmlBlockCloseScript() As Boolean
                     .BufPos = .BufPos + 6
                     GoTo L315
                 End If
-                GoTo L314
+                Exit Function
 L315:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -5767,7 +5579,6 @@ L315:
                 End If
             End If
         End If
-L314:
     End With
 End Function
 
@@ -5785,10 +5596,9 @@ Private Function ParseHtmlBlockScript() As Boolean
                 If ParseHtmlBlockCloseScript() Then
                     .BufPos = p1467
                     Exit Do
-                Else
-                    .BufPos = p1465
-                    .LastExpected = e1465
                 End If
+                .BufPos = p1465
+                .LastExpected = e1465
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -5818,7 +5628,7 @@ Private Function ParseHtmlBlockOpenHead() As Boolean
                 .BufPos = .BufPos + 4
                 GoTo L318
             End If
-            GoTo L317
+            Exit Function
 L318:
             Call ParseSpnl
             Do
@@ -5834,7 +5644,6 @@ L318:
                 ParseHtmlBlockOpenHead = True
             End If
         End If
-L317:
     End With
 End Function
 
@@ -5853,7 +5662,7 @@ Private Function ParseHtmlBlockCloseHead() As Boolean
                     .BufPos = .BufPos + 4
                     GoTo L320
                 End If
-                GoTo L319
+                Exit Function
 L320:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -5863,7 +5672,6 @@ L320:
                 End If
             End If
         End If
-L319:
     End With
 End Function
 
@@ -5881,10 +5689,9 @@ Private Function ParseHtmlBlockHead() As Boolean
                 If ParseHtmlBlockCloseHead() Then
                     .BufPos = p1497
                     Exit Do
-                Else
-                    .BufPos = p1495
-                    .LastExpected = e1495
                 End If
+                .BufPos = p1495
+                .LastExpected = e1495
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -5906,178 +5713,143 @@ Private Function ParseHtmlBlockInTags() As Boolean
         p1504 = .BufPos
         If ParseHtmlBlockAddress() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockBlockquote() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockCenter() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockDir() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockDiv() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockDl() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockFieldset() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockForm() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockH1() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockH2() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockH3() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockH4() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockH5() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockH6() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockMenu() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockNoframes() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockNoscript() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockOl() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockP() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockPre() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockTable() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockUl() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockDd() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockDt() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockFrameset() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockLi() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockTbody() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockTd() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockTfoot() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockTh() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockThead() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockTr() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockScript() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
+        .BufPos = p1504
         If ParseHtmlBlockHead() Then
             GoTo L322
-        Else
-            .BufPos = p1504
         End If
-        If False Then
+        .BufPos = p1504
+        Exit Function
 L322:
-            ParseHtmlBlockInTags = True
-        End If
+        ParseHtmlBlockInTags = True
     End With
 End Function
 
@@ -6092,11 +5864,9 @@ Private Function ParseHtmlComment() As Boolean
                 p2516 = .BufPos
                 p2514 = .BufPos
                 If pvMatchString("-->") Then        ' "-->"
-                    .BufPos = p2516
                     Exit Do
-                Else
-                    .BufPos = p2514
                 End If
+                .BufPos = p2514
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -6425,11 +6195,10 @@ Private Function ParseHtmlBlockType() As Boolean
             .BufPos = .BufPos + 6
             GoTo L325
         End If
-        If False Then
+        Exit Function
 L325:
-            Call pvSetAdvance
-            ParseHtmlBlockType = True
-        End If
+        Call pvSetAdvance
+        ParseHtmlBlockType = True
     End With
 End Function
 
@@ -6448,7 +6217,7 @@ Private Function ParseStyleOpen() As Boolean
                 .BufPos = .BufPos + 5
                 GoTo L327
             End If
-            GoTo L326
+            Exit Function
 L327:
             Call ParseSpnl
             Do
@@ -6464,7 +6233,6 @@ L327:
                 ParseStyleOpen = True
             End If
         End If
-L326:
     End With
 End Function
 
@@ -6483,7 +6251,7 @@ Private Function ParseStyleClose() As Boolean
                     .BufPos = .BufPos + 5
                     GoTo L329
                 End If
-                GoTo L328
+                Exit Function
 L329:
                 Call ParseSpnl
                 If .BufData(.BufPos) = 62 Then      ' ">"
@@ -6493,7 +6261,6 @@ L329:
                 End If
             End If
         End If
-L328:
     End With
 End Function
 
@@ -6511,10 +6278,9 @@ Private Function ParseInStyleTags() As Boolean
                 If ParseStyleClose() Then
                     .BufPos = p1657
                     Exit Do
-                Else
-                    .BufPos = p1655
-                    .LastExpected = e1655
                 End If
+                .BufPos = p1655
+                .LastExpected = e1655
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -6587,19 +6353,16 @@ Private Function ParseUlOrStarLine() As Boolean
         p1828 = .BufPos
         If ParseUlLine() Then
             GoTo L333
-        Else
-            .BufPos = p1828
         End If
+        .BufPos = p1828
         If ParseStarLine() Then
             GoTo L333
-        Else
-            .BufPos = p1828
         End If
-        GoTo L332
+        .BufPos = p1828
+        Exit Function
 L333:
         pvPushThunk ucsAct_1_UlOrStarLine, .CaptureBegin, .CaptureEnd
         ParseUlOrStarLine = True
-L332:
     End With
 End Function
 
@@ -6631,20 +6394,17 @@ Private Function ParseStrong() As Boolean
         q1922 = .ThunkPos
         If ParseStrongStar() Then
             GoTo L335
-        Else
-            .BufPos = p1922
-            .ThunkPos = q1922
         End If
+        .BufPos = p1922
+        .ThunkPos = q1922
         If ParseStrongUl() Then
             GoTo L335
-        Else
-            .BufPos = p1922
-            .ThunkPos = q1922
         End If
-        If False Then
+        .BufPos = p1922
+        .ThunkPos = q1922
+        Exit Function
 L335:
-            ParseStrong = True
-        End If
+        ParseStrong = True
     End With
 End Function
 
@@ -6657,20 +6417,17 @@ Private Function ParseEmph() As Boolean
         q1865 = .ThunkPos
         If ParseEmphStar() Then
             GoTo L336
-        Else
-            .BufPos = p1865
-            .ThunkPos = q1865
         End If
+        .BufPos = p1865
+        .ThunkPos = q1865
         If ParseEmphUl() Then
             GoTo L336
-        Else
-            .BufPos = p1865
-            .ThunkPos = q1865
         End If
-        If False Then
+        .BufPos = p1865
+        .ThunkPos = q1865
+        Exit Function
 L336:
-            ParseEmph = True
-        End If
+        ParseEmph = True
     End With
 End Function
 
@@ -6702,13 +6459,10 @@ Private Function ParseStrike() As Boolean
                             p1971 = .BufPos
                             q1971 = .ThunkPos
                             If .BufData(.BufPos) = 126 And .BufData(.BufPos + 1) = 126 Then ' "~~"
-                                .BufPos = p1976
-                                .ThunkPos = q1976
                                 Exit For
-                            Else
-                                .BufPos = p1971
-                                .ThunkPos = q1971
                             End If
+                            .BufPos = p1971
+                            .ThunkPos = q1971
                             pvPushThunk ucsActResultClear
                             If ParseInline() Then
                                 pvPushThunk ucsActVarSet, 2
@@ -6746,23 +6500,20 @@ Private Function ParseImage() As Boolean
             q1986 = .ThunkPos
             If ParseExplicitLink() Then
                 GoTo L339
-            Else
-                .BufPos = p1986
-                .ThunkPos = q1986
             End If
+            .BufPos = p1986
+            .ThunkPos = q1986
             If ParseReferenceLink() Then
                 GoTo L339
-            Else
-                .BufPos = p1986
-                .ThunkPos = q1986
             End If
-            GoTo L338
+            .BufPos = p1986
+            .ThunkPos = q1986
+            Exit Function
 L339:
             pvPushThunk ucsAct_1_Image, .CaptureBegin, .CaptureEnd
             Call pvSetAdvance
             ParseImage = True
         End If
-L338:
     End With
 End Function
 
@@ -6775,26 +6526,22 @@ Private Function ParseLink() As Boolean
         q1991 = .ThunkPos
         If ParseExplicitLink() Then
             GoTo L340
-        Else
-            .BufPos = p1991
-            .ThunkPos = q1991
         End If
+        .BufPos = p1991
+        .ThunkPos = q1991
         If ParseReferenceLink() Then
             GoTo L340
-        Else
-            .BufPos = p1991
-            .ThunkPos = q1991
         End If
+        .BufPos = p1991
+        .ThunkPos = q1991
         If ParseAutoLink() Then
             GoTo L340
-        Else
-            .BufPos = p1991
-            .ThunkPos = q1991
         End If
-        If False Then
+        .BufPos = p1991
+        .ThunkPos = q1991
+        Exit Function
 L340:
-            ParseLink = True
-        End If
+        ParseLink = True
     End With
 End Function
 
@@ -6834,13 +6581,10 @@ Private Function ParseInlineNote() As Boolean
                         p2952 = .BufPos
                         q2952 = .ThunkPos
                         If .BufData(.BufPos) = 93 Then ' "]"
-                            .BufPos = p2954
-                            .ThunkPos = q2954
                             Exit For
-                        Else
-                            .BufPos = p2952
-                            .ThunkPos = q2952
                         End If
+                        .BufPos = p2952
+                        .ThunkPos = q2952
                         If Not (ParseInline()) Then
                             .BufPos = p2954
                             .ThunkPos = q2954
@@ -6939,11 +6683,9 @@ Private Function ParseCode() As Boolean
                     p2317 = .BufPos
                     p2315 = .BufPos
                     If .BufData(.BufPos) = 96 Then  ' "`"
-                        .BufPos = p2317
                         Exit For
-                    Else
-                        .BufPos = p2315
                     End If
+                    .BufPos = p2315
                     If Not (ParseNonspacechar()) Then
                         .BufPos = p2317
                         Exit For
@@ -6955,10 +6697,9 @@ Private Function ParseCode() As Boolean
                     If ParseTicks1() Then
                         .BufPos = p2324
                         GoTo L351
-                    Else
-                        .BufPos = p2320
-                        .LastExpected = e2320
                     End If
+                    .BufPos = p2320
+                    .LastExpected = e2320
                     For i2322 = 0 To LNG_MAXINT
                         If .BufData(.BufPos) = 96 Then ' "`"
                             .BufPos = .BufPos + 1
@@ -6977,9 +6718,8 @@ L351:
                     If ParseTicks1() Then
                         .BufPos = p2324
                         GoTo L347
-                    Else
-                        .BufPos = p2328
                     End If
+                    .BufPos = p2328
                     p2334 = .BufPos
                     If Not (ParseSpacechar()) Then
                         .BufPos = p2334
@@ -6992,10 +6732,9 @@ L351:
                         If ParseBlankLine() Then
                             .BufPos = p2334
                             GoTo L350
-                        Else
-                            .BufPos = p2332
-                            .LastExpected = e2332
                         End If
+                        .BufPos = p2332
+                        .LastExpected = e2332
                         GoTo L349
 L350:
                         .BufPos = p2324
@@ -7014,9 +6753,8 @@ L346:
                 Call ParseSp
                 If ParseTicks1() Then
                     GoTo L344
-                Else
-                    .BufPos = p2370
                 End If
+                .BufPos = p2370
             Else
                 .BufPos = p2370
             End If
@@ -7032,11 +6770,9 @@ L346:
                     p2347 = .BufPos
                     p2345 = .BufPos
                     If .BufData(.BufPos) = 96 Then  ' "`"
-                        .BufPos = p2347
                         Exit For
-                    Else
-                        .BufPos = p2345
                     End If
+                    .BufPos = p2345
                     If Not (ParseNonspacechar()) Then
                         .BufPos = p2347
                         Exit For
@@ -7048,10 +6784,9 @@ L346:
                     If ParseTicks2() Then
                         .BufPos = p2354
                         GoTo L358
-                    Else
-                        .BufPos = p2350
-                        .LastExpected = e2350
                     End If
+                    .BufPos = p2350
+                    .LastExpected = e2350
                     For i2352 = 0 To LNG_MAXINT
                         If .BufData(.BufPos) = 96 Then ' "`"
                             .BufPos = .BufPos + 1
@@ -7070,9 +6805,8 @@ L358:
                     If ParseTicks2() Then
                         .BufPos = p2354
                         GoTo L354
-                    Else
-                        .BufPos = p2358
                     End If
+                    .BufPos = p2358
                     p2364 = .BufPos
                     If Not (ParseSpacechar()) Then
                         .BufPos = p2364
@@ -7085,10 +6819,9 @@ L358:
                         If ParseBlankLine() Then
                             .BufPos = p2364
                             GoTo L357
-                        Else
-                            .BufPos = p2362
-                            .LastExpected = e2362
                         End If
+                        .BufPos = p2362
+                        .LastExpected = e2362
                         GoTo L356
 L357:
                         .BufPos = p2354
@@ -7107,9 +6840,8 @@ L353:
                 Call ParseSp
                 If ParseTicks2() Then
                     GoTo L344
-                Else
-                    .BufPos = p2370
                 End If
+                .BufPos = p2370
             Else
                 .BufPos = p2370
             End If
@@ -7125,11 +6857,9 @@ L353:
                     p2378 = .BufPos
                     p2376 = .BufPos
                     If .BufData(.BufPos) = 96 Then  ' "`"
-                        .BufPos = p2378
                         Exit For
-                    Else
-                        .BufPos = p2376
                     End If
+                    .BufPos = p2376
                     If Not (ParseNonspacechar()) Then
                         .BufPos = p2378
                         Exit For
@@ -7141,10 +6871,9 @@ L353:
                     If ParseTicks3() Then
                         .BufPos = p2385
                         GoTo L365
-                    Else
-                        .BufPos = p2381
-                        .LastExpected = e2381
                     End If
+                    .BufPos = p2381
+                    .LastExpected = e2381
                     For i2383 = 0 To LNG_MAXINT
                         If .BufData(.BufPos) = 96 Then ' "`"
                             .BufPos = .BufPos + 1
@@ -7163,9 +6892,8 @@ L365:
                     If ParseTicks3() Then
                         .BufPos = p2385
                         GoTo L361
-                    Else
-                        .BufPos = p2389
                     End If
+                    .BufPos = p2389
                     p2395 = .BufPos
                     If Not (ParseSpacechar()) Then
                         .BufPos = p2395
@@ -7178,10 +6906,9 @@ L365:
                         If ParseBlankLine() Then
                             .BufPos = p2395
                             GoTo L364
-                        Else
-                            .BufPos = p2393
-                            .LastExpected = e2393
                         End If
+                        .BufPos = p2393
+                        .LastExpected = e2393
                         GoTo L363
 L364:
                         .BufPos = p2385
@@ -7200,9 +6927,8 @@ L360:
                 Call ParseSp
                 If ParseTicks3() Then
                     GoTo L344
-                Else
-                    .BufPos = p2370
                 End If
+                .BufPos = p2370
             Else
                 .BufPos = p2370
             End If
@@ -7218,11 +6944,9 @@ L360:
                     p2408 = .BufPos
                     p2406 = .BufPos
                     If .BufData(.BufPos) = 96 Then  ' "`"
-                        .BufPos = p2408
                         Exit For
-                    Else
-                        .BufPos = p2406
                     End If
+                    .BufPos = p2406
                     If Not (ParseNonspacechar()) Then
                         .BufPos = p2408
                         Exit For
@@ -7234,10 +6958,9 @@ L360:
                     If ParseTicks4() Then
                         .BufPos = p2415
                         GoTo L372
-                    Else
-                        .BufPos = p2411
-                        .LastExpected = e2411
                     End If
+                    .BufPos = p2411
+                    .LastExpected = e2411
                     For i2413 = 0 To LNG_MAXINT
                         If .BufData(.BufPos) = 96 Then ' "`"
                             .BufPos = .BufPos + 1
@@ -7256,9 +6979,8 @@ L372:
                     If ParseTicks4() Then
                         .BufPos = p2415
                         GoTo L368
-                    Else
-                        .BufPos = p2419
                     End If
+                    .BufPos = p2419
                     p2425 = .BufPos
                     If Not (ParseSpacechar()) Then
                         .BufPos = p2425
@@ -7271,10 +6993,9 @@ L372:
                         If ParseBlankLine() Then
                             .BufPos = p2425
                             GoTo L371
-                        Else
-                            .BufPos = p2423
-                            .LastExpected = e2423
                         End If
+                        .BufPos = p2423
+                        .LastExpected = e2423
                         GoTo L370
 L371:
                         .BufPos = p2415
@@ -7293,9 +7014,8 @@ L367:
                 Call ParseSp
                 If ParseTicks4() Then
                     GoTo L344
-                Else
-                    .BufPos = p2370
                 End If
+                .BufPos = p2370
             Else
                 .BufPos = p2370
             End If
@@ -7311,11 +7031,9 @@ L367:
                     p2438 = .BufPos
                     p2436 = .BufPos
                     If .BufData(.BufPos) = 96 Then  ' "`"
-                        .BufPos = p2438
                         Exit For
-                    Else
-                        .BufPos = p2436
                     End If
+                    .BufPos = p2436
                     If Not (ParseNonspacechar()) Then
                         .BufPos = p2438
                         Exit For
@@ -7327,10 +7045,9 @@ L367:
                     If ParseTicks5() Then
                         .BufPos = p2445
                         GoTo L379
-                    Else
-                        .BufPos = p2441
-                        .LastExpected = e2441
                     End If
+                    .BufPos = p2441
+                    .LastExpected = e2441
                     For i2443 = 0 To LNG_MAXINT
                         If .BufData(.BufPos) = 96 Then ' "`"
                             .BufPos = .BufPos + 1
@@ -7349,9 +7066,8 @@ L379:
                     If ParseTicks5() Then
                         .BufPos = p2445
                         GoTo L375
-                    Else
-                        .BufPos = p2449
                     End If
+                    .BufPos = p2449
                     p2455 = .BufPos
                     If Not (ParseSpacechar()) Then
                         .BufPos = p2455
@@ -7364,10 +7080,9 @@ L379:
                         If ParseBlankLine() Then
                             .BufPos = p2455
                             GoTo L378
-                        Else
-                            .BufPos = p2453
-                            .LastExpected = e2453
                         End If
+                        .BufPos = p2453
+                        .LastExpected = e2453
                         GoTo L377
 L378:
                         .BufPos = p2445
@@ -7386,23 +7101,21 @@ L374:
                 Call ParseSp
                 If ParseTicks5() Then
                     GoTo L344
-                Else
-                    .BufPos = p2370
                 End If
+                .BufPos = p2370
             Else
                 .BufPos = p2370
             End If
         Else
             .BufPos = p2370
         End If
-        GoTo L343
+        Exit Function
 L344:
         .CaptureBegin = lCaptureBegin
         .CaptureEnd = lCaptureEnd
         pvPushThunk ucsAct_1_Code, lCaptureBegin, lCaptureEnd
         Call pvSetAdvance
         ParseCode = True
-L343:
     End With
 End Function
 
@@ -7416,27 +7129,23 @@ Private Function ParseRawHtml() As Boolean
         p2466 = .BufPos
         If ParseHtmlComment() Then
             GoTo L381
-        Else
-            .BufPos = p2466
         End If
+        .BufPos = p2466
         If ParseHtmlBlockScript() Then
             GoTo L381
-        Else
-            .BufPos = p2466
         End If
+        .BufPos = p2466
         If ParseHtmlTag() Then
             GoTo L381
-        Else
-            .BufPos = p2466
         End If
-        GoTo L380
+        .BufPos = p2466
+        Exit Function
 L381:
         lCaptureEnd = .BufPos
         .CaptureBegin = lCaptureBegin
         .CaptureEnd = lCaptureEnd
         pvPushThunk ucsAct_1_RawHtml, lCaptureBegin, lCaptureEnd
         ParseRawHtml = True
-L380:
     End With
 End Function
 
@@ -7447,24 +7156,20 @@ Private Function ParseEntity() As Boolean
         p1777 = .BufPos
         If ParseHexEntity() Then
             GoTo L383
-        Else
-            .BufPos = p1777
         End If
+        .BufPos = p1777
         If ParseDecEntity() Then
             GoTo L383
-        Else
-            .BufPos = p1777
         End If
+        .BufPos = p1777
         If ParseCharEntity() Then
             GoTo L383
-        Else
-            .BufPos = p1777
         End If
-        GoTo L382
+        .BufPos = p1777
+        Exit Function
 L383:
         pvPushThunk ucsAct_1_Entity, .CaptureBegin, .CaptureEnd
         ParseEntity = True
-L382:
     End With
 End Function
 
@@ -7508,39 +7213,33 @@ Private Function ParseSmart() As Boolean
             q2818 = .ThunkPos
             If ParseEllipsis() Then
                 GoTo L386
-            Else
-                .BufPos = p2818
-                .ThunkPos = q2818
             End If
+            .BufPos = p2818
+            .ThunkPos = q2818
             If ParseDash() Then
                 GoTo L386
-            Else
-                .BufPos = p2818
-                .ThunkPos = q2818
             End If
+            .BufPos = p2818
+            .ThunkPos = q2818
             If ParseSingleQuoted() Then
                 GoTo L386
-            Else
-                .BufPos = p2818
-                .ThunkPos = q2818
             End If
+            .BufPos = p2818
+            .ThunkPos = q2818
             If ParseDoubleQuoted() Then
                 GoTo L386
-            Else
-                .BufPos = p2818
-                .ThunkPos = q2818
             End If
+            .BufPos = p2818
+            .ThunkPos = q2818
             If ParseApostrophe() Then
                 GoTo L386
-            Else
-                .BufPos = p2818
-                .ThunkPos = q2818
             End If
-            GoTo L385
+            .BufPos = p2818
+            .ThunkPos = q2818
+            Exit Function
 L386:
             ParseSmart = True
         End If
-L385:
     End With
 End Function
 
@@ -7568,26 +7267,22 @@ Private Function ParseNormalChar() As Boolean
         p2581 = .BufPos
         p2579 = .BufPos
         If ParseSpecialChar() Then
-            GoTo L388
-        Else
-            .BufPos = p2579
+            Exit Function
         End If
+        .BufPos = p2579
         If ParseSpacechar() Then
-            GoTo L388
-        Else
-            .BufPos = p2579
+            Exit Function
         End If
+        .BufPos = p2579
         If ParseNewline() Then
-            GoTo L388
-        Else
-            .BufPos = p2579
+            Exit Function
         End If
+        .BufPos = p2579
         .BufPos = p2581
         If .BufPos < .BufSize Then
             .BufPos = .BufPos + 1
             ParseNormalChar = True
         End If
-L388:
     End With
 End Function
 
@@ -7640,21 +7335,18 @@ L392:
             .CaptureEnd = lCaptureEnd
             pvPushThunk ucsAct_1_StrChunk, lCaptureBegin, lCaptureEnd
             GoTo L390
-        Else
-            .BufPos = p1758
-            .ThunkPos = q1758
         End If
+        .BufPos = p1758
+        .ThunkPos = q1758
         If ParseAposChunk() Then
             GoTo L390
-        Else
-            .BufPos = p1758
-            .ThunkPos = q1758
         End If
-        If False Then
+        .BufPos = p1758
+        .ThunkPos = q1758
+        Exit Function
 L390:
-            Call pvSetAdvance
-            ParseStrChunk = True
-        End If
+        Call pvSetAdvance
+        ParseStrChunk = True
     End With
 End Function
 
@@ -8177,11 +7869,10 @@ Private Function ParseAlphanumeric() As Boolean
             .BufPos = .BufPos + 1
             GoTo L394
         End If
-        If False Then
+        Exit Function
 L394:
-            Call pvSetAdvance
-            ParseAlphanumeric = True
-        End If
+        Call pvSetAdvance
+        ParseAlphanumeric = True
     End With
 End Function
 
@@ -8390,7 +8081,7 @@ Private Function ParseNormalEndline() As Boolean
                         If Not (ParseNewline()) Then
                             GoTo L402
                         End If
-                        GoTo L401
+                        Exit Function
 L402:
                         .BufPos = p1806
                         .ThunkPos = q1806
@@ -8401,7 +8092,6 @@ L402:
                 End If
             End If
         End If
-L401:
     End With
 End Function
 
@@ -8484,14 +8174,12 @@ Private Function ParseSpecialChar() As Boolean
         End If
         If ParseExtendedSpecialChar() Then
             GoTo L404
-        Else
-            .BufPos = p2561
         End If
-        If False Then
+        .BufPos = p2561
+        Exit Function
 L404:
-            Call pvSetAdvance
-            ParseSpecialChar = True
-        End If
+        Call pvSetAdvance
+        ParseSpecialChar = True
     End With
 End Function
 
@@ -8532,22 +8220,20 @@ Private Function ParseUlLine() As Boolean
                     .BufPos = p1858
                     lCaptureEnd = .BufPos
                     GoTo L405
-                Else
-                    .BufPos = p1860
                 End If
+                .BufPos = p1860
             Else
                 .BufPos = p1860
             End If
         Else
             .BufPos = p1860
         End If
-        If False Then
+        Exit Function
 L405:
-            .CaptureBegin = lCaptureBegin
-            .CaptureEnd = lCaptureEnd
-            Call pvSetAdvance
-            ParseUlLine = True
-        End If
+        .CaptureBegin = lCaptureBegin
+        .CaptureEnd = lCaptureEnd
+        Call pvSetAdvance
+        ParseUlLine = True
     End With
 End Function
 
@@ -8588,22 +8274,20 @@ Private Function ParseStarLine() As Boolean
                     .BufPos = p1843
                     lCaptureEnd = .BufPos
                     GoTo L408
-                Else
-                    .BufPos = p1845
                 End If
+                .BufPos = p1845
             Else
                 .BufPos = p1845
             End If
         Else
             .BufPos = p1845
         End If
-        If False Then
+        Exit Function
 L408:
-            .CaptureBegin = lCaptureBegin
-            .CaptureEnd = lCaptureEnd
-            Call pvSetAdvance
-            ParseStarLine = True
-        End If
+        .CaptureBegin = lCaptureBegin
+        .CaptureEnd = lCaptureEnd
+        Call pvSetAdvance
+        ParseStarLine = True
     End With
 End Function
 
@@ -8634,13 +8318,10 @@ Private Function ParseEmphStar() As Boolean
                         p1879 = .BufPos
                         q1879 = .ThunkPos
                         If .BufData(.BufPos) = 42 Then ' "*"
-                            .BufPos = p1891
-                            .ThunkPos = q1891
                             GoTo L414
-                        Else
-                            .BufPos = p1879
-                            .ThunkPos = q1879
                         End If
+                        .BufPos = p1879
+                        .ThunkPos = q1879
                         pvPushThunk ucsActResultClear
                         If ParseInline() Then
                             pvPushThunk ucsActVarSet, 2
@@ -8710,13 +8391,10 @@ Private Function ParseEmphUl() As Boolean
                         p1904 = .BufPos
                         q1904 = .ThunkPos
                         If .BufData(.BufPos) = 95 Then ' "_"
-                            .BufPos = p1916
-                            .ThunkPos = q1916
                             GoTo L418
-                        Else
-                            .BufPos = p1904
-                            .ThunkPos = q1904
                         End If
+                        .BufPos = p1904
+                        .ThunkPos = q1904
                         pvPushThunk ucsActResultClear
                         If ParseInline() Then
                             pvPushThunk ucsActVarSet, 2
@@ -8766,18 +8444,15 @@ Private Function ParseWhitespace() As Boolean
         p1869 = .BufPos
         If ParseSpacechar() Then
             GoTo L419
-        Else
-            .BufPos = p1869
         End If
+        .BufPos = p1869
         If ParseNewline() Then
             GoTo L419
-        Else
-            .BufPos = p1869
         End If
-        If False Then
+        .BufPos = p1869
+        Exit Function
 L419:
-            ParseWhitespace = True
-        End If
+        ParseWhitespace = True
     End With
 End Function
 
@@ -8808,13 +8483,10 @@ Private Function ParseStrongStar() As Boolean
                         p1932 = .BufPos
                         q1932 = .ThunkPos
                         If .BufData(.BufPos) = 42 And .BufData(.BufPos + 1) = 42 Then ' "**"
-                            .BufPos = p1937
-                            .ThunkPos = q1937
                             Exit For
-                        Else
-                            .BufPos = p1932
-                            .ThunkPos = q1932
                         End If
+                        .BufPos = p1932
+                        .ThunkPos = q1932
                         pvPushThunk ucsActResultClear
                         If ParseInline() Then
                             pvPushThunk ucsActVarSet, 2
@@ -8867,13 +8539,10 @@ Private Function ParseStrongUl() As Boolean
                         p1951 = .BufPos
                         q1951 = .ThunkPos
                         If .BufData(.BufPos) = 95 And .BufData(.BufPos + 1) = 95 Then ' "__"
-                            .BufPos = p1956
-                            .ThunkPos = q1956
                             Exit For
-                        Else
-                            .BufPos = p1951
-                            .ThunkPos = q1951
                         End If
+                        .BufPos = p1951
+                        .ThunkPos = q1951
                         pvPushThunk ucsActResultClear
                         If ParseInline() Then
                             pvPushThunk ucsActVarSet, 2
@@ -8937,20 +8606,17 @@ Private Function ParseReferenceLink() As Boolean
         q1998 = .ThunkPos
         If ParseReferenceLinkDouble() Then
             GoTo L423
-        Else
-            .BufPos = p1998
-            .ThunkPos = q1998
         End If
+        .BufPos = p1998
+        .ThunkPos = q1998
         If ParseReferenceLinkSingle() Then
             GoTo L423
-        Else
-            .BufPos = p1998
-            .ThunkPos = q1998
         End If
-        If False Then
+        .BufPos = p1998
+        .ThunkPos = q1998
+        Exit Function
 L423:
-            ParseReferenceLink = True
-        End If
+        ParseReferenceLink = True
     End With
 End Function
 
@@ -8963,20 +8629,17 @@ Private Function ParseAutoLink() As Boolean
         q2120 = .ThunkPos
         If ParseAutoLinkUrl() Then
             GoTo L424
-        Else
-            .BufPos = p2120
-            .ThunkPos = q2120
         End If
+        .BufPos = p2120
+        .ThunkPos = q2120
         If ParseAutoLinkEmail() Then
             GoTo L424
-        Else
-            .BufPos = p2120
-            .ThunkPos = q2120
         End If
-        If False Then
+        .BufPos = p2120
+        .ThunkPos = q2120
+        Exit Function
 L424:
-            ParseAutoLink = True
-        End If
+        ParseAutoLink = True
     End With
 End Function
 
@@ -9061,28 +8724,24 @@ Private Function ParseLabel() As Boolean
             .BufPos = .BufPos + 1
             p2187 = .BufPos
             p2180 = .BufPos
-            If .BufData(.BufPos) = 94 Then          ' "^"
-                .BufPos = p2187
-            Else
+            If Not (.BufData(.BufPos) = 94) Then    ' "^"
                 .BufPos = p2180
                 If extension(EXT_NOTES) Then
                     GoTo L430
-                Else
-                    .BufPos = p2187
                 End If
+                .BufPos = p2187
             End If
             p2184 = .BufPos
             If .BufPos < .BufSize Then
                 .BufPos = p2184
                 If Not extension(EXT_NOTES) Then
                     GoTo L430
-                Else
-                    .BufPos = p2187
                 End If
+                .BufPos = p2187
             Else
                 .BufPos = p2187
             End If
-            GoTo L429
+            Exit Function
 L430:
             pvPushThunk ucsActResultClear
             If ParseStartList() Then
@@ -9093,13 +8752,10 @@ L430:
                     p2194 = .BufPos
                     q2194 = .ThunkPos
                     If .BufData(.BufPos) = 93 Then  ' "]"
-                        .BufPos = p2196
-                        .ThunkPos = q2196
                         Exit Do
-                    Else
-                        .BufPos = p2194
-                        .ThunkPos = q2194
                     End If
+                    .BufPos = p2194
+                    .ThunkPos = q2194
                     If Not (ParseInline()) Then
                         .BufPos = p2196
                         .ThunkPos = q2196
@@ -9116,7 +8772,6 @@ L430:
                 End If
             End If
         End If
-L429:
     End With
 End Function
 
@@ -9135,21 +8790,19 @@ Private Sub ParseSource()
             If .BufData(.BufPos) = 62 Then          ' ">"
                 .BufPos = .BufPos + 1
                 GoTo L433
-            Else
-                .BufPos = p2056
             End If
+            .BufPos = p2056
         End If
         lCaptureBegin = .BufPos
         Call ParseSourceContents
         lCaptureEnd = .BufPos
         GoTo L433
-        If False Then
+        Exit Sub
 L433:
-            .CaptureBegin = lCaptureBegin
-            .CaptureEnd = lCaptureEnd
-            pvPushThunk ucsAct_1_Source, lCaptureBegin, lCaptureEnd
-            Call pvSetAdvance
-        End If
+        .CaptureBegin = lCaptureBegin
+        .CaptureEnd = lCaptureEnd
+        pvPushThunk ucsAct_1_Source, lCaptureBegin, lCaptureEnd
+        Call pvSetAdvance
     End With
 End Sub
 
@@ -9189,25 +8842,19 @@ Private Sub ParseSourceContents()
                 p2063 = .BufPos
                 p2060 = .BufPos
                 If .BufData(.BufPos) = 40 Then      ' "("
-                    .BufPos = p2063
                     Exit For
-                Else
-                    .BufPos = p2060
                 End If
+                .BufPos = p2060
                 p2062 = .BufPos
                 If .BufData(.BufPos) = 41 Then      ' ")"
-                    .BufPos = p2063
                     Exit For
-                Else
-                    .BufPos = p2062
                 End If
+                .BufPos = p2062
                 p2065 = .BufPos
                 If .BufData(.BufPos) = 62 Then      ' ">"
-                    .BufPos = p2063
                     Exit For
-                Else
-                    .BufPos = p2065
                 End If
+                .BufPos = p2065
                 If Not (ParseNonspacechar()) Then
                     .BufPos = p2063
                     Exit For
@@ -9287,17 +8934,15 @@ Private Function ParseTitleSingle() As Boolean
                     End If
                     If ParseNewline() Then
                         GoTo L444
-                    Else
-                        .BufPos = p2094
                     End If
+                    .BufPos = p2094
                     .BufPos = p2095
                     GoTo L443
 L444:
                     .BufPos = p2097
                     Exit Do
-                Else
-                    .BufPos = p2095
                 End If
+                .BufPos = p2095
 L443:
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
@@ -9342,17 +8987,15 @@ Private Function ParseTitleDouble() As Boolean
                     End If
                     If ParseNewline() Then
                         GoTo L447
-                    Else
-                        .BufPos = p2109
                     End If
+                    .BufPos = p2109
                     .BufPos = p2110
                     GoTo L446
 L447:
                     .BufPos = p2112
                     Exit Do
-                Else
-                    .BufPos = p2110
                 End If
+                .BufPos = p2110
 L446:
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
@@ -9405,17 +9048,14 @@ Private Function ParseAutoLinkUrl() As Boolean
                         If ParseNewline() Then
                             .BufPos = p2131
                             Exit For
-                        Else
-                            .BufPos = p2128
-                            .LastExpected = e2128
                         End If
+                        .BufPos = p2128
+                        .LastExpected = e2128
                         p2130 = .BufPos
                         If .BufData(.BufPos) = 62 Then ' ">"
-                            .BufPos = p2131
                             Exit For
-                        Else
-                            .BufPos = p2130
                         End If
+                        .BufPos = p2130
                         If .BufPos < .BufSize Then
                             .BufPos = .BufPos + 1
                         Else
@@ -9475,17 +9115,14 @@ Private Function ParseAutoLinkEmail() As Boolean
                         If ParseNewline() Then
                             .BufPos = p2149
                             Exit For
-                        Else
-                            .BufPos = p2146
-                            .LastExpected = e2146
                         End If
+                        .BufPos = p2146
+                        .LastExpected = e2146
                         p2148 = .BufPos
                         If .BufData(.BufPos) = 62 Then ' ">"
-                            .BufPos = p2149
                             Exit For
-                        Else
-                            .BufPos = p2148
                         End If
+                        .BufPos = p2148
                         If .BufPos < .BufSize Then
                             .BufPos = .BufPos + 1
                         Else
@@ -9586,10 +9223,8 @@ L456:
                 If ParseNewline() Then
                     .BufPos = p2234
                     Exit Do
-                Else
-                    .BufPos = p2231
-                    .BufPos = p2232
                 End If
+                .BufPos = p2232
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -9641,10 +9276,8 @@ L459:
                 If ParseNewline() Then
                     .BufPos = p2250
                     Exit Do
-                Else
-                    .BufPos = p2247
-                    .BufPos = p2248
                 End If
+                .BufPos = p2248
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -9696,10 +9329,8 @@ L462:
                 If ParseNewline() Then
                     .BufPos = p2266
                     Exit Do
-                Else
-                    .BufPos = p2263
-                    .BufPos = p2264
                 End If
+                .BufPos = p2264
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -9759,23 +9390,19 @@ Private Function ParseSkipBlock() As Boolean
         q2798 = .ThunkPos
         If ParseHtmlBlock() Then
             GoTo L463
-        Else
-            .BufPos = p2798
-            .ThunkPos = q2798
         End If
+        .BufPos = p2798
+        .ThunkPos = q2798
         For i2794 = 0 To LNG_MAXINT
             p2788 = .BufPos
             q2788 = .ThunkPos
             p2785 = .BufPos
             q2785 = .ThunkPos
             If .BufData(.BufPos) = 35 Then          ' "#"
-                .BufPos = p2788
-                .ThunkPos = q2788
                 Exit For
-            Else
-                .BufPos = p2785
-                .ThunkPos = q2785
             End If
+            .BufPos = p2785
+            .ThunkPos = q2785
             p2787 = .BufPos
             q2787 = .ThunkPos
             e2787 = .LastExpected
@@ -9783,11 +9410,10 @@ Private Function ParseSkipBlock() As Boolean
                 .BufPos = p2788
                 .ThunkPos = q2788
                 Exit For
-            Else
-                .BufPos = p2787
-                .ThunkPos = q2787
-                .LastExpected = e2787
             End If
+            .BufPos = p2787
+            .ThunkPos = q2787
+            .LastExpected = e2787
             p2790 = .BufPos
             q2790 = .ThunkPos
             e2790 = .LastExpected
@@ -9795,11 +9421,10 @@ Private Function ParseSkipBlock() As Boolean
                 .BufPos = p2788
                 .ThunkPos = q2788
                 Exit For
-            Else
-                .BufPos = p2790
-                .ThunkPos = q2790
-                .LastExpected = e2790
             End If
+            .BufPos = p2790
+            .ThunkPos = q2790
+            .LastExpected = e2790
             p2792 = .BufPos
             q2792 = .ThunkPos
             e2792 = .LastExpected
@@ -9807,11 +9432,10 @@ Private Function ParseSkipBlock() As Boolean
                 .BufPos = p2788
                 .ThunkPos = q2788
                 Exit For
-            Else
-                .BufPos = p2792
-                .ThunkPos = q2792
-                .LastExpected = e2792
             End If
+            .BufPos = p2792
+            .ThunkPos = q2792
+            .LastExpected = e2792
             If Not (ParseRawLine()) Then
                 .BufPos = p2788
                 .ThunkPos = q2788
@@ -9829,10 +9453,9 @@ Private Function ParseSkipBlock() As Boolean
                 End If
             Loop
             GoTo L463
-        Else
-            .BufPos = p2798
-            .ThunkPos = q2798
         End If
+        .BufPos = p2798
+        .ThunkPos = q2798
         For i2800 = 0 To LNG_MAXINT
             p2799 = .BufPos
             q2799 = .ThunkPos
@@ -9847,15 +9470,13 @@ Private Function ParseSkipBlock() As Boolean
         End If
         If ParseRawLine() Then
             GoTo L463
-        Else
-            .BufPos = p2798
-            .ThunkPos = q2798
         End If
-        If False Then
+        .BufPos = p2798
+        .ThunkPos = q2798
+        Exit Function
 L463:
-            Call pvSetAdvance
-            ParseSkipBlock = True
-        End If
+        Call pvSetAdvance
+        ParseSkipBlock = True
     End With
 End Function
 
@@ -9996,11 +9617,9 @@ Private Function ParseQuoted() As Boolean
                 p2480 = .BufPos
                 p2478 = .BufPos
                 If .BufData(.BufPos) = 34 Then      ' """
-                    .BufPos = p2480
                     Exit Do
-                Else
-                    .BufPos = p2478
                 End If
+                .BufPos = p2478
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -10011,9 +9630,8 @@ Private Function ParseQuoted() As Boolean
             If .BufData(.BufPos) = 34 Then          ' """
                 .BufPos = .BufPos + 1
                 GoTo L473
-            Else
-                .BufPos = p2492
             End If
+            .BufPos = p2492
         End If
         If .BufData(.BufPos) = 39 Then              ' "\'"
             .BufPos = .BufPos + 1
@@ -10021,11 +9639,9 @@ Private Function ParseQuoted() As Boolean
                 p2488 = .BufPos
                 p2486 = .BufPos
                 If .BufData(.BufPos) = 39 Then      ' "\'"
-                    .BufPos = p2488
                     Exit Do
-                Else
-                    .BufPos = p2486
                 End If
+                .BufPos = p2486
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -10036,15 +9652,13 @@ Private Function ParseQuoted() As Boolean
             If .BufData(.BufPos) = 39 Then          ' "\'"
                 .BufPos = .BufPos + 1
                 GoTo L473
-            Else
-                .BufPos = p2492
             End If
+            .BufPos = p2492
         End If
-        If False Then
+        Exit Function
 L473:
-            Call pvSetAdvance
-            ParseQuoted = True
-        End If
+        Call pvSetAdvance
+        ParseQuoted = True
     End With
 End Function
 
@@ -10078,11 +9692,10 @@ Private Function ParseExtendedSpecialChar() As Boolean
                 GoTo L476
             End If
         End If
-        If False Then
+        Exit Function
 L476:
-            Call pvSetAdvance
-            ParseExtendedSpecialChar = True
-        End If
+        Call pvSetAdvance
+        ParseExtendedSpecialChar = True
     End With
 End Function
 
@@ -10096,12 +9709,11 @@ Private Function ParseEllipsis() As Boolean
             .BufPos = .BufPos + 5
             GoTo L481
         End If
-        GoTo L480
+        Exit Function
 L481:
         pvPushThunk ucsAct_1_Ellipsis, .CaptureBegin, .CaptureEnd
         Call pvSetAdvance
         ParseEllipsis = True
-L480:
     End With
 End Function
 
@@ -10114,20 +9726,17 @@ Private Function ParseDash() As Boolean
         q2838 = .ThunkPos
         If ParseEmDash() Then
             GoTo L482
-        Else
-            .BufPos = p2838
-            .ThunkPos = q2838
         End If
+        .BufPos = p2838
+        .ThunkPos = q2838
         If ParseEnDash() Then
             GoTo L482
-        Else
-            .BufPos = p2838
-            .ThunkPos = q2838
         End If
-        If False Then
+        .BufPos = p2838
+        .ThunkPos = q2838
+        Exit Function
 L482:
-            ParseDash = True
-        End If
+        ParseDash = True
     End With
 End Function
 
@@ -10155,11 +9764,10 @@ Private Function ParseSingleQuoted() As Boolean
                         .BufPos = p2873
                         .ThunkPos = q2873
                         Exit For
-                    Else
-                        .BufPos = p2868
-                        .ThunkPos = q2868
-                        .LastExpected = e2868
                     End If
+                    .BufPos = p2868
+                    .ThunkPos = q2868
+                    .LastExpected = e2868
                     pvPushThunk ucsActResultClear
                     If ParseInline() Then
                         pvPushThunk ucsActVarSet, 2
@@ -10202,13 +9810,10 @@ Private Function ParseDoubleQuoted() As Boolean
                     p2889 = .BufPos
                     q2889 = .ThunkPos
                     If .BufData(.BufPos) = 34 Then  ' """
-                        .BufPos = p2894
-                        .ThunkPos = q2894
                         Exit For
-                    Else
-                        .BufPos = p2889
-                        .ThunkPos = q2889
                     End If
+                    .BufPos = p2889
+                    .ThunkPos = q2889
                     pvPushThunk ucsActResultClear
                     If ParseInline() Then
                         pvPushThunk ucsActVarSet, 2
@@ -10254,12 +9859,11 @@ Private Function ParseEmDash() As Boolean
             .BufPos = .BufPos + 2
             GoTo L487
         End If
-        GoTo L486
+        Exit Function
 L487:
         pvPushThunk ucsAct_1_EmDash, .CaptureBegin, .CaptureEnd
         Call pvSetAdvance
         ParseEmDash = True
-L486:
     End With
 End Function
 
@@ -10291,20 +9895,18 @@ Private Function ParseSingleQuoteStart() As Boolean
             p2854 = .BufPos
             p2853 = .BufPos
             If ParseSpacechar() Then
-                GoTo L489
-            Else
-                .BufPos = p2853
+                GoTo L490
             End If
+            .BufPos = p2853
             If ParseNewline() Then
-                GoTo L489
-            Else
-                .BufPos = p2853
+                GoTo L490
             End If
+            .BufPos = p2853
             .BufPos = p2854
             Call pvSetAdvance
             ParseSingleQuoteStart = True
+L490:
         End If
-L489:
     End With
 End Function
 
@@ -10347,17 +9949,14 @@ Private Function ParseRawNoteReference() As Boolean
                 If ParseNewline() Then
                     .BufPos = p2914
                     Exit For
-                Else
-                    .BufPos = p2911
-                    .LastExpected = e2911
                 End If
+                .BufPos = p2911
+                .LastExpected = e2911
                 p2913 = .BufPos
                 If .BufData(.BufPos) = 93 Then      ' "]"
-                    .BufPos = p2914
                     Exit For
-                Else
-                    .BufPos = p2913
                 End If
+                .BufPos = p2913
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -10407,11 +10006,10 @@ Private Function ParseRawNoteBlock() As Boolean
                     .BufPos = p2980
                     .ThunkPos = q2980
                     Exit For
-                Else
-                    .BufPos = p2978
-                    .ThunkPos = q2978
-                    .LastExpected = e2978
                 End If
+                .BufPos = p2978
+                .ThunkPos = q2978
+                .LastExpected = e2978
                 If Not (ParseOptionallyIndentedLine()) Then
                     .BufPos = p2980
                     .ThunkPos = q2980

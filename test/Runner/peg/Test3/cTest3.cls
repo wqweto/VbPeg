@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 5.3.2019 1:30:19
+' Auto-generated on 5.3.2019 16:44:41
 Option Explicit
 DefObj A-Z
 
@@ -94,7 +94,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "5.3.2019 1:30:19"
+    ParserVersion = "5.3.2019 16:44:41"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -230,28 +230,23 @@ Private Function Parseelem() As Boolean
         p13 = .BufPos
         If Parselist() Then
             GoTo L3
-        Else
-            .BufPos = p13
         End If
+        .BufPos = p13
         If Parseatom() Then
             GoTo L3
-        Else
-            .BufPos = p13
         End If
+        .BufPos = p13
         If Parsesstring() Then
             GoTo L3
-        Else
-            .BufPos = p13
         End If
+        .BufPos = p13
         If Parsedstring() Then
             GoTo L3
-        Else
-            .BufPos = p13
         End If
-        If False Then
+        .BufPos = p13
+        Exit Function
 L3:
-            Parseelem = True
-        End If
+        Parseelem = True
     End With
 End Function
 
@@ -374,14 +369,12 @@ Private Function Parsespace() As Boolean
         End If
         If Parseeol() Then
             GoTo L8
-        Else
-            .BufPos = p48
         End If
-        If False Then
+        .BufPos = p48
+        Exit Function
 L8:
-            Call pvSetAdvance
-            Parsespace = True
-        End If
+        Call pvSetAdvance
+        Parsespace = True
     End With
 End Function
 
@@ -399,11 +392,10 @@ Private Function Parseeol() As Boolean
             .BufPos = .BufPos + 1
             GoTo L9
         End If
-        If False Then
+        Exit Function
 L9:
-            Call pvSetAdvance
-            Parseeol = True
-        End If
+        Call pvSetAdvance
+        Parseeol = True
     End With
 End Function
 

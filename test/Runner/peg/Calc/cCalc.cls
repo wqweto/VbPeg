@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 5.3.2019 1:30:17
+' Auto-generated on 5.3.2019 16:44:39
 Option Explicit
 DefObj A-Z
 
@@ -120,7 +120,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "5.3.2019 1:30:17"
+    ParserVersion = "5.3.2019 16:44:39"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -270,10 +270,9 @@ Public Function ParseStmt() As Boolean
             If ParseEOL() Then
                 pvPushThunk ucsAct_1_Stmt, .CaptureBegin, .CaptureEnd
                 GoTo L1
-            Else
-                .BufPos = p22
-                .ThunkPos = q22
             End If
+            .BufPos = p22
+            .ThunkPos = q22
         Else
             .BufPos = p22
             .ThunkPos = q22
@@ -288,11 +287,10 @@ Public Function ParseStmt() As Boolean
                 .BufPos = p17
                 .ThunkPos = q17
                 Exit Do
-            Else
-                .BufPos = p15
-                .ThunkPos = q15
-                .LastExpected = e15
             End If
+            .BufPos = p15
+            .ThunkPos = q15
+            .LastExpected = e15
             If .BufPos < .BufSize Then
                 .BufPos = .BufPos + 1
             Else
@@ -304,15 +302,13 @@ Public Function ParseStmt() As Boolean
         If ParseEOL() Then
             pvPushThunk ucsAct_2_Stmt, .CaptureBegin, .CaptureEnd
             GoTo L1
-        Else
-            .BufPos = p22
-            .ThunkPos = q22
         End If
-        If False Then
+        .BufPos = p22
+        .ThunkPos = q22
+        Exit Function
 L1:
-            pvPushThunk ucsActVarAlloc, -1
-            ParseStmt = True
-        End If
+        pvPushThunk ucsActVarAlloc, -1
+        ParseStmt = True
     End With
 End Function
 
@@ -347,10 +343,9 @@ Private Function ParseExpr() As Boolean
                     pvPushThunk ucsActVarSet, 2
                     pvPushThunk ucsAct_1_Expr, .CaptureBegin, .CaptureEnd
                     GoTo L4
-                Else
-                    .BufPos = p40
-                    .ThunkPos = q40
                 End If
+                .BufPos = p40
+                .ThunkPos = q40
             Else
                 .BufPos = p40
                 .ThunkPos = q40
@@ -364,15 +359,13 @@ Private Function ParseExpr() As Boolean
             pvPushThunk ucsActVarSet, 2
             pvPushThunk ucsAct_2_Expr, .CaptureBegin, .CaptureEnd
             GoTo L4
-        Else
-            .BufPos = p40
-            .ThunkPos = q40
         End If
-        If False Then
+        .BufPos = p40
+        .ThunkPos = q40
+        Exit Function
 L4:
-            pvPushThunk ucsActVarAlloc, -2
-            ParseExpr = True
-        End If
+        pvPushThunk ucsActVarAlloc, -2
+        ParseExpr = True
     End With
 End Function
 
@@ -394,11 +387,10 @@ Private Function ParseEOL() As Boolean
             .BufPos = .BufPos + 1
             GoTo L7
         End If
-        If False Then
+        Exit Function
 L7:
-            Call pvSetAdvance
-            ParseEOL = True
-        End If
+        Call pvSetAdvance
+        ParseEOL = True
     End With
 End Function
 
@@ -583,10 +575,9 @@ Private Function ParseValue() As Boolean
             pvPushThunk ucsActVarSet, 1
             pvPushThunk ucsAct_1_Value, .CaptureBegin, .CaptureEnd
             GoTo L20
-        Else
-            .BufPos = p99
-            .ThunkPos = q99
         End If
+        .BufPos = p99
+        .ThunkPos = q99
         pvPushThunk ucsActResultClear
         If ParseID() Then
             pvPushThunk ucsActVarSet, 1
@@ -614,10 +605,9 @@ Private Function ParseValue() As Boolean
                 If ParseCLOSE() Then
                     pvPushThunk ucsAct_3_Value, .CaptureBegin, .CaptureEnd
                     GoTo L20
-                Else
-                    .BufPos = p99
-                    .ThunkPos = q99
                 End If
+                .BufPos = p99
+                .ThunkPos = q99
             Else
                 .BufPos = p99
                 .ThunkPos = q99
@@ -626,11 +616,10 @@ Private Function ParseValue() As Boolean
             .BufPos = p99
             .ThunkPos = q99
         End If
-        If False Then
+        Exit Function
 L20:
-            pvPushThunk ucsActVarAlloc, -1
-            ParseValue = True
-        End If
+        pvPushThunk ucsActVarAlloc, -1
+        ParseValue = True
     End With
 End Function
 

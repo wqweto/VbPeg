@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 5.3.2019 1:30:20
+' Auto-generated on 5.3.2019 16:44:41
 Option Explicit
 DefObj A-Z
 
@@ -115,7 +115,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "5.3.2019 1:30:20"
+    ParserVersion = "5.3.2019 16:44:41"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -386,25 +386,22 @@ Private Function Parseunexpr() As Boolean
                 pvPushThunk ucsActVarSet, 2
                 pvPushThunk ucsAct_1_unexpr, .CaptureBegin, .CaptureEnd
                 GoTo L7
-            Else
-                .BufPos = p56
-                .ThunkPos = q56
             End If
+            .BufPos = p56
+            .ThunkPos = q56
         Else
             .BufPos = p56
             .ThunkPos = q56
         End If
         If Parseprimary() Then
             GoTo L7
-        Else
-            .BufPos = p56
-            .ThunkPos = q56
         End If
-        If False Then
+        .BufPos = p56
+        .ThunkPos = q56
+        Exit Function
 L7:
-            pvPushThunk ucsActVarAlloc, -2
-            Parseunexpr = True
-        End If
+        pvPushThunk ucsActVarAlloc, -2
+        Parseunexpr = True
     End With
 End Function
 
@@ -459,18 +456,16 @@ Private Function Parseprimary() As Boolean
         q65 = .ThunkPos
         If ParseDOUBLE() Then
             GoTo L12
-        Else
-            .BufPos = p65
-            .ThunkPos = q65
         End If
+        .BufPos = p65
+        .ThunkPos = q65
         If ParseLPAREN() Then
             If Parsebinexpr() Then
                 If ParseRPAREN() Then
                     GoTo L12
-                Else
-                    .BufPos = p65
-                    .ThunkPos = q65
                 End If
+                .BufPos = p65
+                .ThunkPos = q65
             Else
                 .BufPos = p65
                 .ThunkPos = q65
@@ -481,14 +476,12 @@ Private Function Parseprimary() As Boolean
         End If
         If ParseIDENT() Then
             GoTo L12
-        Else
-            .BufPos = p65
-            .ThunkPos = q65
         End If
-        If False Then
+        .BufPos = p65
+        .ThunkPos = q65
+        Exit Function
 L12:
-            Parseprimary = True
-        End If
+        Parseprimary = True
     End With
 End Function
 
@@ -523,9 +516,8 @@ Private Function ParseDOUBLE() As Boolean
                 End Select
             Loop
             GoTo L15
-        Else
-            .BufPos = p91
         End If
+        .BufPos = p91
         Do
             Select Case .BufData(.BufPos)
             Case 48 To 57                           ' [0-9]
@@ -546,13 +538,12 @@ Private Function ParseDOUBLE() As Boolean
             Next
             If i90 <> 0 Then
                 GoTo L15
-            Else
-                .BufPos = p91
             End If
+            .BufPos = p91
         Else
             .BufPos = p91
         End If
-        GoTo L14
+        Exit Function
 L15:
         lCaptureEnd = .BufPos
         Call Parse_
@@ -561,7 +552,6 @@ L15:
         pvPushThunk ucsAct_1_DOUBLE, lCaptureBegin, lCaptureEnd
         Call pvSetAdvance
         ParseDOUBLE = True
-L14:
     End With
 End Function
 

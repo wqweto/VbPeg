@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 5.3.2019 1:30:19
+' Auto-generated on 5.3.2019 16:44:41
 Option Explicit
 DefObj A-Z
 
@@ -94,7 +94,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "5.3.2019 1:30:19"
+    ParserVersion = "5.3.2019 16:44:41"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -217,10 +217,9 @@ Public Function Parsestart() As Boolean
             If ParseEndline() Then
                 .BufPos = p13
                 GoTo L7
-            Else
-                .BufPos = p5
-                .LastExpected = e5
             End If
+            .BufPos = p5
+            .LastExpected = e5
             If Not (ParseInline()) Then
                 .BufPos = p13
                 GoTo L7
@@ -260,18 +259,16 @@ L5:
 L3:
             Call ConsoleTrace(ctx.BufPos + 1, "start", 2, ctx.UserData)
             GoTo L1
-        Else
-            .BufPos = p25
         End If
+        .BufPos = p25
 L2:
         If ConsoleTrace(ctx.BufPos + 1, "start", 3, ctx.UserData) And False Then
             '--- do nothing
         End If
-        If False Then
+        Exit Function
 L1:
-            Call pvSetAdvance
-            Parsestart = True
-        End If
+        Call pvSetAdvance
+        Parsestart = True
     End With
 End Function
 

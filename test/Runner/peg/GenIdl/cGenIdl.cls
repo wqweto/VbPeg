@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 5.3.2019 1:30:17
+' Auto-generated on 5.3.2019 16:44:40
 Option Explicit
 DefObj A-Z
 
@@ -135,7 +135,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "5.3.2019 1:30:17"
+    ParserVersion = "5.3.2019 16:44:40"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -318,8 +318,6 @@ Public Function ParseStmt() As Boolean
                                 If ParseSkipStmt() Then
                                     pvPushThunk ucsActVarSet, 2
                                 Else
-                                    .BufPos = p12
-                                    .ThunkPos = q12
                                     .BufPos = p22
                                     .ThunkPos = q22
                                     Exit Do
@@ -612,17 +610,15 @@ Private Function ParseFunDecl() As Boolean
                             q173 = .ThunkPos
                             If ParseSEMI() Then
                                 GoTo L21
-                            Else
-                                .BufPos = p173
-                                .ThunkPos = q173
                             End If
+                            .BufPos = p173
+                            .ThunkPos = q173
                             If ParseLBRACE() Then
                                 GoTo L21
-                            Else
-                                .BufPos = p173
-                                .ThunkPos = q173
                             End If
-                            GoTo L20
+                            .BufPos = p173
+                            .ThunkPos = q173
+                            Exit Function
 L21:
                             pvPushThunk ucsAct_1_FunDecl, .CaptureBegin, .CaptureEnd
                             pvPushThunk ucsActVarAlloc, -3
@@ -632,7 +628,6 @@ L21:
                 End If
             End If
         End If
-L20:
     End With
 End Function
 
@@ -654,16 +649,13 @@ Private Function ParseSkipStmt() As Boolean
             If ParseNL() Then
                 .BufPos = p189
                 Exit Do
-            Else
-                .BufPos = p179
-                If ParseSEMI() Then
-                    .BufPos = p189
-                    Exit Do
-                Else
-                    .BufPos = p179
-                    .BufPos = p180
-                End If
             End If
+            .BufPos = p179
+            If ParseSEMI() Then
+                .BufPos = p189
+                Exit Do
+            End If
+            .BufPos = p180
             p185 = .BufPos
             If Not (ParseBLOCKCOMMENT()) Then
                 .BufPos = p185
@@ -684,15 +676,13 @@ Private Function ParseSkipStmt() As Boolean
         p194 = .BufPos
         If ParseNL() Then
             GoTo L26
-        Else
-            .BufPos = p194
         End If
+        .BufPos = p194
         If ParseSEMI() Then
             GoTo L26
-        Else
-            .BufPos = p194
         End If
-        GoTo L25
+        .BufPos = p194
+        Exit Function
 L26:
         Call Parse_
         lCaptureEnd = .BufPos
@@ -700,7 +690,6 @@ L26:
         .CaptureEnd = lCaptureEnd
         pvPushThunk ucsAct_1_SkipStmt, lCaptureBegin, lCaptureEnd
         ParseSkipStmt = True
-L25:
     End With
 End Function
 
@@ -821,7 +810,7 @@ Private Function ParseType() As Boolean
             .BufPos = p215
             .ThunkPos = q215
         End If
-        GoTo L30
+        Exit Function
 L32:
         p218 = .BufPos
         q218 = .ThunkPos
@@ -831,7 +820,6 @@ L32:
         .CaptureEnd = lCaptureEnd
         pvPushThunk ucsAct_1_Type, lCaptureBegin, lCaptureEnd
         ParseType = True
-L30:
     End With
 End Function
 
@@ -889,21 +877,19 @@ Private Function ParseTypeUnlimited() As Boolean
         If ParseTypePrefix() Then
             If ParseTypeBody() Then
                 GoTo L39
-            Else
-                .BufPos = p227
-                .ThunkPos = q227
             End If
+            .BufPos = p227
+            .ThunkPos = q227
         Else
             .BufPos = p227
             .ThunkPos = q227
         End If
         If ParseTypeBody() Then
             GoTo L39
-        Else
-            .BufPos = p227
-            .ThunkPos = q227
         End If
-        GoTo L37
+        .BufPos = p227
+        .ThunkPos = q227
+        Exit Function
 L39:
         p229 = .BufPos
         q229 = .ThunkPos
@@ -913,7 +899,6 @@ L39:
         .CaptureEnd = lCaptureEnd
         pvPushThunk ucsAct_1_TypeUnlimited, lCaptureBegin, lCaptureEnd
         ParseTypeUnlimited = True
-L37:
     End With
 End Function
 
@@ -1134,22 +1119,19 @@ Private Function ParseLinkage() As Boolean
         p359 = .BufPos
         If ParseEXTERN() Then
             GoTo L55
-        Else
-            .BufPos = p359
         End If
+        .BufPos = p359
         If ParseSTATIC() Then
             GoTo L55
-        Else
-            .BufPos = p359
         End If
-        GoTo L53
+        .BufPos = p359
+        Exit Function
 L55:
         p361 = .BufPos
         If Not (ParseINLINE()) Then
             .BufPos = p361
         End If
         ParseLinkage = True
-L53:
     End With
 End Function
 
@@ -1185,17 +1167,14 @@ Private Function ParseBLOCKCOMMENT() As Boolean
                 p536 = .BufPos
                 p529 = .BufPos
                 If .BufData(.BufPos) = 42 And .BufData(.BufPos + 1) = 47 Then ' "*/"
-                    .BufPos = p536
                     Exit Do
-                Else
-                    .BufPos = p529
                 End If
+                .BufPos = p529
                 p535 = .BufPos
                 p531 = .BufPos
                 If .BufData(.BufPos) = 47 And .BufData(.BufPos + 1) = 42 Then ' "/*"
                     .BufPos = p531
                 Else
-                    .BufPos = p535
                     GoTo L61
                 End If
                 If Not (ParseBLOCKCOMMENT()) Then
@@ -1258,7 +1237,6 @@ Private Function ParseWS() As Boolean
             Case Else
                 If Not (ParseNL()) Then
                     .BufPos = p513
-                    .BufPos = p513
                     Exit For
                 End If
             End Select
@@ -1282,7 +1260,6 @@ Private Sub Parse_()
                     .BufPos = p508
                     If Not (ParseWS()) Then
                         .BufPos = p508
-                        .BufPos = p508
                         Exit Do
                     End If
                 End If
@@ -1298,28 +1275,23 @@ Private Function ParseTypePrefix() As Boolean
         p237 = .BufPos
         If ParseCONST() Then
             GoTo L65
-        Else
-            .BufPos = p237
         End If
+        .BufPos = p237
         If ParseUNSIGNED() Then
             GoTo L65
-        Else
-            .BufPos = p237
         End If
+        .BufPos = p237
         If ParseSTRUCT() Then
             GoTo L65
-        Else
-            .BufPos = p237
         End If
+        .BufPos = p237
         If ParseENUM() Then
             GoTo L65
-        Else
-            .BufPos = p237
         End If
-        If False Then
+        .BufPos = p237
+        Exit Function
 L65:
-            ParseTypePrefix = True
-        End If
+        ParseTypePrefix = True
     End With
 End Function
 
@@ -1332,86 +1304,72 @@ Private Function ParseTypeBody() As Boolean
         q244 = .ThunkPos
         If ParseINT() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseCHAR() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseUNSIGNED() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseVOID() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseUINT_A_T() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseUINT_B_T() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseUINT_C_T() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseUINTPTR_T() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseSIZE_T() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseDOUBLE() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseLONG_LONG() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseBOOL() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
+        .BufPos = p244
+        .ThunkPos = q244
         If ParseRefType() Then
             GoTo L66
-        Else
-            .BufPos = p244
-            .ThunkPos = q244
         End If
-        If False Then
+        .BufPos = p244
+        .ThunkPos = q244
+        Exit Function
 L66:
-            ParseTypeBody = True
-        End If
+        ParseTypeBody = True
     End With
 End Function
 
@@ -1764,10 +1722,9 @@ Private Function ParseArraySuffix() As Boolean
                 If ParseRBRACKET() Then
                     .BufPos = p349
                     Exit Do
-                Else
-                    .BufPos = p347
-                    .LastExpected = e347
                 End If
+                .BufPos = p347
+                .LastExpected = e347
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -1815,27 +1772,26 @@ Private Function ParseEnumValueToken() As Boolean
             If ParseBLOCKCOMMENT() Then
                 .BufPos = p335
                 Exit For
+            End If
+            .BufPos = p330
+            If ParseLINECOMMENT() Then
+                .BufPos = p335
+                Exit For
             Else
                 .BufPos = p330
-                If ParseLINECOMMENT() Then
+                If ParseWS() Then
                     .BufPos = p335
                     Exit For
                 Else
                     .BufPos = p330
-                    If ParseWS() Then
+                    Select Case .BufData(.BufPos)
+                    Case 44, 125                    ' [,}]
+                        .BufPos = .BufPos + 1
                         .BufPos = p335
                         Exit For
-                    Else
-                        .BufPos = p330
-                        Select Case .BufData(.BufPos)
-                        Case 44, 125                ' [,}]
-                            .BufPos = .BufPos + 1
-                            .BufPos = p335
-                            Exit For
-                        Case Else
-                            .BufPos = p333
-                        End Select
-                    End If
+                    Case Else
+                        .BufPos = p333
+                    End Select
                 End If
             End If
             If .BufPos < .BufSize Then

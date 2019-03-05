@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 5.3.2019 1:30:20
+' Auto-generated on 5.3.2019 16:44:42
 Option Explicit
 DefObj A-Z
 
@@ -99,7 +99,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "5.3.2019 1:30:20"
+    ParserVersion = "5.3.2019 16:44:42"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -223,18 +223,15 @@ Private Function ParseLocationPath() As Boolean
         p15 = .BufPos
         If ParseRelativeLocationPath() Then
             GoTo L1
-        Else
-            .BufPos = p15
         End If
+        .BufPos = p15
         If ParseAbsoluteLocationPath() Then
             GoTo L1
-        Else
-            .BufPos = p15
         End If
-        If False Then
+        .BufPos = p15
+        Exit Function
 L1:
-            ParseLocationPath = True
-        End If
+        ParseLocationPath = True
     End With
 End Function
 
@@ -290,9 +287,8 @@ Private Function ParseAbsoluteLocationPath() As Boolean
         p23 = .BufPos
         If ParseAbbreviatedAbsoluteLocationPath() Then
             GoTo L4
-        Else
-            .BufPos = p23
         End If
+        .BufPos = p23
         If .BufData(.BufPos) = 47 Then              ' "/"
             .BufPos = .BufPos + 1
             Call Parse_
@@ -302,11 +298,10 @@ Private Function ParseAbsoluteLocationPath() As Boolean
             End If
             GoTo L4
         End If
-        If False Then
+        Exit Function
 L4:
-            Call pvSetAdvance
-            ParseAbsoluteLocationPath = True
-        End If
+        Call pvSetAdvance
+        ParseAbsoluteLocationPath = True
     End With
 End Function
 
@@ -341,18 +336,15 @@ Private Function ParseStep() As Boolean
                 End If
             Loop
             GoTo L8
-        Else
-            .BufPos = p48
         End If
+        .BufPos = p48
         If ParseAbbreviatedStep() Then
             GoTo L8
-        Else
-            .BufPos = p48
         End If
-        If False Then
+        .BufPos = p48
+        Exit Function
 L8:
-            ParseStep = True
-        End If
+        ParseStep = True
     End With
 End Function
 
@@ -366,18 +358,16 @@ Private Sub ParseAxisSpecifier()
             If .BufData(.BufPos) = 58 And .BufData(.BufPos + 1) = 58 Then ' "::"
                 .BufPos = .BufPos + 2
                 GoTo L10
-            Else
-                .BufPos = p56
             End If
+            .BufPos = p56
         Else
             .BufPos = p56
         End If
         Call ParseAbbreviatedAxisSpecifier
         GoTo L10
-        If False Then
+        Exit Sub
 L10:
-            Call pvSetAdvance
-        End If
+        Call pvSetAdvance
     End With
 End Sub
 
@@ -394,9 +384,8 @@ Private Function ParseNodeTest() As Boolean
                 If .BufData(.BufPos) = 41 Then      ' ")"
                     .BufPos = .BufPos + 1
                     GoTo L12
-                Else
-                    .BufPos = p87
                 End If
+                .BufPos = p87
             Else
                 .BufPos = p87
             End If
@@ -414,9 +403,8 @@ Private Function ParseNodeTest() As Boolean
                     If .BufData(.BufPos) = 41 Then  ' ")"
                         .BufPos = .BufPos + 1
                         GoTo L12
-                    Else
-                        .BufPos = p87
                     End If
+                    .BufPos = p87
                 Else
                     .BufPos = p87
                 End If
@@ -426,14 +414,12 @@ Private Function ParseNodeTest() As Boolean
         End If
         If ParseNameTest() Then
             GoTo L12
-        Else
-            .BufPos = p87
         End If
-        If False Then
+        .BufPos = p87
+        Exit Function
 L12:
-            Call pvSetAdvance
-            ParseNodeTest = True
-        End If
+        Call pvSetAdvance
+        ParseNodeTest = True
     End With
 End Function
 
@@ -464,11 +450,10 @@ Private Function ParseAbbreviatedStep() As Boolean
             .BufPos = .BufPos + 1
             GoTo L16
         End If
-        If False Then
+        Exit Function
 L16:
-            Call pvSetAdvance
-            ParseAbbreviatedStep = True
-        End If
+        Call pvSetAdvance
+        ParseAbbreviatedStep = True
     End With
 End Function
 
@@ -526,11 +511,10 @@ Private Function ParseAxisName() As Boolean
             .BufPos = .BufPos + 4
             GoTo L17
         End If
-        If False Then
+        Exit Function
 L17:
-            Call pvSetAdvance
-            ParseAxisName = True
-        End If
+        Call pvSetAdvance
+        ParseAxisName = True
     End With
 End Function
 
@@ -561,11 +545,10 @@ Private Function ParseNodeType() As Boolean
             .BufPos = .BufPos + 4
             GoTo L19
         End If
-        If False Then
+        Exit Function
 L19:
-            Call pvSetAdvance
-            ParseNodeType = True
-        End If
+        Call pvSetAdvance
+        ParseNodeType = True
     End With
 End Function
 
@@ -586,9 +569,8 @@ Private Function ParseLiteral() As Boolean
             If .BufData(.BufPos) = 34 Then          ' "\""
                 .BufPos = .BufPos + 1
                 GoTo L20
-            Else
-                .BufPos = p273
             End If
+            .BufPos = p273
         End If
         If .BufData(.BufPos) = 34 Then              ' "\""
             .BufPos = .BufPos + 1
@@ -602,15 +584,13 @@ Private Function ParseLiteral() As Boolean
             If .BufData(.BufPos) = 34 Then          ' "\""
                 .BufPos = .BufPos + 1
                 GoTo L20
-            Else
-                .BufPos = p273
             End If
+            .BufPos = p273
         End If
-        If False Then
+        Exit Function
 L20:
-            Call pvSetAdvance
-            ParseLiteral = True
-        End If
+        Call pvSetAdvance
+        ParseLiteral = True
     End With
 End Function
 
@@ -629,9 +609,8 @@ Private Function ParseNameTest() As Boolean
                 If .BufData(.BufPos) = 42 Then      ' "*"
                     .BufPos = .BufPos + 1
                     GoTo L23
-                Else
-                    .BufPos = p323
                 End If
+                .BufPos = p323
             Else
                 .BufPos = p323
             End If
@@ -640,14 +619,12 @@ Private Function ParseNameTest() As Boolean
         End If
         If ParseQName() Then
             GoTo L23
-        Else
-            .BufPos = p323
         End If
-        If False Then
+        .BufPos = p323
+        Exit Function
 L23:
-            Call pvSetAdvance
-            ParseNameTest = True
-        End If
+        Call pvSetAdvance
+        ParseNameTest = True
     End With
 End Function
 
@@ -684,9 +661,8 @@ Private Function ParsePrimaryExpr() As Boolean
         p119 = .BufPos
         If ParseVariableReference() Then
             GoTo L26
-        Else
-            .BufPos = p119
         End If
+        .BufPos = p119
         If .BufData(.BufPos) = 40 Then              ' "("
             .BufPos = .BufPos + 1
             Call Parse_
@@ -695,33 +671,28 @@ Private Function ParsePrimaryExpr() As Boolean
                 If .BufData(.BufPos) = 41 Then      ' ")"
                     .BufPos = .BufPos + 1
                     GoTo L26
-                Else
-                    .BufPos = p119
                 End If
+                .BufPos = p119
             Else
                 .BufPos = p119
             End If
         End If
         If ParseLiteral() Then
             GoTo L26
-        Else
-            .BufPos = p119
         End If
+        .BufPos = p119
         If ParseNumber() Then
             GoTo L26
-        Else
-            .BufPos = p119
         End If
+        .BufPos = p119
         If ParseFunctionCall() Then
             GoTo L26
-        Else
-            .BufPos = p119
         End If
-        If False Then
+        .BufPos = p119
+        Exit Function
 L26:
-            Call pvSetAdvance
-            ParsePrimaryExpr = True
-        End If
+        Call pvSetAdvance
+        ParsePrimaryExpr = True
     End With
 End Function
 
@@ -754,22 +725,19 @@ Private Function ParseNumber() As Boolean
                 End If
             End If
             GoTo L29
-        Else
-            .BufPos = p285
         End If
+        .BufPos = p285
         If .BufData(.BufPos) = 46 Then              ' "."
             .BufPos = .BufPos + 1
             If ParseDigits() Then
                 GoTo L29
-            Else
-                .BufPos = p285
             End If
+            .BufPos = p285
         End If
-        If False Then
+        Exit Function
 L29:
-            Call pvSetAdvance
-            ParseNumber = True
-        End If
+        Call pvSetAdvance
+        ParseNumber = True
     End With
 End Function
 
@@ -800,9 +768,8 @@ Private Function ParseFunctionCall() As Boolean
                             Exit Do
                         End If
                     Loop
-                Else
-                    .BufPos = p133
                 End If
+                .BufPos = p133
                 Call Parse_
                 If .BufData(.BufPos) = 41 Then      ' ")"
                     .BufPos = .BufPos + 1
@@ -883,19 +850,16 @@ L44:
             End If
 L43:
             GoTo L40
-        Else
-            .BufPos = p166
         End If
+        .BufPos = p166
         If ParseLocationPath() Then
             GoTo L40
-        Else
-            .BufPos = p166
         End If
-        If False Then
+        .BufPos = p166
+        Exit Function
 L40:
-            Call pvSetAdvance
-            ParsePathExpr = True
-        End If
+        Call pvSetAdvance
+        ParsePathExpr = True
     End With
 End Function
 
@@ -1080,23 +1044,20 @@ Private Function ParseUnaryExpr() As Boolean
         p242 = .BufPos
         If ParseUnionExpr() Then
             GoTo L55
-        Else
-            .BufPos = p242
         End If
+        .BufPos = p242
         If .BufData(.BufPos) = 45 Then              ' "-"
             .BufPos = .BufPos + 1
             Call Parse_
             If ParseUnaryExpr() Then
                 GoTo L55
-            Else
-                .BufPos = p242
             End If
+            .BufPos = p242
         End If
-        If False Then
+        Exit Function
 L55:
-            Call pvSetAdvance
-            ParseUnaryExpr = True
-        End If
+        Call pvSetAdvance
+        ParseUnaryExpr = True
     End With
 End Function
 
@@ -1107,9 +1068,8 @@ Private Function ParseOperator() As Boolean
         p291 = .BufPos
         If ParseOperatorName() Then
             GoTo L57
-        Else
-            .BufPos = p291
         End If
+        .BufPos = p291
         If .BufData(.BufPos) = 42 Then              ' "*"
             .BufPos = .BufPos + 1
             GoTo L57
@@ -1158,11 +1118,10 @@ Private Function ParseOperator() As Boolean
             .BufPos = .BufPos + 1
             GoTo L57
         End If
-        If False Then
+        Exit Function
 L57:
-            Call pvSetAdvance
-            ParseOperator = True
-        End If
+        Call pvSetAdvance
+        ParseOperator = True
     End With
 End Function
 
@@ -1203,11 +1162,10 @@ Private Function ParseOperatorName() As Boolean
             .BufPos = .BufPos + 3
             GoTo L58
         End If
-        If False Then
+        Exit Function
 L58:
-            Call pvSetAdvance
-            ParseOperatorName = True
-        End If
+        Call pvSetAdvance
+        ParseOperatorName = True
     End With
 End Function
 
@@ -1218,18 +1176,15 @@ Private Function ParseQName() As Boolean
         p338 = .BufPos
         If ParsePrefixedName() Then
             GoTo L59
-        Else
-            .BufPos = p338
         End If
+        .BufPos = p338
         If ParseName() Then
             GoTo L59
-        Else
-            .BufPos = p338
         End If
-        If False Then
+        .BufPos = p338
+        Exit Function
 L59:
-            ParseQName = True
-        End If
+        ParseQName = True
     End With
 End Function
 
@@ -1354,11 +1309,10 @@ Private Function ParseNameStartChar() As Boolean
             .BufPos = .BufPos + 1
             GoTo L62
         End Select
-        If False Then
+        Exit Function
 L62:
-            Call pvSetAdvance
-            ParseNameStartChar = True
-        End If
+        Call pvSetAdvance
+        ParseNameStartChar = True
     End With
 End Function
 
@@ -1369,9 +1323,8 @@ Private Function ParseNameChar() As Boolean
         p373 = .BufPos
         If ParseNameStartChar() Then
             GoTo L63
-        Else
-            .BufPos = p373
         End If
+        .BufPos = p373
         If .BufData(.BufPos) = 45 Then              ' "-"
             .BufPos = .BufPos + 1
             GoTo L63
@@ -1400,11 +1353,10 @@ Private Function ParseNameChar() As Boolean
             .BufPos = .BufPos + 1
             GoTo L63
         End Select
-        If False Then
+        Exit Function
 L63:
-            Call pvSetAdvance
-            ParseNameChar = True
-        End If
+        Call pvSetAdvance
+        ParseNameChar = True
     End With
 End Function
 

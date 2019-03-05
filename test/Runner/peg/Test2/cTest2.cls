@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-' Auto-generated on 5.3.2019 1:30:19
+' Auto-generated on 5.3.2019 16:44:41
 Option Explicit
 DefObj A-Z
 
@@ -99,7 +99,7 @@ Property Get LastOffset() As Long
 End Property
 
 Property Get ParserVersion() As String
-    ParserVersion = "5.3.2019 1:30:19"
+    ParserVersion = "5.3.2019 16:44:41"
 End Property
 
 Property Get Contents(Optional ByVal lOffset As Long = 1, Optional ByVal lSize As Long = LNG_MAXINT) As String
@@ -248,10 +248,9 @@ Private Function ParseLineComment() As Boolean
                 If ParseEndOfLine() Then
                     .BufPos = p44
                     Exit Do
-                Else
-                    .BufPos = p42
-                    .LastExpected = e42
                 End If
+                .BufPos = p42
+                .LastExpected = e42
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -278,11 +277,9 @@ Private Function ParseBlockComment() As Boolean
                 p52 = .BufPos
                 p50 = .BufPos
                 If .BufData(.BufPos) = 42 And .BufData(.BufPos + 1) = 47 Then ' "*/"
-                    .BufPos = p52
                     Exit Do
-                Else
-                    .BufPos = p50
                 End If
+                .BufPos = p50
                 If .BufPos < .BufSize Then
                     .BufPos = .BufPos + 1
                 Else
@@ -320,15 +317,13 @@ Private Function ParseScope() As Boolean
             p74 = .BufPos
             If ParseScope() Then
                 GoTo L6
-            Else
-                .BufPos = p74
             End If
+            .BufPos = p74
             For i73 = 0 To LNG_MAXINT
                 p72 = .BufPos
                 p70 = .BufPos
                 Select Case .BufData(.BufPos)
                 Case 123, 125                       ' [{}]
-                    .BufPos = p72
                     Exit For
                 Case Else
                     .BufPos = p70
@@ -343,7 +338,7 @@ Private Function ParseScope() As Boolean
             If i73 <> 0 Then
                 GoTo L6
             End If
-            GoTo L5
+            Exit Function
 L6:
             If .BufData(.BufPos) = 125 Then         ' "}"
                 .BufPos = .BufPos + 1
@@ -351,7 +346,6 @@ L6:
                 ParseScope = True
             End If
         End If
-L5:
     End With
 End Function
 
@@ -367,7 +361,6 @@ Private Function Parsejunk() As Boolean
             p131 = .BufPos
             Select Case .BufData(.BufPos)
             Case 97 To 122, 65 To 90, 95, 123, 125, 34, 47, 42, 58, 40, 41 ' [a-zA-Z_{}"/*:()]
-                .BufPos = p133
                 Exit For
             Case Else
                 .BufPos = p131
@@ -429,23 +422,20 @@ Private Function ParseStatement() As Boolean
                 If .BufData(.BufPos) = 59 Then      ' ";"
                     .BufPos = .BufPos + 1
                     GoTo L10
-                Else
-                    .BufPos = p37
                 End If
+                .BufPos = p37
             Else
                 .BufPos = p37
             End If
             If ParseFile() Then
                 GoTo L10
-            Else
-                .BufPos = p37
             End If
-            GoTo L9
+            .BufPos = p37
+            Exit Function
 L10:
             Call pvSetAdvance
             ParseStatement = True
         End If
-L9:
     End With
 End Function
 
@@ -477,7 +467,6 @@ Private Function ParseSpacing() As Boolean
                         .BufPos = .BufPos + 1
                     Case Else
                         If Not (ParseEndOfLine()) Then
-                            .BufPos = p115
                             .BufPos = p115
                             Exit For
                         End If
@@ -519,12 +508,11 @@ Private Function ParseEndOfLine() As Boolean
                 .BufPos = .BufPos + 1
                 GoTo L15
             End If
-            GoTo L14
+            Exit Function
 L15:
             Call pvSetAdvance
             ParseEndOfLine = True
         End If
-L14:
     End With
 End Function
 
